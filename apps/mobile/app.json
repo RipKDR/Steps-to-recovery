@@ -1,0 +1,69 @@
+{
+  "expo": {
+    "name": "Steps to Recovery",
+    "slug": "steps-to-recovery",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#4F8FC0"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.recovery.stepstorecovery",
+      "infoPlist": {
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "We use your location to notify you when you're near saved meeting locations to provide timely support.",
+        "NSLocationWhenInUseUsageDescription": "We use your location to help you save meeting locations for geofencing support.",
+        "NSLocationAlwaysUsageDescription": "We use your location in the background to notify you when you're near saved meeting locations.",
+        "UIBackgroundModes": ["location", "fetch", "processing"]
+      }
+    },
+    "android": {
+      "package": "com.recovery.stepstorecovery",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#4F8FC0"
+      },
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION",
+        "POST_NOTIFICATIONS",
+        "RECEIVE_BOOT_COMPLETED",
+        "SCHEDULE_EXACT_ALARM"
+      ],
+      "edgeToEdgeEnabled": true,
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-secure-store",
+      "expo-sqlite",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#4F8FC0"
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "We use your location to notify you when you're near saved meeting locations to provide timely support.",
+          "locationWhenInUsePermission": "We use your location to help you save meeting locations for geofencing support."
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "your-project-id-here"
+      }
+    }
+  }
+}
