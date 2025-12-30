@@ -1,38 +1,58 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useCallback } from 'react';
 
-interface SyncContextType {
+interface SyncState {
   isSyncing: boolean;
   lastSyncTime: Date | null;
   pendingCount: number;
+  error: Error | null;
+}
+
+interface SyncContextType extends SyncState {
   triggerSync: () => Promise<void>;
+  clearError: () => void;
 }
 
 const SyncContext = createContext<SyncContextType | undefined>(undefined);
 
 export function SyncProvider({ children }: { children: React.ReactNode }) {
-  const [isSyncing, setIsSyncing] = useState(false);
-  const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
-  const [pendingCount, setPendingCount] = useState(0);
+  const [state, setState] = useState<SyncState>({
+    isSyncing: false,
+    lastSyncTime: null,
+    pendingCount: 0,
+    error: null,
+  });
 
-  const triggerSync = async () => {
-    setIsSyncing(true);
+  const triggerSync = useCallback(async () => {
+    setState(prev => ({ ...prev, isSyncing: true, error: null }));
     try {
       // Sync logic will be implemented in Phase 2
-      // For now, just update the last sync time
-      setLastSyncTime(new Date());
-      setPendingCount(0);
+      // For now, simulate a sync operation
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      setState(prev => ({
+        ...prev,
+        isSyncing: false,
+        lastSyncTime: new Date(),
+        pendingCount: 0,
+      }));
     } catch (error) {
       console.error('Sync failed:', error);
-    } finally {
-      setIsSyncing(false);
+      setState(prev => ({
+        ...prev,
+        isSyncing: false,
+        error: error instanceof Error ? error : new Error('Sync failed'),
+      }));
     }
-  };
+  }, []);
 
-  const value = {
-    isSyncing,
-    lastSyncTime,
-    pendingCount,
+  const clearError = useCallback(() => {
+    setState(prev => ({ ...prev, error: null }));
+  }, []);
+
+  const value: SyncContextType = {
+    ...state,
     triggerSync,
+    clearError,
   };
 
   return <SyncContext.Provider value={value}>{children}</SyncContext.Provider>;

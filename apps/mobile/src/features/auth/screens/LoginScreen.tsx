@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -7,102 +7,157 @@ import {
   Platform,
   Alert,
   TouchableOpacity,
+  ScrollView,
+  TextInput,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../../contexts/AuthContext';
 import { Input } from '../../../components/Input';
 import { Button } from '../../../components/Button';
 import { theme } from '../../../utils/theme';
 import { validateEmail } from '../../../utils/validation';
+import type { AuthStackScreenProps } from '../../../navigation/types';
 
-export function LoginScreen({ navigation }: any) {
+type Props = AuthStackScreenProps<'Login'>;
+
+export function LoginScreen({ navigation }: Props) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
 
+  const passwordRef = useRef<TextInput>(null);
   const { signIn } = useAuth();
 
-  const handleLogin = async () => {
-    // Validate
+  const validateForm = (): boolean => {
     const newErrors: { email?: string; password?: string } = {};
-    if (!validateEmail(email)) {
+
+    if (!email.trim()) {
+      newErrors.email = 'Email is required';
+    } else if (!validateEmail(email)) {
       newErrors.email = 'Please enter a valid email';
     }
-    if (password.length < 6) {
+
+    if (!password) {
+      newErrors.password = 'Password is required';
+    } else if (password.length < 6) {
       newErrors.password = 'Password must be at least 6 characters';
     }
 
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
-      return;
-    }
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleLogin = async () => {
+    if (!validateForm()) return;
 
     setLoading(true);
     setErrors({});
 
     try {
-      await signIn(email, password);
+      await signIn(email.trim().toLowerCase(), password);
       // Navigation handled by root navigator based on auth state
-    } catch (error: any) {
-      Alert.alert('Login Failed', error.message || 'Please check your credentials');
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Please check your credentials';
+      Alert.alert('Login Failed', message);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      enabled={true}
-      style={styles.container}
-    >
-      <View style={styles.content}>
-        <Text style={styles.title}>Welcome Back</Text>
-        <Text style={styles.subtitle}>
-          Your recovery journey continues here
-        </Text>
+    <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.container}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+      >
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.header}>
+            <Text style={styles.title}>Welcome Back</Text>
+            <Text style={styles.subtitle}>
+              Your recovery journey continues here
+            </Text>
+          </View>
 
-        <Input
-          label="Email"
-          value={email}
-          onChangeText={setEmail}
-          placeholder="your.email@example.com"
-          autoCapitalize="none"
-          keyboardType="email-address"
-          error={errors.email}
-        />
+          <View style={styles.form}>
+            <Input
+              label="Email"
+              value={email}
+              onChangeText={(text) => {
+                setEmail(text);
+                if (errors.email) setErrors(prev => ({ ...prev, email: undefined }));
+              }}
+              placeholder="your.email@example.com"
+              autoCapitalize="none"
+              keyboardType="email-address"
+              autoComplete="email"
+              returnKeyType="next"
+              onSubmitEditing={() => passwordRef.current?.focus()}
+              error={errors.email}
+              testID="login-email-input"
+            />
 
-        <Input
-          label="Password"
-          value={password}
-          onChangeText={setPassword}
-          placeholder="Enter your password"
-          secureTextEntry={true}
-          error={errors.password}
-        />
+            <Input
+              ref={passwordRef}
+              label="Password"
+              value={password}
+              onChangeText={(text) => {
+                setPassword(text);
+                if (errors.password) setErrors(prev => ({ ...prev, password: undefined }));
+              }}
+              placeholder="Enter your password"
+              secureTextEntry
+              autoComplete="password"
+              returnKeyType="done"
+              onSubmitEditing={handleLogin}
+              error={errors.password}
+              testID="login-password-input"
+            />
 
-        <Button title="Log In" onPress={handleLogin} loading={loading} />
+            <Button
+              title="Log In"
+              onPress={handleLogin}
+              loading={loading}
+              testID="login-submit-button"
+            />
+          </View>
 
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>Don't have an account? </Text>
-          <TouchableOpacity onPress={() => navigation.navigate('SignUp')}>
-            <Text style={styles.signUpLink}>Sign Up</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    </KeyboardAvoidingView>
+          <View style={styles.footer}>
+            <Text style={styles.footerText}>Don't have an account? </Text>
+            <TouchableOpacity
+              onPress={() => navigation.navigate('SignUp')}
+              accessibilityRole="link"
+              accessibilityLabel="Navigate to sign up"
+            >
+              <Text style={styles.link}>Sign Up</Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
     backgroundColor: theme.colors.background,
   },
-  content: {
+  container: {
     flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
     padding: theme.spacing.lg,
     justifyContent: 'center',
+  },
+  header: {
+    marginBottom: theme.spacing.xl,
   },
   title: {
     ...theme.typography.h1,
@@ -112,17 +167,23 @@ const styles = StyleSheet.create({
   subtitle: {
     ...theme.typography.body,
     color: theme.colors.textSecondary,
-    marginBottom: theme.spacing.xl,
+    lineHeight: 24,
+  },
+  form: {
+    gap: theme.spacing.sm,
   },
   footer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginTop: theme.spacing.lg,
+    marginTop: theme.spacing.xl,
+    paddingVertical: theme.spacing.md,
   },
   footerText: {
+    ...theme.typography.body,
     color: theme.colors.textSecondary,
   },
-  signUpLink: {
+  link: {
+    ...theme.typography.body,
     color: theme.colors.primary,
     fontWeight: '600',
   },

@@ -4,6 +4,7 @@
     "slug": "steps-to-recovery",
     "version": "1.0.0",
     "orientation": "portrait",
+    "entryPoint": "index.ts",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -36,7 +37,7 @@
         "RECEIVE_BOOT_COMPLETED",
         "SCHEDULE_EXACT_ALARM"
       ],
-      "edgeToEdgeEnabled": true,
+      "edgeToEdgeEnabled": false,
       "predictiveBackGestureEnabled": false
     },
     "web": {
@@ -48,7 +49,6 @@
       [
         "expo-notifications",
         {
-          "icon": "./assets/notification-icon.png",
           "color": "#4F8FC0"
         }
       ],
@@ -60,10 +60,8 @@
         }
       ]
     ],
-    "extra": {
-      "eas": {
-        "projectId": "your-project-id-here"
-      }
+    "updates": {
+      "enabled": false
     }
   }
 }
