@@ -54,3 +54,6 @@ apps/mobile/android.os.*
 apps/mobile/android.view.*
 apps/mobile/com.facebook.*
 apps/mobile/bugreport-*.zip
+
+# Root-level Android directory (should not exist in Expo projects)
+/android/

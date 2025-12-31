@@ -23,7 +23,10 @@
       "Bash(cat:*)",
       "mcp__sequential-thinking__sequentialthinking",
       "Bash(done)",
-      "Bash(taskkill:*)"
+      "Bash(taskkill:*)",
+      "Bash(npx expo prebuild:*)",
+      "Bash(npx expo run:android:*)",
+      "Bash(npx expo start:*)"
     ]
   },
   "outputStyle": "Explanatory"
