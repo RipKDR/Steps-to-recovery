@@ -4,11 +4,11 @@ import { View, ActivityIndicator } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { PaperProvider } from 'react-native-paper';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { SQLiteProvider } from 'expo-sqlite';
+import { DatabaseProvider } from './src/contexts/DatabaseContext';
 import { AuthProvider } from './src/contexts/AuthContext';
 import { SyncProvider } from './src/contexts/SyncContext';
 import { RootNavigator } from './src/navigation/RootNavigator';
-import { initDatabase } from './src/utils/database';
+import { ErrorBoundary } from './src/components/ErrorBoundary';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -29,21 +29,23 @@ function LoadingFallback(): React.ReactElement {
 
 export default function App(): React.ReactElement {
   return (
-    <QueryClientProvider client={queryClient}>
-      <SafeAreaProvider>
-        <PaperProvider>
-          <Suspense fallback={<LoadingFallback />}>
-            <SQLiteProvider databaseName="recovery.db" onInit={initDatabase}>
-              <AuthProvider>
-                <SyncProvider>
-                  <RootNavigator />
-                  <StatusBar style="auto" />
-                </SyncProvider>
-              </AuthProvider>
-            </SQLiteProvider>
-          </Suspense>
-        </PaperProvider>
-      </SafeAreaProvider>
-    </QueryClientProvider>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <SafeAreaProvider>
+          <PaperProvider>
+            <Suspense fallback={<LoadingFallback />}>
+              <DatabaseProvider>
+                <AuthProvider>
+                  <SyncProvider>
+                    <RootNavigator />
+                    <StatusBar style="auto" />
+                  </SyncProvider>
+                </AuthProvider>
+              </DatabaseProvider>
+            </Suspense>
+          </PaperProvider>
+        </SafeAreaProvider>
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 }

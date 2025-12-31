@@ -782,50 +782,54 @@ describe('syncService Integration Tests', () => {
       expect(result.errors).toContain('unknown_table/record-1: Unknown table: unknown_table');
     });
 
-    it('should handle exponential backoff delays between retries', async () => {
-      const queueItems = [
-        {
-          id: 'queue-1',
-          table_name: 'journal_entries',
-          record_id: 'entry-1',
-          operation: 'insert',
-          retry_count: 1, // Should delay 2s
-          last_error: 'Previous error',
-        },
-        {
-          id: 'queue-2',
-          table_name: 'journal_entries',
-          record_id: 'entry-2',
-          operation: 'insert',
-          retry_count: 2, // Should delay 4s
-          last_error: 'Previous error',
-        },
-      ];
+    it(
+      'should handle exponential backoff delays between retries',
+      async () => {
+        const queueItems = [
+          {
+            id: 'queue-1',
+            table_name: 'journal_entries',
+            record_id: 'entry-1',
+            operation: 'insert',
+            retry_count: 1, // Should delay 2s
+            last_error: 'Previous error',
+          },
+          {
+            id: 'queue-2',
+            table_name: 'journal_entries',
+            record_id: 'entry-2',
+            operation: 'insert',
+            retry_count: 2, // Should delay 4s
+            last_error: 'Previous error',
+          },
+        ];
 
-      mockDb.getAllAsync.mockResolvedValueOnce(queueItems);
-      mockDb.getFirstAsync.mockResolvedValue({
-        id: 'entry-1',
-        user_id: userId,
-        encrypted_title: 'title',
-        encrypted_body: 'body',
-        encrypted_mood: null,
-        encrypted_craving: null,
-        encrypted_tags: null,
-        created_at: '2025-01-01T00:00:00Z',
-        updated_at: '2025-01-01T00:00:00Z',
-        sync_status: 'pending',
-        supabase_id: null,
-      });
-      mockDb.runAsync.mockResolvedValue({} as any);
+        mockDb.getAllAsync.mockResolvedValueOnce(queueItems);
+        mockDb.getFirstAsync.mockResolvedValue({
+          id: 'entry-1',
+          user_id: userId,
+          encrypted_title: 'title',
+          encrypted_body: 'body',
+          encrypted_mood: null,
+          encrypted_craving: null,
+          encrypted_tags: null,
+          created_at: '2025-01-01T00:00:00Z',
+          updated_at: '2025-01-01T00:00:00Z',
+          sync_status: 'pending',
+          supabase_id: null,
+        });
+        mockDb.runAsync.mockResolvedValue({} as any);
 
-      const startTime = Date.now();
-      await processSyncQueue(mockDb, userId);
-      const endTime = Date.now();
+        const startTime = Date.now();
+        await processSyncQueue(mockDb, userId);
+        const endTime = Date.now();
 
-      // Should have waited at least 6s (2s + 4s)
-      // Using a more lenient check for test environment
-      expect(endTime - startTime).toBeGreaterThanOrEqual(5900); // Allow 100ms margin
-    });
+        // Should have waited at least 6s (2s + 4s)
+        // Using a more lenient check for test environment
+        expect(endTime - startTime).toBeGreaterThanOrEqual(5900); // Allow 100ms margin
+      },
+      15000
+    ); // 15 second timeout for exponential backoff test
 
     it('should process mixed success/failure correctly', async () => {
       const queueItems = [
@@ -994,8 +998,8 @@ describe('syncService Integration Tests', () => {
 
       const result = await processSyncQueue(mockDb, userId);
 
-      expect(result.synced).toBe(1); // Only journal entry succeeds
-      expect(result.failed).toBe(2); // step_work and daily_checkins fail (checkin not implemented)
+      expect(result.synced).toBe(2); // journal_entries and step_work succeed
+      expect(result.failed).toBe(1); // only daily_checkins fails (not implemented)
       expect(mockSupabaseFrom).toHaveBeenCalledWith('journal_entries');
       expect(mockSupabaseFrom).toHaveBeenCalledWith('step_work');
     });

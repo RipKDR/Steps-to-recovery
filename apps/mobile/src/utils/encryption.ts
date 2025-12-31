@@ -1,28 +1,51 @@
 import * as Crypto from 'expo-crypto';
-import * as SecureStore from 'expo-secure-store';
 import CryptoJS from 'crypto-js';
+import { Platform } from 'react-native';
+import { secureStorage } from '../adapters/secureStorage';
 
 const ENCRYPTION_KEY_NAME = 'journal_encryption_key';
 const KEY_DERIVATION_ITERATIONS = 100000;
 
+/**
+ * Get random bytes in a platform-agnostic way
+ */
+async function getRandomBytes(length: number): Promise<Uint8Array> {
+  if (Platform.OS === 'web') {
+    return crypto.getRandomValues(new Uint8Array(length));
+  } else {
+    return await Crypto.getRandomBytesAsync(length);
+  }
+}
+
+/**
+ * Generate random UUID in a platform-agnostic way
+ */
+function generateUUID(): string {
+  if (Platform.OS === 'web') {
+    return crypto.randomUUID();
+  } else {
+    return Crypto.randomUUID();
+  }
+}
+
 export async function generateEncryptionKey(): Promise<string> {
-  const randomBytes = await Crypto.getRandomBytesAsync(32);
+  const randomBytes = await getRandomBytes(32);
   const randomString = Array.from(randomBytes).map(b => b.toString(16).padStart(2, '0')).join('');
-  const salt = Crypto.randomUUID();
+  const salt = generateUUID();
   const derivedKey = CryptoJS.PBKDF2(randomString, salt, { keySize: 256 / 32, iterations: KEY_DERIVATION_ITERATIONS }).toString();
-  await SecureStore.setItemAsync(ENCRYPTION_KEY_NAME, derivedKey);
-  await SecureStore.setItemAsync(`${ENCRYPTION_KEY_NAME}_salt`, salt);
+  await secureStorage.setItemAsync(ENCRYPTION_KEY_NAME, derivedKey);
+  await secureStorage.setItemAsync(`${ENCRYPTION_KEY_NAME}_salt`, salt);
   return derivedKey;
 }
 
 export async function getEncryptionKey(): Promise<string | null> {
-  return await SecureStore.getItemAsync(ENCRYPTION_KEY_NAME);
+  return await secureStorage.getItemAsync(ENCRYPTION_KEY_NAME);
 }
 
 export async function encryptContent(content: string): Promise<string> {
   const key = await getEncryptionKey();
   if (!key) throw new Error('Encryption key not found');
-  const ivBytes = await Crypto.getRandomBytesAsync(16);
+  const ivBytes = await getRandomBytes(16);
   const iv = Array.from(ivBytes).map(b => b.toString(16).padStart(2, '0')).join('');
   const ivWordArray = CryptoJS.enc.Hex.parse(iv);
   const keyWordArray = CryptoJS.enc.Hex.parse(key);
@@ -44,8 +67,8 @@ export async function decryptContent(encrypted: string): Promise<string> {
 }
 
 export async function deleteEncryptionKey(): Promise<void> {
-  await SecureStore.deleteItemAsync(ENCRYPTION_KEY_NAME);
-  await SecureStore.deleteItemAsync(`${ENCRYPTION_KEY_NAME}_salt`);
+  await secureStorage.deleteItemAsync(ENCRYPTION_KEY_NAME);
+  await secureStorage.deleteItemAsync(`${ENCRYPTION_KEY_NAME}_salt`);
 }
 
 export async function hasEncryptionKey(): Promise<boolean> {

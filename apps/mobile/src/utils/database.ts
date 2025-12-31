@@ -1,11 +1,11 @@
-import * as SQLite from 'expo-sqlite';
+import type { StorageAdapter } from '../adapters/storage';
 
 /**
- * Initialize SQLite database with schema for offline-first storage
+ * Initialize database with schema for offline-first storage
  * Creates tables for journal entries, step work, and user profile
- * Used by SQLiteProvider's onInit callback
+ * Works with both SQLite (mobile) and IndexedDB (web) via StorageAdapter
  */
-export async function initDatabase(db: SQLite.SQLiteDatabase): Promise<void> {
+export async function initDatabase(db: StorageAdapter): Promise<void> {
   // Create tables for offline storage with encryption
   await db.execAsync(`
     PRAGMA journal_mode = WAL;
@@ -98,7 +98,7 @@ export async function initDatabase(db: SQLite.SQLiteDatabase): Promise<void> {
 /**
  * Clear all local data (used for logout or account deletion)
  */
-export async function clearDatabase(db: SQLite.SQLiteDatabase): Promise<void> {
+export async function clearDatabase(db: StorageAdapter): Promise<void> {
   await db.execAsync(`
     DELETE FROM sync_queue;
     DELETE FROM achievements;

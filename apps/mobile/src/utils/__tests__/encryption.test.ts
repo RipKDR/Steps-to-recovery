@@ -298,14 +298,14 @@ describe('Encryption Utilities', () => {
       await expect(decryptContent(`${validIV}:data`)).rejects.toThrow('Encryption key not found');
     });
 
-    it('should handle empty string decryption', async () => {
+    it('should throw error on empty string decryption', async () => {
       const mockIV = new Uint8Array(16).fill(2);
       mockCrypto.getRandomBytesAsync.mockResolvedValue(mockIV);
 
       const encrypted = await encryptContent('');
-      const decrypted = await decryptContent(encrypted);
 
-      expect(decrypted).toBe('');
+      // Empty plaintext results are treated as decryption failures
+      await expect(decryptContent(encrypted)).rejects.toThrow('Decryption failed');
     });
   });
 

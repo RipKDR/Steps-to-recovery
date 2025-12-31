@@ -47,7 +47,46 @@
       "predictiveBackGestureEnabled": false
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro",
+      "output": "single",
+      "build": {
+        "babel": {
+          "include": [
+            "sql.js",
+            "idb"
+          ]
+        }
+      },
+      "config": {
+        "firebase": {
+          "measurementId": ""
+        }
+      },
+      "meta": {
+        "name": "Steps to Recovery",
+        "description": "A private, offline-first recovery companion app for addiction recovery",
+        "keywords": "recovery,addiction,sobriety,journal,12-step",
+        "theme-color": "#4F8FC0"
+      },
+      "pwa": {
+        "name": "Steps to Recovery",
+        "shortName": "Recovery",
+        "description": "Your private recovery companion",
+        "themeColor": "#4F8FC0",
+        "backgroundColor": "#FFFFFF",
+        "display": "standalone",
+        "startUrl": "/",
+        "scope": "/",
+        "icons": [
+          {
+            "src": "./assets/icon.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any maskable"
+          }
+        ]
+      }
     },
     "plugins": [
       "expo-secure-store",
@@ -63,6 +102,13 @@
         {
           "locationAlwaysAndWhenInUsePermission": "We use your location to notify you when you're near saved meeting locations to provide timely support.",
           "locationWhenInUsePermission": "We use your location to help you save meeting locations for geofencing support."
+        }
+      ],
+      [
+        "sentry-expo",
+        {
+          "organization": "steps-to-recovery",
+          "project": "mobile-app"
         }
       ]
     ],
