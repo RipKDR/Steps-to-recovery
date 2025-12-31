@@ -1,4 +1,3 @@
-import * as Crypto from 'expo-crypto';
 import CryptoJS from 'crypto-js';
 import { Platform } from 'react-native';
 import { secureStorage } from '../adapters/secureStorage';
@@ -13,6 +12,8 @@ async function getRandomBytes(length: number): Promise<Uint8Array> {
   if (Platform.OS === 'web') {
     return crypto.getRandomValues(new Uint8Array(length));
   } else {
+    // Dynamically import expo-crypto only on mobile
+    const Crypto = await import('expo-crypto');
     return await Crypto.getRandomBytesAsync(length);
   }
 }
@@ -20,10 +21,12 @@ async function getRandomBytes(length: number): Promise<Uint8Array> {
 /**
  * Generate random UUID in a platform-agnostic way
  */
-function generateUUID(): string {
+async function generateUUID(): Promise<string> {
   if (Platform.OS === 'web') {
     return crypto.randomUUID();
   } else {
+    // Dynamically import expo-crypto only on mobile
+    const Crypto = await import('expo-crypto');
     return Crypto.randomUUID();
   }
 }
@@ -31,7 +34,7 @@ function generateUUID(): string {
 export async function generateEncryptionKey(): Promise<string> {
   const randomBytes = await getRandomBytes(32);
   const randomString = Array.from(randomBytes).map(b => b.toString(16).padStart(2, '0')).join('');
-  const salt = generateUUID();
+  const salt = await generateUUID();
   const derivedKey = CryptoJS.PBKDF2(randomString, salt, { keySize: 256 / 32, iterations: KEY_DERIVATION_ITERATIONS }).toString();
   await secureStorage.setItemAsync(ENCRYPTION_KEY_NAME, derivedKey);
   await secureStorage.setItemAsync(`${ENCRYPTION_KEY_NAME}_salt`, salt);

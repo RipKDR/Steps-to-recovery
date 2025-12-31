@@ -19,7 +19,8 @@
       "Bash(npx tsc:*)",
       "Bash(npm test:*)",
       "Bash(npm run web:*)",
-      "Bash(npx expo install:*)"
+      "Bash(npx expo install:*)",
+      "Bash(cat:*)"
     ]
   },
   "outputStyle": "Explanatory"
