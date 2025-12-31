@@ -46,4 +46,30 @@ export const secureStorage = {
     const adapter = await getAdapter();
     return adapter.deleteItemAsync(key);
   },
+
+  /**
+   * Initialize secure storage with user session (web only, no-op on native)
+   * MUST be called after authentication on web platform
+   */
+  async initializeWithSession(userId: string, sessionToken: string): Promise<void> {
+    if (Platform.OS === 'web') {
+      const adapter = await getAdapter();
+      // Type assertion safe because we know it's WebSecureStorageAdapter
+      await (adapter as any).initializeWithSession(userId, sessionToken);
+    }
+    // Native platforms don't need initialization - they use system keystore
+  },
+
+  /**
+   * Clear session data (web only, no-op on native)
+   * MUST be called on logout to clear encryption keys
+   */
+  async clearSession(): Promise<void> {
+    if (Platform.OS === 'web') {
+      const adapter = await getAdapter();
+      // Type assertion safe because we know it's WebSecureStorageAdapter
+      (adapter as any).clearSession();
+    }
+    // Native platforms handle this automatically
+  },
 };

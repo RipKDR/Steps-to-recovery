@@ -4,6 +4,13 @@ import { logger } from '../utils/logger';
 
 interface Props {
   children: ReactNode;
+  /**
+   * Optional callback invoked when the user taps "Try Again".
+   * If provided, the parent is responsible for remounting the tree
+   * (e.g., by changing a key). If omitted, the boundary resets its
+   * internal state only.
+   */
+  onReset?: () => void;
 }
 
 interface State {
@@ -33,19 +40,24 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo): void {
-    // Log error without sensitive data
-    logger.error('React Error Boundary caught error', {
-      message: error.message,
-      stack: error.stack,
-      componentStack: errorInfo.componentStack,
-    });
+    // Pass error to sanitized logger - it will automatically redact sensitive data
+    logger.error('React Error Boundary caught error', error);
+
+    // Note: logger will sanitize error.message, error.stack, and exclude sensitive fields
+    // Component stack is intentionally NOT logged to prevent data leaks
   }
 
   handleReset = (): void => {
-    this.setState({
-      hasError: false,
-      error: null,
-    });
+    if (this.props.onReset) {
+      // Let the parent remount the entire tree (e.g., by changing a key)
+      this.props.onReset();
+    } else {
+      // Fallback: reset internal state only
+      this.setState({
+        hasError: false,
+        error: null,
+      });
+    }
   };
 
   render(): ReactNode {
@@ -61,7 +73,7 @@ export class ErrorBoundary extends Component<Props, State> {
             {__DEV__ && this.state.error && (
               <View style={styles.errorDetails}>
                 <Text style={styles.errorText}>
-                  {this.state.error.message}
+                  {this.state.error.name}: Generic error (message hidden for security)
                 </Text>
               </View>
             )}

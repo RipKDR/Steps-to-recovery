@@ -1,6 +1,8 @@
+import React, { useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useSQLiteContext } from 'expo-sqlite';
 import { logger } from '../../../utils/logger';
+import { scheduleAllMilestones, MILESTONE_DAYS } from '../../../services/notificationService';
 import type { UserProfile, Milestone } from '@repo/shared/types';
 
 /**
@@ -103,13 +105,47 @@ export function useCleanTime(userId: string): {
 }
 
 /**
- * Hook to check for new milestones
+ * Hook to check for new milestones and schedule celebration notifications
  */
 export function useMilestones(userId: string): {
   milestones: Milestone[];
   checkForNewMilestones: () => Promise<Milestone[]>;
+  newMilestone: Milestone | null;
 } {
   const db = useSQLiteContext();
+  const [newMilestone, setNewMilestone] = React.useState<Milestone | null>(null);
+  const hasScheduledNotifications = useRef(false);
+
+  /**
+   * Schedule milestone notifications on mount (only once)
+   */
+  useEffect(() => {
+    if (hasScheduledNotifications.current) return;
+
+    const scheduleMilestoneNotifications = async () => {
+      try {
+        const profile = await db.getFirstAsync<UserProfile>(
+          'SELECT * FROM user_profile WHERE id = ?',
+          [userId]
+        );
+
+        if (!profile?.sobriety_start_date) {
+          return;
+        }
+
+        // Schedule all future milestone notifications
+        const cleanSinceDate = new Date(profile.sobriety_start_date);
+        await scheduleAllMilestones(cleanSinceDate);
+
+        hasScheduledNotifications.current = true;
+        logger.info('Milestone notifications scheduled for user', { userId });
+      } catch (err) {
+        logger.error('Failed to schedule milestone notifications', err);
+      }
+    };
+
+    scheduleMilestoneNotifications();
+  }, [db, userId]);
 
   const checkForNewMilestones = async (): Promise<Milestone[]> => {
     try {
@@ -145,6 +181,9 @@ export function useMilestones(userId: string): {
         );
 
         logger.info('Milestone earned', { key: milestone.key, days: milestone.days });
+
+        // Set the most recent new milestone for celebration modal
+        setNewMilestone(milestone);
       }
 
       return newMilestones;
@@ -157,5 +196,6 @@ export function useMilestones(userId: string): {
   return {
     milestones: MILESTONES,
     checkForNewMilestones,
+    newMilestone,
   };
 }

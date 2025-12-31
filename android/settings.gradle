@@ -15,6 +15,12 @@ pluginManagement {
     "../android/expo-gradle-plugin"
   ).absolutePath
   includeBuild(expoPluginsPath)
+
+  repositories {
+    gradlePluginPortal()
+    google()
+    mavenCentral()
+  }
 }
 
 plugins {
@@ -31,7 +37,8 @@ extensions.configure(com.facebook.react.ReactSettingsExtension) { ex ->
 }
 expoAutolinking.useExpoModules()
 
-rootProject.name = 'steps-to-recovery-monorepo'
+// Keep this consistent with the app config name (and apps/mobile/android) to avoid confusing Gradle/IDE project naming.
+rootProject.name = 'Steps to Recovery'
 
 expoAutolinking.useExpoVersionCatalog()
 

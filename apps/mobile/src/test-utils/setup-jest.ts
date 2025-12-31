@@ -1,3 +1,47 @@
+// Mock React Native to avoid parsing Flow syntax issues
+jest.mock('react-native', () => {
+  const mock = {
+    Platform: {
+      OS: 'ios',
+      select: jest.fn((dict) => dict.ios || dict.default),
+    },
+    NativeModules: {},
+    Alert: {
+      alert: jest.fn(),
+    },
+    StyleSheet: {
+      create: (styles: any) => styles,
+      flatten: (style: any) => style,
+      compose: (...styles: any[]) => Object.assign({}, ...styles),
+    },
+    View: 'View',
+    Text: 'Text',
+    TextInput: 'TextInput',
+    Image: 'Image',
+    Pressable: 'Pressable',
+    Modal: 'Modal',
+    FlatList: 'FlatList',
+    SectionList: 'SectionList',
+    TouchableHighlight: 'TouchableHighlight',
+    TouchableWithoutFeedback: 'TouchableWithoutFeedback',
+    TouchableOpacity: 'TouchableOpacity',
+    ActivityIndicator: 'ActivityIndicator',
+    ScrollView: 'ScrollView',
+    SafeAreaView: 'SafeAreaView',
+  };
+
+  // @testing-library/react-native detects "host component" names by rendering core RN components.
+  // If any host component is missing from this mock, detection can fail with "Element type is invalid".
+  // Provide a safe fallback for any missing export by returning its name as a host component.
+  return new Proxy(mock, {
+    get(target, prop) {
+      if (prop in target) return (target as any)[prop];
+      if (typeof prop === 'string') return prop;
+      return undefined;
+    },
+  });
+});
+
 // Mock Expo modules before tests run
 jest.mock('expo-secure-store', () => ({
   getItemAsync: jest.fn(),

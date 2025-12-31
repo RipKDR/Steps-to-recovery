@@ -4,9 +4,9 @@
     "slug": "steps-to-recovery",
     "version": "1.0.0",
     "orientation": "portrait",
-    "entryPoint": "index.ts",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
+    "jsEngine": "hermes",
     "newArchEnabled": true,
     "splash": {
       "image": "./assets/splash-icon.png",
@@ -39,9 +39,7 @@
         "ACCESS_BACKGROUND_LOCATION",
         "POST_NOTIFICATIONS",
         "RECEIVE_BOOT_COMPLETED",
-        "SCHEDULE_EXACT_ALARM",
-        "android.permission.ACCESS_COARSE_LOCATION",
-        "android.permission.ACCESS_FINE_LOCATION"
+        "SCHEDULE_EXACT_ALARM"
       ],
       "edgeToEdgeEnabled": false,
       "predictiveBackGestureEnabled": false
@@ -102,13 +100,6 @@
         {
           "locationAlwaysAndWhenInUsePermission": "We use your location to notify you when you're near saved meeting locations to provide timely support.",
           "locationWhenInUsePermission": "We use your location to help you save meeting locations for geofencing support."
-        }
-      ],
-      [
-        "sentry-expo",
-        {
-          "organization": "steps-to-recovery",
-          "project": "mobile-app"
         }
       ]
     ],

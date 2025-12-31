@@ -1191,8 +1191,14 @@ describe('syncService Integration Tests', () => {
       mockDb.getAllAsync.mockResolvedValueOnce(queueItems);
 
       // Fail items 3, 5, 7
-      mockDb.getFirstAsync.mockImplementation(async (query, params) => {
-        const recordId = params[0] as string;
+      mockDb.getFirstAsync.mockImplementation(async (query: string, ...params: any[]) => {
+        // expo-sqlite typings can be either (query, ...bindParams) OR some callers pass a single params array.
+        const bindParams: any[] =
+          params.length === 1 && Array.isArray(params[0]) ? (params[0] as any[]) : params;
+
+        if (!bindParams || bindParams.length === 0) return null;
+
+        const recordId = bindParams[0] as string;
         if (['entry-3', 'entry-5', 'entry-7'].includes(recordId)) {
           return null; // Not found
         }

@@ -130,6 +130,14 @@ android {
     androidResources {
         ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:!CVS:!thumbs.db:!picasa.ini:!*~'
     }
+
+    // Ensure IDE/Gradle treat the React Native autolinking output as part of the app sources.
+    // This prevents "PackageList.java is not on the classpath of project app" warnings in the editor.
+    sourceSets {
+        main {
+            java.srcDir("$buildDir/generated/autolinking/src/main/java")
+        }
+    }
 }
 
 // Apply static values from `gradle.properties` to the `android.packagingOptions`

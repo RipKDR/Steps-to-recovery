@@ -63,9 +63,11 @@ Overall, the codebase is well-structured and follows React Native/Expo best prac
    - Add `apps/mobile/.env.example` with placeholder values
    - Document required environment variables
 
-2. **Add Runtime Error Boundary**
-   - Consider adding error boundary for better error handling
-   - Especially for Supabase connection errors
+2. **~~Add Runtime Error Boundary~~** ✅ IMPLEMENTED
+   - An `ErrorBoundary` component now wraps the entire app tree
+   - Upgraded with full-remount recovery: tapping "Try Again" remounts all providers and resets the query cache
+   - Privacy-first: errors are logged locally only (no Sentry reporting)
+   - Unit tests added: `apps/mobile/src/components/__tests__/ErrorBoundary.test.tsx`
 
 ### Medium Priority
 
@@ -84,8 +86,8 @@ Overall, the codebase is well-structured and follows React Native/Expo best prac
    - Overall documentation is good
 
 6. **Testing**
-   - No test files found (expected for Phase 1)
-   - Consider adding tests in Phase 5
+   - Unit tests exist for select components (e.g., `SyncStatusIndicator`, `ErrorBoundary`, `encryption`, `syncService`)
+   - Consider expanding test coverage in future phases
 
 ---
 
@@ -118,10 +120,10 @@ The linter shows 113 errors in `node_modules/@react-native-community/datetimepic
 ## ✅ Files Reviewed
 
 ### Source Files (All Clean)
-- ✅ `App.tsx` - Clean
+- ✅ `App.tsx` - Clean (upgraded with resetKey-based full remount on error recovery)
 - ✅ `src/contexts/*` - All clean
 - ✅ `src/navigation/*` - All clean
-- ✅ `src/components/*` - All clean
+- ✅ `src/components/*` - All clean (`ErrorBoundary` upgraded with `onReset` prop)
 - ✅ `src/features/auth/screens/*` - All clean
 - ✅ `src/utils/*` - All clean
 - ✅ `src/lib/supabase.ts` - Fixed env validation

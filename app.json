@@ -1,5 +1,7 @@
 {
   "expo": {
+    "name": "Steps to Recovery",
+    "slug": "steps-to-recovery",
     "extra": {
       "eas": {
         "projectId": "34b9f1fa-9d9d-455d-bdf2-7323eb775d7a"

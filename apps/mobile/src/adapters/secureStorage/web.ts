@@ -7,6 +7,7 @@
  */
 
 import type { SecureStorageAdapter } from './types';
+import { logger } from '../../utils/logger';
 
 const STORAGE_PREFIX = 'secure_';
 const CRYPTO_ALGORITHM = 'AES-GCM';
@@ -14,27 +15,60 @@ const KEY_LENGTH = 256;
 
 export class WebSecureStorageAdapter implements SecureStorageAdapter {
   private masterKey: CryptoKey | null = null;
+  private userId: string | null = null;
+  private sessionToken: string | null = null;
 
   /**
-   * Derive master encryption key from session
-   * In production, this should use user password or session token
+   * Initialize storage with user session (REQUIRED before use)
+   * Derives a user-specific master key from the session token
+   */
+  async initializeWithSession(userId: string, sessionToken: string): Promise<void> {
+    // Clear old key if switching users
+    if (this.userId !== userId) {
+      this.masterKey = null;
+    }
+
+    this.userId = userId;
+    this.sessionToken = sessionToken;
+
+    // Derive new master key immediately
+    await this.getMasterKey();
+  }
+
+  /**
+   * Clear session and master key (call on logout)
+   */
+  clearSession(): void {
+    this.masterKey = null;
+    this.userId = null;
+    this.sessionToken = null;
+  }
+
+  /**
+   * Derive master encryption key from user's session token
+   * Each user gets a unique key derived from their session
    */
   private async getMasterKey(): Promise<CryptoKey> {
     if (this.masterKey) return this.masterKey;
 
-    // For now, use a static key (in production, derive from user password)
+    if (!this.sessionToken || !this.userId) {
+      throw new Error('SecureStorage not initialized. Call initializeWithSession() first.');
+    }
+
+    // Import session token as key material
     const keyMaterial = await window.crypto.subtle.importKey(
       'raw',
-      new TextEncoder().encode('static-master-key-change-in-production'),
+      new TextEncoder().encode(this.sessionToken),
       { name: 'PBKDF2' },
       false,
       ['deriveKey']
     );
 
+    // Use user-specific salt
     this.masterKey = await window.crypto.subtle.deriveKey(
       {
         name: 'PBKDF2',
-        salt: new TextEncoder().encode('recovery-app-salt'),
+        salt: new TextEncoder().encode(`recovery-app-${this.userId}`),
         iterations: 100000,
         hash: 'SHA-256',
       },
@@ -67,7 +101,8 @@ export class WebSecureStorageAdapter implements SecureStorageAdapter {
 
       return new TextDecoder().decode(decrypted);
     } catch (error) {
-      console.error('Failed to decrypt secure storage item:', error);
+      // Use sanitized logger to prevent data leaks
+      logger.error('Failed to decrypt secure storage item', error);
       return null;
     }
   }

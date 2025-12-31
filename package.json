@@ -14,10 +14,11 @@
     "clean": "turbo run clean",
     "mobile": "cd apps/mobile && npm start",
     "web": "cd apps/web && npm run dev",
-    "android": "expo run:android",
-    "ios": "expo run:ios"
+    "android": "cd apps/mobile && npx expo run:android",
+    "ios": "cd apps/mobile && npx expo run:ios"
   },
   "devDependencies": {
+    "@types/sql.js": "^1.4.9",
     "turbo": "^1.11.0",
     "typescript": "^5.3.0"
   },
@@ -25,11 +26,11 @@
     "node": ">=20.0.0"
   },
   "dependencies": {
-    "expo-dev-client": "~6.0.20",
-    "expo-insights": "~0.10.8",
     "expo": "~54.0.30",
-    "react": "19.2.3",
-    "react-dom": "19.2.3",
+    "expo-dev-client": "~6.0.20",
+    "expo-insights": "^0.10.8",
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
     "react-native": "0.81.5"
   }
 }

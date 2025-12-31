@@ -49,7 +49,7 @@ describe('SyncStatusIndicator', () => {
         expect(getByText('Sync paused')).toBeTruthy();
 
         // Verify icon props
-        const icon = UNSAFE_getByType('MaterialCommunityIcons');
+        const icon = UNSAFE_getByType('MaterialCommunityIcons' as any);
         expect(icon.props.name).toBe('cloud-off-outline');
         expect(icon.props.color).toBe('#9E9E9E'); // Gray
       });
@@ -91,7 +91,7 @@ describe('SyncStatusIndicator', () => {
         expect(getByText('3 items')).toBeTruthy();
 
         // Verify ActivityIndicator is rendered
-        const spinner = UNSAFE_getByType('ActivityIndicator');
+        const spinner = UNSAFE_getByType('ActivityIndicator' as any);
         expect(spinner.props.size).toBe(20);
         expect(spinner.props.color).toBe('#2196F3'); // Blue
       });
@@ -148,7 +148,7 @@ describe('SyncStatusIndicator', () => {
         expect(getByText('Tap to retry')).toBeTruthy();
 
         // Verify icon props
-        const icon = UNSAFE_getByType('MaterialCommunityIcons');
+        const icon = UNSAFE_getByType('MaterialCommunityIcons' as any);
         expect(icon.props.name).toBe('cloud-alert');
         expect(icon.props.color).toBe('#F44336'); // Red
       });
@@ -190,7 +190,7 @@ describe('SyncStatusIndicator', () => {
         expect(getByText('Tap to sync')).toBeTruthy();
 
         // Verify icon props
-        const icon = UNSAFE_getByType('MaterialCommunityIcons');
+        const icon = UNSAFE_getByType('MaterialCommunityIcons' as any);
         expect(icon.props.name).toBe('cloud-upload-outline');
         expect(icon.props.color).toBe('#FF9800'); // Orange
       });
@@ -246,7 +246,7 @@ describe('SyncStatusIndicator', () => {
         expect(getByText('Synced')).toBeTruthy();
 
         // Verify icon props
-        const icon = UNSAFE_getByType('MaterialCommunityIcons');
+        const icon = UNSAFE_getByType('MaterialCommunityIcons' as any);
         expect(icon.props.name).toBe('cloud-check');
         expect(icon.props.color).toBe('#4CAF50'); // Green
       });
@@ -263,14 +263,14 @@ describe('SyncStatusIndicator', () => {
       });
 
       it('should show last sync time as subtext', () => {
-        // Mock current time for consistent testing
-        const mockNow = new Date('2025-12-31T12:05:00Z'); // 5 minutes after last sync
-        jest.spyOn(global, 'Date').mockImplementation(() => mockNow as any);
+        // Freeze time for consistent testing
+        jest.useFakeTimers();
+        jest.setSystemTime(new Date('2025-12-31T12:05:00Z')); // 5 minutes after last sync
 
         const { getByText } = render(<SyncStatusIndicator />);
         expect(getByText('5m ago')).toBeTruthy();
 
-        jest.restoreAllMocks();
+        jest.useRealTimers();
       });
 
       it('should show "Never" when lastSyncTime is null', () => {
@@ -291,7 +291,7 @@ describe('SyncStatusIndicator', () => {
   });
 
   describe('Time Formatting', () => {
-    const setupSyncedState = (lastSyncTime: Date) => {
+    const setupSyncedState = (lastSyncTime: Date | null) => {
       mockUseSync.mockReturnValue({
         isSyncing: false,
         lastSyncTime,
@@ -304,19 +304,13 @@ describe('SyncStatusIndicator', () => {
     };
 
     beforeEach(() => {
-      // Mock current time
-      jest.spyOn(global, 'Date').mockImplementation(
-        ((...args: any[]) => {
-          if (args.length === 0) {
-            return new Date('2025-12-31T12:00:00Z');
-          }
-          return new (Date as any)(...args);
-        }) as any
-      );
+      // Freeze current time so formatSyncTime() is deterministic
+      jest.useFakeTimers();
+      jest.setSystemTime(new Date('2025-12-31T12:00:00Z'));
     });
 
     afterEach(() => {
-      jest.restoreAllMocks();
+      jest.useRealTimers();
     });
 
     it('should display "Just now" for < 1 minute', () => {
@@ -363,7 +357,7 @@ describe('SyncStatusIndicator', () => {
     });
 
     it('should display "Never" when lastSyncTime is null', () => {
-      setupSyncedState(null as any);
+      setupSyncedState(null);
       const { getByText } = render(<SyncStatusIndicator />);
       expect(getByText('Never')).toBeTruthy();
     });
@@ -438,10 +432,10 @@ describe('SyncStatusIndicator', () => {
         clearError: jest.fn(),
       });
 
-      const { getByText } = render(<SyncStatusIndicator />);
-      const touchable = getByText('Offline').parent?.parent;
+      const { UNSAFE_getByType } = render(<SyncStatusIndicator />);
+      const touchable = UNSAFE_getByType('TouchableOpacity' as any);
 
-      expect(touchable?.props.disabled).toBe(true);
+      expect(touchable.props.disabled).toBe(true);
     });
 
     it('should have disabled state when syncing', () => {
@@ -455,10 +449,10 @@ describe('SyncStatusIndicator', () => {
         clearError: jest.fn(),
       });
 
-      const { getByText } = render(<SyncStatusIndicator />);
-      const touchable = getByText('Syncing...').parent?.parent;
+      const { UNSAFE_getByType } = render(<SyncStatusIndicator />);
+      const touchable = UNSAFE_getByType('TouchableOpacity' as any);
 
-      expect(touchable?.props.disabled).toBe(true);
+      expect(touchable.props.disabled).toBe(true);
     });
 
     it('should have activeOpacity of 0.7 for visual feedback', () => {
@@ -472,10 +466,10 @@ describe('SyncStatusIndicator', () => {
         clearError: jest.fn(),
       });
 
-      const { getByText } = render(<SyncStatusIndicator />);
-      const touchable = getByText('Synced').parent?.parent;
+      const { UNSAFE_getByType } = render(<SyncStatusIndicator />);
+      const touchable = UNSAFE_getByType('TouchableOpacity' as any);
 
-      expect(touchable?.props.activeOpacity).toBe(0.7);
+      expect(touchable.props.activeOpacity).toBe(0.7);
     });
 
     it('should trigger sync from error state', () => {
@@ -581,8 +575,6 @@ describe('SyncStatusIndicator', () => {
 
   describe('Real-time Updates', () => {
     it('should update when pendingCount changes', () => {
-      const { getByText, rerender } = render(<SyncStatusIndicator />);
-
       // Initial state: 0 pending
       mockUseSync.mockReturnValue({
         isSyncing: false,
@@ -594,7 +586,7 @@ describe('SyncStatusIndicator', () => {
         clearError: jest.fn(),
       });
 
-      rerender(<SyncStatusIndicator />);
+      const { getByText, rerender } = render(<SyncStatusIndicator />);
       expect(getByText('Synced')).toBeTruthy();
 
       // Update to 3 pending
@@ -613,8 +605,6 @@ describe('SyncStatusIndicator', () => {
     });
 
     it('should update when isOnline changes', () => {
-      const { getByText, rerender, UNSAFE_getByType } = render(<SyncStatusIndicator />);
-
       // Initial state: online
       mockUseSync.mockReturnValue({
         isSyncing: false,
@@ -626,7 +616,7 @@ describe('SyncStatusIndicator', () => {
         clearError: jest.fn(),
       });
 
-      rerender(<SyncStatusIndicator />);
+      const { getByText, rerender, UNSAFE_getByType } = render(<SyncStatusIndicator />);
       expect(getByText('Synced')).toBeTruthy();
 
       // Update to offline
@@ -643,14 +633,12 @@ describe('SyncStatusIndicator', () => {
       rerender(<SyncStatusIndicator />);
       expect(getByText('Offline')).toBeTruthy();
 
-      const icon = UNSAFE_getByType('MaterialCommunityIcons');
+      const icon = UNSAFE_getByType('MaterialCommunityIcons' as any);
       expect(icon.props.name).toBe('cloud-off-outline');
       expect(icon.props.color).toBe('#9E9E9E');
     });
 
     it('should update when isSyncing changes', () => {
-      const { getByText, rerender, UNSAFE_queryByType } = render(<SyncStatusIndicator />);
-
       // Initial state: not syncing
       mockUseSync.mockReturnValue({
         isSyncing: false,
@@ -662,7 +650,7 @@ describe('SyncStatusIndicator', () => {
         clearError: jest.fn(),
       });
 
-      rerender(<SyncStatusIndicator />);
+      const { getByText, rerender, UNSAFE_queryByType } = render(<SyncStatusIndicator />);
       expect(getByText('2 Pending')).toBeTruthy();
 
       // Update to syncing
@@ -678,12 +666,10 @@ describe('SyncStatusIndicator', () => {
 
       rerender(<SyncStatusIndicator />);
       expect(getByText('Syncing...')).toBeTruthy();
-      expect(UNSAFE_queryByType('ActivityIndicator')).toBeTruthy();
+      expect(UNSAFE_queryByType('ActivityIndicator' as any)).toBeTruthy();
     });
 
     it('should update when error state changes', () => {
-      const { getByText, rerender } = render(<SyncStatusIndicator />);
-
       // Initial state: no error
       mockUseSync.mockReturnValue({
         isSyncing: false,
@@ -695,7 +681,7 @@ describe('SyncStatusIndicator', () => {
         clearError: jest.fn(),
       });
 
-      rerender(<SyncStatusIndicator />);
+      const { getByText, rerender } = render(<SyncStatusIndicator />);
       expect(getByText('Synced')).toBeTruthy();
 
       // Update to error
@@ -715,16 +701,8 @@ describe('SyncStatusIndicator', () => {
     });
 
     it('should update when lastSyncTime changes', () => {
-      jest.spyOn(global, 'Date').mockImplementation(
-        ((...args: any[]) => {
-          if (args.length === 0) {
-            return new Date('2025-12-31T12:00:00Z');
-          }
-          return new (Date as any)(...args);
-        }) as any
-      );
-
-      const { getByText, rerender } = render(<SyncStatusIndicator />);
+      jest.useFakeTimers();
+      jest.setSystemTime(new Date('2025-12-31T12:00:00Z'));
 
       // Initial state: never synced
       mockUseSync.mockReturnValue({
@@ -737,7 +715,7 @@ describe('SyncStatusIndicator', () => {
         clearError: jest.fn(),
       });
 
-      rerender(<SyncStatusIndicator />);
+      const { getByText, rerender } = render(<SyncStatusIndicator />);
       expect(getByText('Never')).toBeTruthy();
 
       // Update to recently synced
@@ -754,7 +732,7 @@ describe('SyncStatusIndicator', () => {
       rerender(<SyncStatusIndicator />);
       expect(getByText('5m ago')).toBeTruthy();
 
-      jest.restoreAllMocks();
+      jest.useRealTimers();
     });
   });
 

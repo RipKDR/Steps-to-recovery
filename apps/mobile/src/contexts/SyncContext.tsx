@@ -4,7 +4,9 @@ import NetInfo from '@react-native-community/netinfo';
 import { useSQLiteContext } from 'expo-sqlite';
 import { processSyncQueue } from '../services/syncService';
 import { useAuth } from './AuthContext';
+import { clearDatabase } from '../utils/database';
 import { logger } from '../utils/logger';
+import type { StorageAdapter } from '../adapters/storage';
 
 interface SyncState {
   isSyncing: boolean;
@@ -27,6 +29,10 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
   const db = useSQLiteContext();
   const { user } = useAuth();
   const syncIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const isOnlineRef = useRef<boolean>(false);
+  const isSyncingRef = useRef<boolean>(false);
+  const triggerSyncRef = useRef<() => Promise<void>>(async () => {});
+  const userIdRef = useRef<string | null>(null);
 
   const [state, setState] = useState<SyncState>({
     isSyncing: false,
@@ -35,6 +41,17 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
     error: null,
     isOnline: false,
   });
+
+  // Keep refs in sync so background listeners always see the latest state
+  useEffect(() => {
+    isOnlineRef.current = state.isOnline;
+  }, [state.isOnline]);
+  useEffect(() => {
+    isSyncingRef.current = state.isSyncing;
+  }, [state.isSyncing]);
+  useEffect(() => {
+    userIdRef.current = user?.id ?? null;
+  }, [user?.id]);
 
   /**
    * Update pending count from sync_queue
@@ -61,7 +78,7 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    if (!state.isOnline) {
+    if (!isOnlineRef.current) {
       logger.info('Cannot sync: device is offline');
       setState((prev) => ({
         ...prev,
@@ -70,12 +87,13 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    if (state.isSyncing) {
+    if (isSyncingRef.current) {
       logger.info('Sync already in progress, skipping');
       return;
     }
 
     setState((prev) => ({ ...prev, isSyncing: true, error: null }));
+    isSyncingRef.current = true;
 
     try {
       logger.info('Starting sync process');
@@ -92,6 +110,7 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
         lastSyncTime: new Date(),
         error: result.errors.length > 0 ? new Error(result.errors.join(', ')) : null,
       }));
+      isSyncingRef.current = false;
 
       // Update pending count after sync
       await updatePendingCount();
@@ -102,8 +121,14 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
         isSyncing: false,
         error: error instanceof Error ? error : new Error('Sync failed'),
       }));
+      isSyncingRef.current = false;
     }
-  }, [db, user, state.isOnline, state.isSyncing, updatePendingCount]);
+  }, [db, user, updatePendingCount]);
+
+  // Expose latest triggerSync to effects without re-subscribing them
+  useEffect(() => {
+    triggerSyncRef.current = triggerSync;
+  }, [triggerSync]);
 
   const clearError = useCallback(() => {
     setState((prev) => ({ ...prev, error: null }));
@@ -113,30 +138,60 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
    * Set up network listener
    */
   useEffect(() => {
-    const unsubscribe = NetInfo.addEventListener((state) => {
-      const isOnline = state.isConnected === true && state.isInternetReachable === true;
+    const unsubscribe = NetInfo.addEventListener((netState) => {
+      const isConnected = netState.isConnected;
+      const isInternetReachable = netState.isInternetReachable;
+      const nextOnline = isConnected === true && isInternetReachable === true;
 
-      setState((prev) => {
-        const wasOffline = !prev.isOnline;
-        const nowOnline = isOnline;
+      // Deduplicate noisy NetInfo events (it can emit the same state many times)
+      if (nextOnline === isOnlineRef.current) {
+        return;
+      }
 
-        logger.info('Network state changed', {
-          isConnected: state.isConnected,
-          isInternetReachable: state.isInternetReachable,
-        });
+      const prevOnline = isOnlineRef.current;
+      isOnlineRef.current = nextOnline;
 
-        // Trigger sync when coming back online
-        if (nowOnline && wasOffline && user) {
-          logger.info('Device came online, triggering sync');
-          triggerSync();
-        }
-
-        return { ...prev, isOnline };
+      logger.info('Network state changed', {
+        isConnected,
+        isInternetReachable,
       });
+
+      setState((prev) => (prev.isOnline === nextOnline ? prev : { ...prev, isOnline: nextOnline }));
+
+      // Trigger sync only on offline -> online transitions
+      if (nextOnline && !prevOnline && userIdRef.current) {
+        logger.info('Device came online, triggering sync');
+        void triggerSyncRef.current();
+      }
     });
 
     return () => unsubscribe();
-  }, [user, triggerSync]);
+  }, []);
+
+  /**
+   * Clear database when user logs out
+   */
+  useEffect(() => {
+    const previousUser = userIdRef.current;
+
+    // If we had a user and now don't (logout), clear the database
+    if (previousUser && !user) {
+      logger.info('User logged out, clearing local database');
+
+      // Create adapter wrapper for the raw SQLite database
+      const adapter: StorageAdapter = {
+        getAllAsync: (query, params) => db.getAllAsync(query, params || []),
+        getFirstAsync: (query, params) => db.getFirstAsync(query, params || []),
+        runAsync: async (query, params) => { await db.runAsync(query, params || []); },
+        execAsync: (sql) => db.execAsync(sql),
+        withTransactionAsync: (callback) => db.withTransactionAsync(callback),
+      };
+
+      clearDatabase(adapter).catch((error) => {
+        logger.error('Failed to clear database on logout', error);
+      });
+    }
+  }, [user, db]);
 
   /**
    * Set up periodic background sync (every 5 minutes when online)
