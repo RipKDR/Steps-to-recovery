@@ -27,11 +27,11 @@ export function JournalListScreen({ userId }: JournalListScreenProps): React.Rea
   });
 
   const handleNewEntry = (): void => {
-    navigation.navigate('JournalEditor' as never, { userId, mode: 'create' } as never);
+    (navigation.navigate as (screen: string, params?: Record<string, unknown>) => void)('JournalEditor', { userId, mode: 'create' });
   };
 
   const handleEntryPress = (entry: JournalEntryDecrypted): void => {
-    navigation.navigate('JournalEditor' as never, { userId, mode: 'edit', entryId: entry.id } as never);
+    (navigation.navigate as (screen: string, params?: Record<string, unknown>) => void)('JournalEditor', { userId, mode: 'edit', entryId: entry.id });
   };
 
   const renderItem = ({ item }: { item: JournalEntryDecrypted }): React.ReactElement => (

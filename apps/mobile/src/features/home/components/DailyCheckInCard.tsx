@@ -20,11 +20,11 @@ export function DailyCheckInCard({
   const navigation = useNavigation();
 
   const handleMorningCheckIn = (): void => {
-    navigation.navigate('MorningIntention' as never, { userId } as never);
+    (navigation.navigate as (screen: string, params?: Record<string, unknown>) => void)('MorningIntention', { userId });
   };
 
   const handleEveningCheckIn = (): void => {
-    navigation.navigate('EveningPulse' as never, { userId } as never);
+    (navigation.navigate as (screen: string, params?: Record<string, unknown>) => void)('EveningPulse', { userId });
   };
 
   if (isLoading) {

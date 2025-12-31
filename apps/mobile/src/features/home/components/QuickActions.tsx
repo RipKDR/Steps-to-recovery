@@ -51,7 +51,7 @@ export function QuickActions({ userId }: QuickActionsProps): React.ReactElement 
   const navigation = useNavigation();
 
   const handleActionPress = (screen: string): void => {
-    navigation.navigate(screen as never, { userId } as never);
+    (navigation.navigate as (screen: string, params?: Record<string, unknown>) => void)(screen, { userId });
   };
 
   return (
