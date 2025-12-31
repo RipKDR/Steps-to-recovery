@@ -45,3 +45,9 @@ yarn-error.log*
 
 # OS
 Thumbs.db
+
+# React Native debug files
+apps/mobile/android.os.*
+apps/mobile/android.view.*
+apps/mobile/com.facebook.*
+apps/mobile/bugreport-*.zip
