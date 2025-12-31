@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSQLiteContext } from 'expo-sqlite';
 import { decryptContent, encryptContent } from '../../../utils/encryption';
 import { logger } from '../../../utils/logger';
+import { addToSyncQueue } from '../../../services/syncService';
 import type { StepWork, StepWorkDecrypted } from '@repo/shared/types';
 
 /**
@@ -93,6 +94,9 @@ export function useSaveStepAnswer(userId: string): {
             'UPDATE step_work SET encrypted_answer = ?, is_complete = ?, completed_at = ?, updated_at = ?, sync_status = ? WHERE user_id = ? AND step_number = ? AND question_number = ?',
             [encrypted_answer, isComplete ? 1 : 0, isComplete ? now : null, now, 'pending', userId, stepNumber, questionNumber]
           );
+
+          // Add to sync queue for cloud backup
+          await addToSyncQueue(db, 'step_work', existing.id, 'update');
         } else {
           // Create new answer
           const id = `step_${Date.now()}_${Math.random().toString(36).substring(7)}`;
@@ -100,6 +104,9 @@ export function useSaveStepAnswer(userId: string): {
             'INSERT INTO step_work (id, user_id, step_number, question_number, encrypted_answer, is_complete, completed_at, created_at, updated_at, sync_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
             [id, userId, stepNumber, questionNumber, encrypted_answer, isComplete ? 1 : 0, isComplete ? now : null, now, now, 'pending']
           );
+
+          // Add to sync queue for cloud backup
+          await addToSyncQueue(db, 'step_work', id, 'insert');
         }
 
         logger.info('Step answer saved', { stepNumber, questionNumber });

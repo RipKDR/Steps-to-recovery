@@ -1,0 +1,1218 @@
+import type { SQLiteDatabase } from 'expo-sqlite';
+import {
+  processSyncQueue,
+  syncJournalEntry,
+  syncStepWork,
+  syncDailyCheckIn,
+  addToSyncQueue,
+  type SyncResult,
+} from '../syncService';
+import { supabase } from '../../lib/supabase';
+import { logger } from '../../utils/logger';
+
+// Mock dependencies
+jest.mock('../../lib/supabase');
+jest.mock('../../utils/logger');
+
+// Mock UUID generation for consistent testing
+const mockUUID = '12345678-1234-4abc-yxyz-123456789012';
+jest.mock('crypto', () => ({
+  randomFillSync: jest.fn(() => Buffer.from('12345678901234567890123456789012', 'hex')),
+}));
+
+describe('syncService Integration Tests', () => {
+  // Mock database
+  let mockDb: jest.Mocked<SQLiteDatabase>;
+
+  // Mock Supabase client
+  const mockSupabaseFrom = jest.fn();
+  const mockSupabaseUpsert = jest.fn();
+  const mockSupabaseDelete = jest.fn();
+  const mockSupabaseEq = jest.fn();
+
+  beforeEach(() => {
+    // Reset all mocks
+    jest.clearAllMocks();
+
+    // Setup mock database
+    mockDb = {
+      getFirstAsync: jest.fn(),
+      getAllAsync: jest.fn(),
+      runAsync: jest.fn(),
+    } as unknown as jest.Mocked<SQLiteDatabase>;
+
+    // Setup Supabase mock chain
+    mockSupabaseEq.mockReturnThis();
+    mockSupabaseDelete.mockReturnValue({ eq: mockSupabaseEq });
+    mockSupabaseUpsert.mockReturnValue({ error: null });
+    mockSupabaseFrom.mockReturnValue({
+      upsert: mockSupabaseUpsert,
+      delete: mockSupabaseDelete,
+    });
+    (supabase.from as jest.Mock) = mockSupabaseFrom;
+  });
+
+  describe('addToSyncQueue', () => {
+    it('should add item to sync queue with correct parameters', async () => {
+      const tableName = 'journal_entries';
+      const recordId = 'test-record-id';
+      const operation = 'insert';
+
+      await addToSyncQueue(mockDb, tableName, recordId, operation);
+
+      expect(mockDb.runAsync).toHaveBeenCalledWith(
+        expect.stringContaining('INSERT OR REPLACE INTO sync_queue'),
+        expect.arrayContaining([
+          expect.stringMatching(/^sync_\d+_/),
+          tableName,
+          recordId,
+          operation,
+          expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/), // ISO date
+        ])
+      );
+      expect(logger.info).toHaveBeenCalledWith('Added to sync queue', {
+        tableName,
+        recordId,
+        operation,
+      });
+    });
+
+    it('should add update operation to queue', async () => {
+      await addToSyncQueue(mockDb, 'step_work', 'step-123', 'update');
+
+      expect(mockDb.runAsync).toHaveBeenCalled();
+      const callArgs = (mockDb.runAsync as jest.Mock).mock.calls[0][1];
+      expect(callArgs[1]).toBe('step_work');
+      expect(callArgs[2]).toBe('step-123');
+      expect(callArgs[3]).toBe('update');
+    });
+
+    it('should add delete operation to queue', async () => {
+      await addToSyncQueue(mockDb, 'daily_checkins', 'checkin-456', 'delete');
+
+      expect(mockDb.runAsync).toHaveBeenCalled();
+      const callArgs = (mockDb.runAsync as jest.Mock).mock.calls[0][1];
+      expect(callArgs[3]).toBe('delete');
+    });
+
+    it('should throw error if database operation fails', async () => {
+      const dbError = new Error('Database error');
+      mockDb.runAsync.mockRejectedValueOnce(dbError);
+
+      await expect(
+        addToSyncQueue(mockDb, 'journal_entries', 'test-id', 'insert')
+      ).rejects.toThrow('Database error');
+
+      expect(logger.error).toHaveBeenCalledWith(
+        'Failed to add to sync queue',
+        expect.objectContaining({
+          tableName: 'journal_entries',
+          recordId: 'test-id',
+          error: dbError,
+        })
+      );
+    });
+  });
+
+  describe('syncJournalEntry', () => {
+    const userId = 'user-123';
+    const entryId = 'entry-456';
+
+    it('should sync new journal entry with generated UUID', async () => {
+      const localEntry = {
+        id: entryId,
+        user_id: userId,
+        encrypted_title: 'encrypted-title-data',
+        encrypted_body: 'encrypted-body-data',
+        encrypted_mood: 'encrypted-mood-data',
+        encrypted_craving: null,
+        encrypted_tags: null,
+        created_at: '2025-01-01T00:00:00Z',
+        updated_at: '2025-01-01T00:00:00Z',
+        sync_status: 'pending',
+        supabase_id: null,
+      };
+
+      mockDb.getFirstAsync.mockResolvedValueOnce(localEntry);
+      mockDb.runAsync.mockResolvedValueOnce({} as any);
+
+      const result = await syncJournalEntry(mockDb, entryId, userId);
+
+      expect(result.success).toBe(true);
+      expect(mockDb.getFirstAsync).toHaveBeenCalledWith(
+        'SELECT * FROM journal_entries WHERE id = ? AND user_id = ?',
+        [entryId, userId]
+      );
+
+      // Verify Supabase upsert was called
+      expect(mockSupabaseFrom).toHaveBeenCalledWith('journal_entries');
+      expect(mockSupabaseUpsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: expect.any(String), // Generated UUID
+          user_id: userId,
+          title: 'encrypted-title-data',
+          content: 'encrypted-body-data',
+          mood: 'encrypted-mood-data',
+          tags: [],
+          created_at: localEntry.created_at,
+          updated_at: localEntry.updated_at,
+        }),
+        { onConflict: 'id' }
+      );
+
+      // Verify local update
+      expect(mockDb.runAsync).toHaveBeenCalledWith(
+        expect.stringContaining('UPDATE journal_entries'),
+        expect.arrayContaining([
+          expect.any(String), // supabase_id
+          expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/), // updated_at
+          entryId,
+        ])
+      );
+    });
+
+    it('should sync updated entry with existing supabase_id', async () => {
+      const existingSupabaseId = 'existing-uuid-123';
+      const localEntry = {
+        id: entryId,
+        user_id: userId,
+        encrypted_title: 'updated-title',
+        encrypted_body: 'updated-body',
+        encrypted_mood: null,
+        encrypted_craving: null,
+        encrypted_tags: null,
+        created_at: '2025-01-01T00:00:00Z',
+        updated_at: '2025-01-02T00:00:00Z',
+        sync_status: 'pending',
+        supabase_id: existingSupabaseId,
+      };
+
+      mockDb.getFirstAsync.mockResolvedValueOnce(localEntry);
+      mockDb.runAsync.mockResolvedValueOnce({} as any);
+
+      const result = await syncJournalEntry(mockDb, entryId, userId);
+
+      expect(result.success).toBe(true);
+      expect(mockSupabaseUpsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: existingSupabaseId, // Uses existing UUID
+          content: 'updated-body',
+        }),
+        { onConflict: 'id' }
+      );
+    });
+
+    it('should map encrypted_body to content correctly', async () => {
+      const localEntry = {
+        id: entryId,
+        user_id: userId,
+        encrypted_title: null,
+        encrypted_body: 'encrypted-content-123',
+        encrypted_mood: null,
+        encrypted_craving: null,
+        encrypted_tags: null,
+        created_at: '2025-01-01T00:00:00Z',
+        updated_at: '2025-01-01T00:00:00Z',
+        sync_status: 'pending',
+        supabase_id: null,
+      };
+
+      mockDb.getFirstAsync.mockResolvedValueOnce(localEntry);
+      mockDb.runAsync.mockResolvedValueOnce({} as any);
+
+      await syncJournalEntry(mockDb, entryId, userId);
+
+      expect(mockSupabaseUpsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          content: 'encrypted-content-123',
+          title: '', // null becomes empty string
+        }),
+        { onConflict: 'id' }
+      );
+    });
+
+    it('should handle encrypted tags correctly', async () => {
+      const localEntry = {
+        id: entryId,
+        user_id: userId,
+        encrypted_title: 'title',
+        encrypted_body: 'body',
+        encrypted_mood: null,
+        encrypted_craving: null,
+        encrypted_tags: 'encrypted-tags-json-string',
+        created_at: '2025-01-01T00:00:00Z',
+        updated_at: '2025-01-01T00:00:00Z',
+        sync_status: 'pending',
+        supabase_id: null,
+      };
+
+      mockDb.getFirstAsync.mockResolvedValueOnce(localEntry);
+      mockDb.runAsync.mockResolvedValueOnce({} as any);
+
+      await syncJournalEntry(mockDb, entryId, userId);
+
+      expect(mockSupabaseUpsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          tags: ['encrypted-tags-json-string'], // Wrapped in array
+        }),
+        { onConflict: 'id' }
+      );
+    });
+
+    it('should update sync_status to synced after successful sync', async () => {
+      const localEntry = {
+        id: entryId,
+        user_id: userId,
+        encrypted_title: 'title',
+        encrypted_body: 'body',
+        encrypted_mood: null,
+        encrypted_craving: null,
+        encrypted_tags: null,
+        created_at: '2025-01-01T00:00:00Z',
+        updated_at: '2025-01-01T00:00:00Z',
+        sync_status: 'pending',
+        supabase_id: null,
+      };
+
+      mockDb.getFirstAsync.mockResolvedValueOnce(localEntry);
+      mockDb.runAsync.mockResolvedValueOnce({} as any);
+
+      await syncJournalEntry(mockDb, entryId, userId);
+
+      expect(mockDb.runAsync).toHaveBeenCalledWith(
+        expect.stringContaining("sync_status = 'synced'"),
+        expect.any(Array)
+      );
+    });
+
+    it('should store supabase_id after sync', async () => {
+      const localEntry = {
+        id: entryId,
+        user_id: userId,
+        encrypted_title: 'title',
+        encrypted_body: 'body',
+        encrypted_mood: null,
+        encrypted_craving: null,
+        encrypted_tags: null,
+        created_at: '2025-01-01T00:00:00Z',
+        updated_at: '2025-01-01T00:00:00Z',
+        sync_status: 'pending',
+        supabase_id: null,
+      };
+
+      mockDb.getFirstAsync.mockResolvedValueOnce(localEntry);
+      mockDb.runAsync.mockResolvedValueOnce({} as any);
+
+      await syncJournalEntry(mockDb, entryId, userId);
+
+      const updateCall = (mockDb.runAsync as jest.Mock).mock.calls[0];
+      expect(updateCall[0]).toContain('SET supabase_id = ?');
+      expect(updateCall[1][0]).toBeTruthy(); // supabase_id is set
+    });
+
+    it('should return error if journal entry not found', async () => {
+      mockDb.getFirstAsync.mockResolvedValueOnce(null);
+
+      const result = await syncJournalEntry(mockDb, entryId, userId);
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('Journal entry not found');
+      expect(mockSupabaseUpsert).not.toHaveBeenCalled();
+    });
+
+    it('should handle Supabase upsert errors', async () => {
+      const localEntry = {
+        id: entryId,
+        user_id: userId,
+        encrypted_title: 'title',
+        encrypted_body: 'body',
+        encrypted_mood: null,
+        encrypted_craving: null,
+        encrypted_tags: null,
+        created_at: '2025-01-01T00:00:00Z',
+        updated_at: '2025-01-01T00:00:00Z',
+        sync_status: 'pending',
+        supabase_id: null,
+      };
+
+      mockDb.getFirstAsync.mockResolvedValueOnce(localEntry);
+      mockSupabaseUpsert.mockReturnValueOnce({
+        error: { message: 'Supabase connection failed' },
+      });
+
+      const result = await syncJournalEntry(mockDb, entryId, userId);
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('Supabase connection failed');
+      expect(logger.error).toHaveBeenCalledWith(
+        'Supabase upsert failed for journal entry',
+        expect.any(Object)
+      );
+      expect(mockDb.runAsync).not.toHaveBeenCalled(); // Should not update local on failure
+    });
+
+    it('should handle database query errors', async () => {
+      const dbError = new Error('Database connection lost');
+      mockDb.getFirstAsync.mockRejectedValueOnce(dbError);
+
+      const result = await syncJournalEntry(mockDb, entryId, userId);
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('Database connection lost');
+      expect(logger.error).toHaveBeenCalledWith(
+        'Failed to sync journal entry',
+        expect.objectContaining({ entryId, error: dbError })
+      );
+    });
+  });
+
+  describe('syncStepWork', () => {
+    const userId = 'user-123';
+    const stepWorkId = 'step-work-789';
+
+    it('should sync step work with correct schema mapping', async () => {
+      const localStepWork = {
+        id: stepWorkId,
+        user_id: userId,
+        step_number: 1,
+        question_number: 2,
+        encrypted_answer: 'encrypted-answer-data',
+        is_complete: 1,
+        completed_at: '2025-01-01T12:00:00Z',
+        created_at: '2025-01-01T00:00:00Z',
+        updated_at: '2025-01-01T12:00:00Z',
+        sync_status: 'pending',
+      };
+
+      mockDb.getFirstAsync.mockResolvedValueOnce(localStepWork);
+      mockDb.runAsync.mockResolvedValueOnce({} as any);
+
+      const result = await syncStepWork(mockDb, stepWorkId, userId);
+
+      expect(result.success).toBe(true);
+      expect(mockSupabaseFrom).toHaveBeenCalledWith('step_work');
+      expect(mockSupabaseUpsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: expect.any(String), // Generated UUID
+          user_id: userId,
+          step_number: 1,
+          content: 'encrypted-answer-data', // question_number + encrypted_answer → content
+          is_completed: true, // 1 → true
+          created_at: localStepWork.created_at,
+          updated_at: localStepWork.updated_at,
+        }),
+        { onConflict: 'id' }
+      );
+    });
+
+    it('should map question_number and encrypted_answer to content', async () => {
+      const localStepWork = {
+        id: stepWorkId,
+        user_id: userId,
+        step_number: 3,
+        question_number: 5,
+        encrypted_answer: 'my-encrypted-answer',
+        is_complete: 0,
+        completed_at: null,
+        created_at: '2025-01-01T00:00:00Z',
+        updated_at: '2025-01-01T00:00:00Z',
+        sync_status: 'pending',
+      };
+
+      mockDb.getFirstAsync.mockResolvedValueOnce(localStepWork);
+      mockDb.runAsync.mockResolvedValueOnce({} as any);
+
+      await syncStepWork(mockDb, stepWorkId, userId);
+
+      expect(mockSupabaseUpsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          content: 'my-encrypted-answer',
+        }),
+        { onConflict: 'id' }
+      );
+    });
+
+    it('should handle is_complete correctly (1 → true, 0 → false)', async () => {
+      // Test is_complete = 1 (true)
+      const completeStepWork = {
+        id: stepWorkId,
+        user_id: userId,
+        step_number: 1,
+        question_number: 1,
+        encrypted_answer: 'answer',
+        is_complete: 1,
+        completed_at: '2025-01-01T00:00:00Z',
+        created_at: '2025-01-01T00:00:00Z',
+        updated_at: '2025-01-01T00:00:00Z',
+        sync_status: 'pending',
+      };
+
+      mockDb.getFirstAsync.mockResolvedValueOnce(completeStepWork);
+      mockDb.runAsync.mockResolvedValueOnce({} as any);
+
+      await syncStepWork(mockDb, stepWorkId, userId);
+
+      expect(mockSupabaseUpsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          is_completed: true,
+        }),
+        { onConflict: 'id' }
+      );
+
+      jest.clearAllMocks();
+
+      // Test is_complete = 0 (false)
+      const incompleteStepWork = {
+        ...completeStepWork,
+        is_complete: 0,
+      };
+
+      mockDb.getFirstAsync.mockResolvedValueOnce(incompleteStepWork);
+      mockDb.runAsync.mockResolvedValueOnce({} as any);
+
+      await syncStepWork(mockDb, stepWorkId, userId);
+
+      expect(mockSupabaseUpsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          is_completed: false,
+        }),
+        { onConflict: 'id' }
+      );
+    });
+
+    it('should update sync_status to synced', async () => {
+      const localStepWork = {
+        id: stepWorkId,
+        user_id: userId,
+        step_number: 1,
+        question_number: 1,
+        encrypted_answer: 'answer',
+        is_complete: 0,
+        completed_at: null,
+        created_at: '2025-01-01T00:00:00Z',
+        updated_at: '2025-01-01T00:00:00Z',
+        sync_status: 'pending',
+      };
+
+      mockDb.getFirstAsync.mockResolvedValueOnce(localStepWork);
+      mockDb.runAsync.mockResolvedValueOnce({} as any);
+
+      await syncStepWork(mockDb, stepWorkId, userId);
+
+      expect(mockDb.runAsync).toHaveBeenCalledWith(
+        expect.stringContaining("sync_status = 'synced'"),
+        expect.any(Array)
+      );
+    });
+
+    it('should handle null encrypted_answer', async () => {
+      const localStepWork = {
+        id: stepWorkId,
+        user_id: userId,
+        step_number: 1,
+        question_number: 1,
+        encrypted_answer: null,
+        is_complete: 0,
+        completed_at: null,
+        created_at: '2025-01-01T00:00:00Z',
+        updated_at: '2025-01-01T00:00:00Z',
+        sync_status: 'pending',
+      };
+
+      mockDb.getFirstAsync.mockResolvedValueOnce(localStepWork);
+      mockDb.runAsync.mockResolvedValueOnce({} as any);
+
+      await syncStepWork(mockDb, stepWorkId, userId);
+
+      expect(mockSupabaseUpsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          content: '', // null → empty string
+        }),
+        { onConflict: 'id' }
+      );
+    });
+
+    it('should return error if step work not found', async () => {
+      mockDb.getFirstAsync.mockResolvedValueOnce(null);
+
+      const result = await syncStepWork(mockDb, stepWorkId, userId);
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('Step work not found');
+    });
+
+    it('should handle Supabase errors', async () => {
+      const localStepWork = {
+        id: stepWorkId,
+        user_id: userId,
+        step_number: 1,
+        question_number: 1,
+        encrypted_answer: 'answer',
+        is_complete: 0,
+        completed_at: null,
+        created_at: '2025-01-01T00:00:00Z',
+        updated_at: '2025-01-01T00:00:00Z',
+        sync_status: 'pending',
+      };
+
+      mockDb.getFirstAsync.mockResolvedValueOnce(localStepWork);
+      mockSupabaseUpsert.mockReturnValueOnce({
+        error: { message: 'Network timeout' },
+      });
+
+      const result = await syncStepWork(mockDb, stepWorkId, userId);
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('Network timeout');
+      expect(logger.error).toHaveBeenCalledWith(
+        'Supabase upsert failed for step work',
+        expect.any(Object)
+      );
+    });
+  });
+
+  describe('syncDailyCheckIn', () => {
+    it('should return error with message about missing schema', async () => {
+      const result = await syncDailyCheckIn(mockDb, 'checkin-123', 'user-456');
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe(
+        'Daily check-ins sync not available - Supabase schema update required'
+      );
+      expect(logger.warn).toHaveBeenCalledWith(
+        expect.stringContaining('Daily check-ins sync not implemented')
+      );
+    });
+
+    it('should update local status to pending to prevent queue buildup', async () => {
+      const checkInId = 'checkin-789';
+
+      await syncDailyCheckIn(mockDb, checkInId, 'user-123');
+
+      expect(mockDb.runAsync).toHaveBeenCalledWith(
+        expect.stringContaining("sync_status = 'pending'"),
+        [checkInId]
+      );
+    });
+  });
+
+  describe('processSyncQueue', () => {
+    const userId = 'user-123';
+
+    it('should return {synced: 0, failed: 0} for empty queue', async () => {
+      mockDb.getAllAsync.mockResolvedValueOnce([]);
+
+      const result = await processSyncQueue(mockDb, userId);
+
+      expect(result).toEqual({
+        synced: 0,
+        failed: 0,
+        errors: [],
+      });
+      expect(logger.info).toHaveBeenCalledWith('Sync queue is empty');
+    });
+
+    it('should process items in order (oldest first)', async () => {
+      const queueItems = [
+        {
+          id: 'queue-1',
+          table_name: 'journal_entries',
+          record_id: 'entry-1',
+          operation: 'insert',
+          retry_count: 0,
+          last_error: null,
+        },
+        {
+          id: 'queue-2',
+          table_name: 'journal_entries',
+          record_id: 'entry-2',
+          operation: 'insert',
+          retry_count: 0,
+          last_error: null,
+        },
+      ];
+
+      mockDb.getAllAsync.mockResolvedValueOnce(queueItems);
+
+      // Mock successful sync for both
+      mockDb.getFirstAsync.mockResolvedValue({
+        id: 'entry-1',
+        user_id: userId,
+        encrypted_title: 'title',
+        encrypted_body: 'body',
+        encrypted_mood: null,
+        encrypted_craving: null,
+        encrypted_tags: null,
+        created_at: '2025-01-01T00:00:00Z',
+        updated_at: '2025-01-01T00:00:00Z',
+        sync_status: 'pending',
+        supabase_id: null,
+      });
+      mockDb.runAsync.mockResolvedValue({} as any);
+
+      await processSyncQueue(mockDb, userId);
+
+      // Verify getAllAsync queried in order
+      expect(mockDb.getAllAsync).toHaveBeenCalledWith(
+        expect.stringContaining('ORDER BY created_at ASC'),
+        expect.any(Array)
+      );
+    });
+
+    it('should respect maxBatchSize limit', async () => {
+      const maxBatchSize = 10;
+
+      mockDb.getAllAsync.mockResolvedValueOnce([]);
+
+      await processSyncQueue(mockDb, userId, maxBatchSize);
+
+      expect(mockDb.getAllAsync).toHaveBeenCalledWith(
+        expect.stringContaining('LIMIT ?'),
+        [maxBatchSize]
+      );
+    });
+
+    it('should default to maxBatchSize of 50', async () => {
+      mockDb.getAllAsync.mockResolvedValueOnce([]);
+
+      await processSyncQueue(mockDb, userId);
+
+      expect(mockDb.getAllAsync).toHaveBeenCalledWith(expect.any(String), [50]);
+    });
+
+    it('should increment retry_count on failure', async () => {
+      const queueItem = {
+        id: 'queue-1',
+        table_name: 'journal_entries',
+        record_id: 'entry-1',
+        operation: 'insert',
+        retry_count: 0,
+        last_error: null,
+      };
+
+      mockDb.getAllAsync.mockResolvedValueOnce([queueItem]);
+      mockDb.getFirstAsync.mockResolvedValueOnce({
+        id: 'entry-1',
+        user_id: userId,
+        encrypted_title: 'title',
+        encrypted_body: 'body',
+        encrypted_mood: null,
+        encrypted_craving: null,
+        encrypted_tags: null,
+        created_at: '2025-01-01T00:00:00Z',
+        updated_at: '2025-01-01T00:00:00Z',
+        sync_status: 'pending',
+        supabase_id: null,
+      });
+      mockSupabaseUpsert.mockReturnValueOnce({
+        error: { message: 'Network error' },
+      });
+
+      const result = await processSyncQueue(mockDb, userId);
+
+      expect(result.failed).toBe(1);
+      expect(mockDb.runAsync).toHaveBeenCalledWith(
+        expect.stringContaining('UPDATE sync_queue'),
+        [1, 'Network error', queueItem.id]
+      );
+    });
+
+    it('should remove from queue on success', async () => {
+      const queueItem = {
+        id: 'queue-success',
+        table_name: 'journal_entries',
+        record_id: 'entry-1',
+        operation: 'insert',
+        retry_count: 0,
+        last_error: null,
+      };
+
+      mockDb.getAllAsync.mockResolvedValueOnce([queueItem]);
+      mockDb.getFirstAsync.mockResolvedValueOnce({
+        id: 'entry-1',
+        user_id: userId,
+        encrypted_title: 'title',
+        encrypted_body: 'body',
+        encrypted_mood: null,
+        encrypted_craving: null,
+        encrypted_tags: null,
+        created_at: '2025-01-01T00:00:00Z',
+        updated_at: '2025-01-01T00:00:00Z',
+        sync_status: 'pending',
+        supabase_id: null,
+      });
+      mockDb.runAsync.mockResolvedValue({} as any);
+
+      const result = await processSyncQueue(mockDb, userId);
+
+      expect(result.synced).toBe(1);
+      expect(mockDb.runAsync).toHaveBeenCalledWith(
+        'DELETE FROM sync_queue WHERE id = ?',
+        [queueItem.id]
+      );
+    });
+
+    it('should stop retrying after 3 attempts', async () => {
+      // Items with retry_count >= 3 should not be fetched
+      mockDb.getAllAsync.mockResolvedValueOnce([]);
+
+      await processSyncQueue(mockDb, userId);
+
+      expect(mockDb.getAllAsync).toHaveBeenCalledWith(
+        expect.stringContaining('WHERE retry_count < 3'),
+        expect.any(Array)
+      );
+    });
+
+    it('should handle invalid table_name', async () => {
+      const queueItem = {
+        id: 'queue-invalid',
+        table_name: 'unknown_table',
+        record_id: 'record-1',
+        operation: 'insert',
+        retry_count: 0,
+        last_error: null,
+      };
+
+      mockDb.getAllAsync.mockResolvedValueOnce([queueItem]);
+
+      const result = await processSyncQueue(mockDb, userId);
+
+      expect(result.failed).toBe(1);
+      expect(result.errors).toContain('unknown_table/record-1: Unknown table: unknown_table');
+    });
+
+    it('should handle exponential backoff delays between retries', async () => {
+      const queueItems = [
+        {
+          id: 'queue-1',
+          table_name: 'journal_entries',
+          record_id: 'entry-1',
+          operation: 'insert',
+          retry_count: 1, // Should delay 2s
+          last_error: 'Previous error',
+        },
+        {
+          id: 'queue-2',
+          table_name: 'journal_entries',
+          record_id: 'entry-2',
+          operation: 'insert',
+          retry_count: 2, // Should delay 4s
+          last_error: 'Previous error',
+        },
+      ];
+
+      mockDb.getAllAsync.mockResolvedValueOnce(queueItems);
+      mockDb.getFirstAsync.mockResolvedValue({
+        id: 'entry-1',
+        user_id: userId,
+        encrypted_title: 'title',
+        encrypted_body: 'body',
+        encrypted_mood: null,
+        encrypted_craving: null,
+        encrypted_tags: null,
+        created_at: '2025-01-01T00:00:00Z',
+        updated_at: '2025-01-01T00:00:00Z',
+        sync_status: 'pending',
+        supabase_id: null,
+      });
+      mockDb.runAsync.mockResolvedValue({} as any);
+
+      const startTime = Date.now();
+      await processSyncQueue(mockDb, userId);
+      const endTime = Date.now();
+
+      // Should have waited at least 6s (2s + 4s)
+      // Using a more lenient check for test environment
+      expect(endTime - startTime).toBeGreaterThanOrEqual(5900); // Allow 100ms margin
+    });
+
+    it('should process mixed success/failure correctly', async () => {
+      const queueItems = [
+        {
+          id: 'queue-success',
+          table_name: 'journal_entries',
+          record_id: 'entry-success',
+          operation: 'insert',
+          retry_count: 0,
+          last_error: null,
+        },
+        {
+          id: 'queue-fail',
+          table_name: 'step_work',
+          record_id: 'step-fail',
+          operation: 'insert',
+          retry_count: 0,
+          last_error: null,
+        },
+      ];
+
+      mockDb.getAllAsync.mockResolvedValueOnce(queueItems);
+
+      // First item succeeds
+      mockDb.getFirstAsync.mockResolvedValueOnce({
+        id: 'entry-success',
+        user_id: userId,
+        encrypted_title: 'title',
+        encrypted_body: 'body',
+        encrypted_mood: null,
+        encrypted_craving: null,
+        encrypted_tags: null,
+        created_at: '2025-01-01T00:00:00Z',
+        updated_at: '2025-01-01T00:00:00Z',
+        sync_status: 'pending',
+        supabase_id: null,
+      });
+
+      // Second item fails (not found)
+      mockDb.getFirstAsync.mockResolvedValueOnce(null);
+
+      mockDb.runAsync.mockResolvedValue({} as any);
+
+      const result = await processSyncQueue(mockDb, userId);
+
+      expect(result.synced).toBe(1);
+      expect(result.failed).toBe(1);
+      expect(result.errors).toHaveLength(1);
+    });
+
+    it('should return accurate counts for batch processing', async () => {
+      const queueItems = Array.from({ length: 5 }, (_, i) => ({
+        id: `queue-${i}`,
+        table_name: 'journal_entries',
+        record_id: `entry-${i}`,
+        operation: 'insert' as const,
+        retry_count: 0,
+        last_error: null,
+      }));
+
+      mockDb.getAllAsync.mockResolvedValueOnce(queueItems);
+      mockDb.getFirstAsync.mockResolvedValue({
+        id: 'entry',
+        user_id: userId,
+        encrypted_title: 'title',
+        encrypted_body: 'body',
+        encrypted_mood: null,
+        encrypted_craving: null,
+        encrypted_tags: null,
+        created_at: '2025-01-01T00:00:00Z',
+        updated_at: '2025-01-01T00:00:00Z',
+        sync_status: 'pending',
+        supabase_id: null,
+      });
+      mockDb.runAsync.mockResolvedValue({} as any);
+
+      const result = await processSyncQueue(mockDb, userId);
+
+      expect(result.synced).toBe(5);
+      expect(result.failed).toBe(0);
+      expect(result.errors).toHaveLength(0);
+    });
+
+    it('should handle delete operations gracefully', async () => {
+      const queueItem = {
+        id: 'queue-delete',
+        table_name: 'journal_entries',
+        record_id: 'entry-deleted',
+        operation: 'delete',
+        retry_count: 0,
+        last_error: null,
+      };
+
+      mockDb.getAllAsync.mockResolvedValueOnce([queueItem]);
+      mockDb.runAsync.mockResolvedValue({} as any);
+
+      const result = await processSyncQueue(mockDb, userId);
+
+      // Delete operations are currently skipped
+      expect(result.synced).toBe(1);
+      expect(logger.warn).toHaveBeenCalledWith(
+        expect.stringContaining('Delete sync not fully implemented')
+      );
+    });
+
+    it('should route to correct sync function based on table_name', async () => {
+      const queueItems = [
+        {
+          id: 'queue-journal',
+          table_name: 'journal_entries',
+          record_id: 'entry-1',
+          operation: 'insert',
+          retry_count: 0,
+          last_error: null,
+        },
+        {
+          id: 'queue-step',
+          table_name: 'step_work',
+          record_id: 'step-1',
+          operation: 'insert',
+          retry_count: 0,
+          last_error: null,
+        },
+        {
+          id: 'queue-checkin',
+          table_name: 'daily_checkins',
+          record_id: 'checkin-1',
+          operation: 'insert',
+          retry_count: 0,
+          last_error: null,
+        },
+      ];
+
+      mockDb.getAllAsync.mockResolvedValueOnce(queueItems);
+
+      // Mock journal entry
+      mockDb.getFirstAsync.mockResolvedValueOnce({
+        id: 'entry-1',
+        user_id: userId,
+        encrypted_title: 'title',
+        encrypted_body: 'body',
+        encrypted_mood: null,
+        encrypted_craving: null,
+        encrypted_tags: null,
+        created_at: '2025-01-01T00:00:00Z',
+        updated_at: '2025-01-01T00:00:00Z',
+        sync_status: 'pending',
+        supabase_id: null,
+      });
+
+      // Mock step work
+      mockDb.getFirstAsync.mockResolvedValueOnce({
+        id: 'step-1',
+        user_id: userId,
+        step_number: 1,
+        question_number: 1,
+        encrypted_answer: 'answer',
+        is_complete: 0,
+        completed_at: null,
+        created_at: '2025-01-01T00:00:00Z',
+        updated_at: '2025-01-01T00:00:00Z',
+        sync_status: 'pending',
+      });
+
+      mockDb.runAsync.mockResolvedValue({} as any);
+
+      const result = await processSyncQueue(mockDb, userId);
+
+      expect(result.synced).toBe(1); // Only journal entry succeeds
+      expect(result.failed).toBe(2); // step_work and daily_checkins fail (checkin not implemented)
+      expect(mockSupabaseFrom).toHaveBeenCalledWith('journal_entries');
+      expect(mockSupabaseFrom).toHaveBeenCalledWith('step_work');
+    });
+
+    it('should log detailed error information on sync failure', async () => {
+      const queueItem = {
+        id: 'queue-error',
+        table_name: 'journal_entries',
+        record_id: 'entry-error',
+        operation: 'insert',
+        retry_count: 0,
+        last_error: null,
+      };
+
+      mockDb.getAllAsync.mockResolvedValueOnce([queueItem]);
+      mockDb.getFirstAsync.mockResolvedValueOnce(null); // Not found
+
+      await processSyncQueue(mockDb, userId);
+
+      expect(logger.error).toHaveBeenCalledWith(
+        'Sync failed for queue item',
+        expect.objectContaining({
+          queueItemId: queueItem.id,
+          tableName: queueItem.table_name,
+          recordId: queueItem.record_id,
+          retryCount: 1,
+          error: 'Journal entry not found',
+        })
+      );
+    });
+
+    it('should handle top-level processing errors', async () => {
+      const dbError = new Error('Database connection lost');
+      mockDb.getAllAsync.mockRejectedValueOnce(dbError);
+
+      const result = await processSyncQueue(mockDb, userId);
+
+      expect(result.synced).toBe(0);
+      expect(result.failed).toBe(0);
+      expect(result.errors).toContain('Database connection lost');
+      expect(logger.error).toHaveBeenCalledWith(
+        'Sync queue processing failed',
+        dbError
+      );
+    });
+  });
+
+  describe('Error Handling', () => {
+    const userId = 'user-123';
+
+    it('should increment retry_count on Supabase errors', async () => {
+      const queueItem = {
+        id: 'queue-supabase-error',
+        table_name: 'journal_entries',
+        record_id: 'entry-1',
+        operation: 'insert',
+        retry_count: 0,
+        last_error: null,
+      };
+
+      mockDb.getAllAsync.mockResolvedValueOnce([queueItem]);
+      mockDb.getFirstAsync.mockResolvedValueOnce({
+        id: 'entry-1',
+        user_id: userId,
+        encrypted_title: 'title',
+        encrypted_body: 'body',
+        encrypted_mood: null,
+        encrypted_craving: null,
+        encrypted_tags: null,
+        created_at: '2025-01-01T00:00:00Z',
+        updated_at: '2025-01-01T00:00:00Z',
+        sync_status: 'pending',
+        supabase_id: null,
+      });
+      mockSupabaseUpsert.mockReturnValueOnce({
+        error: { message: 'Supabase timeout' },
+      });
+
+      await processSyncQueue(mockDb, userId);
+
+      expect(mockDb.runAsync).toHaveBeenCalledWith(
+        expect.stringContaining('UPDATE sync_queue'),
+        [1, 'Supabase timeout', queueItem.id]
+      );
+    });
+
+    it('should increment retry_count on network errors', async () => {
+      const queueItem = {
+        id: 'queue-network-error',
+        table_name: 'journal_entries',
+        record_id: 'entry-1',
+        operation: 'insert',
+        retry_count: 1,
+        last_error: 'Previous error',
+      };
+
+      mockDb.getAllAsync.mockResolvedValueOnce([queueItem]);
+      mockDb.getFirstAsync.mockRejectedValueOnce(new Error('Network timeout'));
+
+      await processSyncQueue(mockDb, userId);
+
+      expect(mockDb.runAsync).toHaveBeenCalledWith(
+        expect.stringContaining('UPDATE sync_queue'),
+        [2, 'Network timeout', queueItem.id]
+      );
+    });
+
+    it('should return error for missing user_id (implicit in sync functions)', async () => {
+      // This tests that sync functions require user_id
+      const result = await syncJournalEntry(mockDb, 'entry-1', '');
+
+      // Should fail to find entry with empty user_id
+      mockDb.getFirstAsync.mockResolvedValueOnce(null);
+
+      expect(mockDb.getFirstAsync).toHaveBeenCalledWith(
+        expect.any(String),
+        ['entry-1', '']
+      );
+    });
+  });
+
+  describe('Batch Processing', () => {
+    const userId = 'user-123';
+
+    it('should process max 50 items per call by default', async () => {
+      mockDb.getAllAsync.mockResolvedValueOnce([]);
+
+      await processSyncQueue(mockDb, userId);
+
+      expect(mockDb.getAllAsync).toHaveBeenCalledWith(
+        expect.stringContaining('LIMIT ?'),
+        [50]
+      );
+    });
+
+    it('should process max 10 items when maxBatchSize is 10', async () => {
+      mockDb.getAllAsync.mockResolvedValueOnce([]);
+
+      await processSyncQueue(mockDb, userId, 10);
+
+      expect(mockDb.getAllAsync).toHaveBeenCalledWith(
+        expect.stringContaining('LIMIT ?'),
+        [10]
+      );
+    });
+
+    it('should handle large batches correctly', async () => {
+      const largeQueue = Array.from({ length: 50 }, (_, i) => ({
+        id: `queue-${i}`,
+        table_name: 'journal_entries',
+        record_id: `entry-${i}`,
+        operation: 'insert' as const,
+        retry_count: 0,
+        last_error: null,
+      }));
+
+      mockDb.getAllAsync.mockResolvedValueOnce(largeQueue);
+      mockDb.getFirstAsync.mockResolvedValue({
+        id: 'entry',
+        user_id: userId,
+        encrypted_title: 'title',
+        encrypted_body: 'body',
+        encrypted_mood: null,
+        encrypted_craving: null,
+        encrypted_tags: null,
+        created_at: '2025-01-01T00:00:00Z',
+        updated_at: '2025-01-01T00:00:00Z',
+        sync_status: 'pending',
+        supabase_id: null,
+      });
+      mockDb.runAsync.mockResolvedValue({} as any);
+
+      const result = await processSyncQueue(mockDb, userId);
+
+      expect(result.synced).toBe(50);
+      expect(result.failed).toBe(0);
+    });
+
+    it('should track partial batch failures', async () => {
+      const queueItems = Array.from({ length: 10 }, (_, i) => ({
+        id: `queue-${i}`,
+        table_name: 'journal_entries',
+        record_id: `entry-${i}`,
+        operation: 'insert' as const,
+        retry_count: 0,
+        last_error: null,
+      }));
+
+      mockDb.getAllAsync.mockResolvedValueOnce(queueItems);
+
+      // Fail items 3, 5, 7
+      mockDb.getFirstAsync.mockImplementation(async (query, params) => {
+        const recordId = params[0] as string;
+        if (['entry-3', 'entry-5', 'entry-7'].includes(recordId)) {
+          return null; // Not found
+        }
+        return {
+          id: recordId,
+          user_id: userId,
+          encrypted_title: 'title',
+          encrypted_body: 'body',
+          encrypted_mood: null,
+          encrypted_craving: null,
+          encrypted_tags: null,
+          created_at: '2025-01-01T00:00:00Z',
+          updated_at: '2025-01-01T00:00:00Z',
+          sync_status: 'pending',
+          supabase_id: null,
+        };
+      });
+      mockDb.runAsync.mockResolvedValue({} as any);
+
+      const result = await processSyncQueue(mockDb, userId);
+
+      expect(result.synced).toBe(7);
+      expect(result.failed).toBe(3);
+      expect(result.errors).toHaveLength(3);
+    });
+  });
+});

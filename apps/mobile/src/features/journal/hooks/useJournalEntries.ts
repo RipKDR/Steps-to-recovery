@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSQLiteContext } from 'expo-sqlite';
 import { decryptContent, encryptContent } from '../../../utils/encryption';
 import { logger } from '../../../utils/logger';
+import { addToSyncQueue } from '../../../services/syncService';
 import type { JournalEntry, JournalEntryDecrypted } from '@repo/shared/types';
 
 /**
@@ -95,6 +96,9 @@ export function useCreateJournalEntry(userId: string): {
           [id, userId, encrypted_title, encrypted_body, encrypted_mood, encrypted_craving, encrypted_tags, now, now, 'pending']
         );
 
+        // Add to sync queue for cloud backup
+        await addToSyncQueue(db, 'journal_entries', id, 'insert');
+
         logger.info('Journal entry created', { id });
       } catch (err) {
         logger.error('Failed to create journal entry', err);
@@ -163,6 +167,9 @@ export function useUpdateJournalEntry(userId: string): {
           values
         );
 
+        // Add to sync queue for cloud backup
+        await addToSyncQueue(db, 'journal_entries', id, 'update');
+
         logger.info('Journal entry updated', { id });
       } catch (err) {
         logger.error('Failed to update journal entry', err);
@@ -193,6 +200,9 @@ export function useDeleteJournalEntry(userId: string): {
   const mutation = useMutation({
     mutationFn: async (id: string) => {
       try {
+        // Add to sync queue before deleting (to sync deletion to Supabase)
+        await addToSyncQueue(db, 'journal_entries', id, 'delete');
+
         await db.runAsync('DELETE FROM journal_entries WHERE id = ? AND user_id = ?', [id, userId]);
         logger.info('Journal entry deleted', { id });
       } catch (err) {

@@ -4,7 +4,19 @@
       "Bash(npm install:*)",
       "Bash(claude mcp:*)",
       "Bash(dir:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "WebFetch(domain:docs.expo.dev)",
+      "Bash(findstr:*)",
+      "WebSearch",
+      "Bash(where:*)",
+      "Bash(echo $GITHUB_PERSONAL_ACCESS_TOKEN:+SET)",
+      "mcp__memory__create_entities",
+      "mcp__memory__create_relations",
+      "mcp__filesystem__list_directory",
+      "mcp__filesystem__directory_tree",
+      "Bash(npm start)",
+      "Skill(bmad:bmm:workflows:create-epics-and-stories)",
+      "Bash(npx tsc:*)"
     ]
   },
   "outputStyle": "Explanatory"

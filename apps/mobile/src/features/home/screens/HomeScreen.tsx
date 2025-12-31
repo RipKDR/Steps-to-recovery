@@ -6,6 +6,7 @@ import { useNavigation } from '@react-navigation/native';
 import { CleanTimeTracker } from '../components/CleanTimeTracker';
 import { DailyCheckInCard } from '../components/DailyCheckInCard';
 import { QuickActions } from '../components/QuickActions';
+import { SyncStatusIndicator } from '../components/SyncStatusIndicator';
 import { useCleanTime } from '../hooks/useCleanTime';
 import { useTodayCheckIns } from '../hooks/useCheckIns';
 
@@ -45,6 +46,8 @@ export function HomeScreen({ userId }: HomeScreenProps): React.ReactElement {
             nextMilestone={nextMilestone}
             isLoading={cleanTimeLoading}
           />
+
+          <SyncStatusIndicator />
 
           <DailyCheckInCard
             morningCheckIn={morning}

@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSQLiteContext } from 'expo-sqlite';
 import { decryptContent, encryptContent } from '../../../utils/encryption';
 import { logger } from '../../../utils/logger';
+import { addToSyncQueue } from '../../../services/syncService';
 import type { DailyCheckIn, DailyCheckInDecrypted, CheckInType } from '@repo/shared/types';
 
 /**
@@ -95,6 +96,9 @@ export function useCreateCheckIn(userId: string): {
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [id, userId, data.type, today, encrypted_intention, encrypted_reflection, encrypted_mood, encrypted_craving, now, 'pending']
         );
+
+        // Add to sync queue for cloud backup
+        await addToSyncQueue(db, 'daily_checkins', id, 'insert');
 
         logger.info('Check-in created', { id, type: data.type });
       } catch (err) {
