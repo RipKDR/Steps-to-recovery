@@ -9,8 +9,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { useSQLiteContext } from 'expo-sqlite';
 import { useAuth } from '../../../contexts/AuthContext';
-import { useDatabase } from '../../../contexts/DatabaseContext';
 import { Button } from '../../../components/Button';
 import { theme } from '../../../utils/theme';
 import { generateEncryptionKey } from '../../../utils/encryption';
@@ -23,12 +23,12 @@ export function OnboardingScreen() {
   const [loading, setLoading] = useState(false);
 
   const { user } = useAuth();
-  const { db, isReady } = useDatabase();
+  const db = useSQLiteContext();
 
   const daysSober = calculateDaysSober(sobrietyDate);
 
   const handleComplete = async () => {
-    if (!user || !db || !isReady) {
+    if (!user || !db) {
       Alert.alert('Error', 'Please wait for initialization');
       return;
     }

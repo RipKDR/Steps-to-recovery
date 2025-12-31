@@ -19,9 +19,9 @@ export const logger = {
       console.warn(`[WARN] ${message}`);
     }
   },
-  info: (message: string) => {
+  info: (message: string, data?: unknown) => {
     if (isDevelopment) {
-      console.log(`[INFO] ${message}`);
+      console.log(`[INFO] ${message}`, data);
     }
   },
   debug: (message: string, data?: unknown) => {

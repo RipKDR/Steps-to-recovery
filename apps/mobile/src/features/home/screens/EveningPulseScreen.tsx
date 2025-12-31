@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { TextInput, Button, Text, Slider } from 'react-native-paper';
+import { TextInput, Button, Text } from 'react-native-paper';
+import Slider from '@react-native-community/slider';
 import { useNavigation } from '@react-navigation/native';
 import { useCreateCheckIn, useTodayCheckIns } from '../hooks/useCheckIns';
 

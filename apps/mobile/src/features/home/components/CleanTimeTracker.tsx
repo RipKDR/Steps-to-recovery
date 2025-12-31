@@ -34,7 +34,7 @@ export function CleanTimeTracker({
   const daysUntilNext = nextMilestone ? nextMilestone.days - days : 0;
 
   return (
-    <Card style={styles.card} accessibilityRole="article" accessibilityLabel={`Clean time: ${days} days, ${hours} hours, ${minutes} minutes, ${seconds} seconds`}>
+    <Card style={styles.card} accessibilityRole="none" accessibilityLabel={`Clean time: ${days} days, ${hours} hours, ${minutes} minutes, ${seconds} seconds`}>
       <Card.Content>
         <Text variant="titleLarge" style={styles.title}>
           Clean Time

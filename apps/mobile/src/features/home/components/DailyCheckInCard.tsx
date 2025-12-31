@@ -29,7 +29,7 @@ export function DailyCheckInCard({
 
   if (isLoading) {
     return (
-      <Card style={styles.card} accessibilityRole="article" accessibilityLabel="Loading daily check-ins">
+      <Card style={styles.card} accessibilityRole="none" accessibilityLabel="Loading daily check-ins">
         <Card.Content style={styles.loadingContainer}>
           <ActivityIndicator size="small" />
         </Card.Content>
@@ -38,7 +38,7 @@ export function DailyCheckInCard({
   }
 
   return (
-    <Card style={styles.card} accessibilityRole="article" accessibilityLabel="Daily check-in card">
+    <Card style={styles.card} accessibilityRole="none" accessibilityLabel="Daily check-in card">
       <Card.Content>
         <Text variant="titleLarge" style={styles.title}>
           Daily Check-In
