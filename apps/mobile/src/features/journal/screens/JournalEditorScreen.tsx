@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { TextInput, Button, Chip, Text } from 'react-native-paper';
-import Slider from '@react-native-community/slider';
+import { Slider } from '../../../components/Slider';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useCreateJournalEntry, useUpdateJournalEntry, useJournalEntries } from '../hooks/useJournalEntries';
 
