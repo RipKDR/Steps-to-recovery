@@ -1,0 +1,170 @@
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useSQLiteContext } from 'expo-sqlite';
+import { decryptContent, encryptContent } from '../../../utils/encryption';
+import { logger } from '../../../utils/logger';
+import type { StepWork, StepWorkDecrypted } from '@repo/shared/types';
+
+/**
+ * Decrypt step work from database format to UI format
+ */
+async function decryptStepWork(stepWork: StepWork): Promise<StepWorkDecrypted> {
+  const answer = stepWork.encrypted_answer ? await decryptContent(stepWork.encrypted_answer) : null;
+
+  return {
+    id: stepWork.id,
+    user_id: stepWork.user_id,
+    step_number: stepWork.step_number,
+    question_number: stepWork.question_number,
+    answer,
+    is_complete: stepWork.is_complete === 1,
+    completed_at: stepWork.completed_at,
+    created_at: stepWork.created_at,
+    updated_at: stepWork.updated_at,
+    sync_status: stepWork.sync_status,
+  };
+}
+
+/**
+ * Hook to get all step work for a specific step
+ */
+export function useStepWork(userId: string, stepNumber: number): {
+  questions: StepWorkDecrypted[];
+  progress: number;
+  isLoading: boolean;
+  error: Error | null;
+} {
+  const db = useSQLiteContext();
+
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['step_work', userId, stepNumber],
+    queryFn: async () => {
+      try {
+        const result = await db.getAllAsync<StepWork>(
+          'SELECT * FROM step_work WHERE user_id = ? AND step_number = ? ORDER BY question_number ASC',
+          [userId, stepNumber]
+        );
+
+        const decrypted = await Promise.all(result.map(decryptStepWork));
+        const completed = decrypted.filter(q => q.is_complete).length;
+        const total = decrypted.length;
+        const progress = total > 0 ? (completed / total) * 100 : 0;
+
+        return { questions: decrypted, progress };
+      } catch (err) {
+        logger.error('Failed to fetch step work', err);
+        throw err;
+      }
+    },
+  });
+
+  return {
+    questions: data?.questions || [],
+    progress: data?.progress || 0,
+    isLoading,
+    error: error as Error | null,
+  };
+}
+
+/**
+ * Hook to save answer to a step question
+ */
+export function useSaveStepAnswer(userId: string): {
+  saveAnswer: (stepNumber: number, questionNumber: number, answer: string, isComplete: boolean) => Promise<void>;
+  isPending: boolean;
+} {
+  const db = useSQLiteContext();
+  const queryClient = useQueryClient();
+
+  const mutation = useMutation({
+    mutationFn: async ({ stepNumber, questionNumber, answer, isComplete }: { stepNumber: number; questionNumber: number; answer: string; isComplete: boolean }) => {
+      try {
+        const encrypted_answer = await encryptContent(answer);
+        const now = new Date().toISOString();
+
+        // Check if answer already exists
+        const existing = await db.getFirstAsync<{ id: string }>(
+          'SELECT id FROM step_work WHERE user_id = ? AND step_number = ? AND question_number = ?',
+          [userId, stepNumber, questionNumber]
+        );
+
+        if (existing) {
+          // Update existing answer
+          await db.runAsync(
+            'UPDATE step_work SET encrypted_answer = ?, is_complete = ?, completed_at = ?, updated_at = ?, sync_status = ? WHERE user_id = ? AND step_number = ? AND question_number = ?',
+            [encrypted_answer, isComplete ? 1 : 0, isComplete ? now : null, now, 'pending', userId, stepNumber, questionNumber]
+          );
+        } else {
+          // Create new answer
+          const id = `step_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+          await db.runAsync(
+            'INSERT INTO step_work (id, user_id, step_number, question_number, encrypted_answer, is_complete, completed_at, created_at, updated_at, sync_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            [id, userId, stepNumber, questionNumber, encrypted_answer, isComplete ? 1 : 0, isComplete ? now : null, now, now, 'pending']
+          );
+        }
+
+        logger.info('Step answer saved', { stepNumber, questionNumber });
+      } catch (err) {
+        logger.error('Failed to save step answer', err);
+        throw err;
+      }
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['step_work', userId, variables.stepNumber] });
+    },
+  });
+
+  return {
+    saveAnswer: (stepNumber, questionNumber, answer, isComplete) =>
+      mutation.mutateAsync({ stepNumber, questionNumber, answer, isComplete }),
+    isPending: mutation.isPending,
+  };
+}
+
+/**
+ * Hook to get overall step progress
+ */
+export function useStepProgress(userId: string): {
+  stepsCompleted: number[];
+  currentStep: number;
+  overallProgress: number;
+  isLoading: boolean;
+} {
+  const db = useSQLiteContext();
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['step_progress', userId],
+    queryFn: async () => {
+      try {
+        const result = await db.getAllAsync<{ step_number: number; total: number; completed: number }>(
+          `SELECT
+            step_number,
+            COUNT(*) as total,
+            SUM(is_complete) as completed
+           FROM step_work
+           WHERE user_id = ?
+           GROUP BY step_number`,
+          [userId]
+        );
+
+        const stepsCompleted = result
+          .filter(r => r.total > 0 && r.completed === r.total)
+          .map(r => r.step_number);
+
+        const currentStep = stepsCompleted.length > 0 ? Math.max(...stepsCompleted) + 1 : 1;
+        const overallProgress = (stepsCompleted.length / 12) * 100;
+
+        return { stepsCompleted, currentStep, overallProgress };
+      } catch (err) {
+        logger.error('Failed to calculate step progress', err);
+        return { stepsCompleted: [], currentStep: 1, overallProgress: 0 };
+      }
+    },
+  });
+
+  return {
+    stepsCompleted: data?.stepsCompleted || [],
+    currentStep: data?.currentStep || 1,
+    overallProgress: data?.overallProgress || 0,
+    isLoading,
+  };
+}

@@ -11,7 +11,7 @@ export async function generateEncryptionKey(): Promise<string> {
   const salt = Crypto.randomUUID();
   const derivedKey = CryptoJS.PBKDF2(randomString, salt, { keySize: 256 / 32, iterations: KEY_DERIVATION_ITERATIONS }).toString();
   await SecureStore.setItemAsync(ENCRYPTION_KEY_NAME, derivedKey);
-  await SecureStore.setItemAsync(\`\${ENCRYPTION_KEY_NAME}_salt\`, salt);
+  await SecureStore.setItemAsync(`${ENCRYPTION_KEY_NAME}_salt`, salt);
   return derivedKey;
 }
 
@@ -27,7 +27,7 @@ export async function encryptContent(content: string): Promise<string> {
   const ivWordArray = CryptoJS.enc.Hex.parse(iv);
   const keyWordArray = CryptoJS.enc.Hex.parse(key);
   const encrypted = CryptoJS.AES.encrypt(content, keyWordArray, { iv: ivWordArray, mode: CryptoJS.mode.CBC, padding: CryptoJS.pad.Pkcs7 });
-  return \`\${iv}:\${encrypted.toString()}\`;
+  return `${iv}:${encrypted.toString()}`;
 }
 
 export async function decryptContent(encrypted: string): Promise<string> {
@@ -45,7 +45,7 @@ export async function decryptContent(encrypted: string): Promise<string> {
 
 export async function deleteEncryptionKey(): Promise<void> {
   await SecureStore.deleteItemAsync(ENCRYPTION_KEY_NAME);
-  await SecureStore.deleteItemAsync(\`\${ENCRYPTION_KEY_NAME}_salt\`);
+  await SecureStore.deleteItemAsync(`${ENCRYPTION_KEY_NAME}_salt`);
 }
 
 export async function hasEncryptionKey(): Promise<boolean> {

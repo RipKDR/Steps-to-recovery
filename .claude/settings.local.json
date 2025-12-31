@@ -3,7 +3,8 @@
     "allow": [
       "Bash(npm install:*)",
       "Bash(claude mcp:*)",
-      "Bash(dir:*)"
+      "Bash(dir:*)",
+      "Bash(git add:*)"
     ]
   },
   "outputStyle": "default"
