@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSQLiteContext } from 'expo-sqlite';
 import { decryptContent, encryptContent } from '../../../utils/encryption';
 import { logger } from '../../../utils/logger';
-import { addToSyncQueue } from '../../../services/syncService';
+import { addToSyncQueue, addDeleteToSyncQueue } from '../../../services/syncService';
 import type { JournalEntry, JournalEntryDecrypted } from '@repo/shared/types';
 
 /**
@@ -200,8 +200,9 @@ export function useDeleteJournalEntry(userId: string): {
   const mutation = useMutation({
     mutationFn: async (id: string) => {
       try {
-        // Add to sync queue before deleting (to sync deletion to Supabase)
-        await addToSyncQueue(db, 'journal_entries', id, 'delete');
+        // Capture supabase_id and add to sync queue BEFORE deleting
+        // This ensures we can delete from Supabase even after local deletion
+        await addDeleteToSyncQueue(db, 'journal_entries', id, userId);
 
         await db.runAsync('DELETE FROM journal_entries WHERE id = ? AND user_id = ?', [id, userId]);
         logger.info('Journal entry deleted', { id });

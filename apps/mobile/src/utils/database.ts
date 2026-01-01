@@ -70,7 +70,9 @@ export async function initDatabase(db: StorageAdapter): Promise<void> {
         encrypted_mood TEXT,
         encrypted_craving TEXT,
         created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL DEFAULT (datetime('now')),
         sync_status TEXT DEFAULT 'pending',
+        supabase_id TEXT,
         FOREIGN KEY (user_id) REFERENCES user_profile(id)
       );`,
       `CREATE TABLE IF NOT EXISTS step_work (
@@ -102,6 +104,7 @@ export async function initDatabase(db: StorageAdapter): Promise<void> {
         table_name TEXT NOT NULL,
         record_id TEXT NOT NULL,
         operation TEXT NOT NULL CHECK(operation IN ('insert','update','delete')),
+        supabase_id TEXT,
         created_at TEXT NOT NULL,
         retry_count INTEGER DEFAULT 0,
         last_error TEXT,
@@ -119,6 +122,25 @@ export async function initDatabase(db: StorageAdapter): Promise<void> {
 
     for (const sql of statements) {
       await db.execAsync(sql);
+    }
+
+    // Run migrations for existing databases (add columns that may be missing)
+    // These use try-catch because ALTER TABLE ADD COLUMN fails if column exists
+    const migrations: string[] = [
+      // Add supabase_id to daily_checkins for sync tracking
+      `ALTER TABLE daily_checkins ADD COLUMN supabase_id TEXT;`,
+      // Add updated_at to daily_checkins for conflict resolution
+      `ALTER TABLE daily_checkins ADD COLUMN updated_at TEXT NOT NULL DEFAULT (datetime('now'));`,
+      // Add supabase_id to sync_queue for delete operations (Story 3.1.2)
+      `ALTER TABLE sync_queue ADD COLUMN supabase_id TEXT;`,
+    ];
+
+    for (const migration of migrations) {
+      try {
+        await db.execAsync(migration);
+      } catch {
+        // Column likely already exists, ignore
+      }
     }
   })();
 
