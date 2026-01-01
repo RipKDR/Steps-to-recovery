@@ -11,6 +11,9 @@ export type { CardProps } from './Card';
 export { FloatingActionButton } from './FloatingActionButton';
 export type { FloatingActionButtonProps } from './FloatingActionButton';
 
+export { Input } from './Input';
+export type { InputProps } from './Input';
+
 // Additional components will be exported here as they're built
 // export { Input } from './Input';
 // export { Badge } from './Badge';

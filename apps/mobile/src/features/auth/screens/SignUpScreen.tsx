@@ -12,9 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../../contexts/AuthContext';
-import { Input } from '../../../components/Input';
-import { Button } from '../../../components/Button';
-import { theme } from '../../../utils/theme';
+import { useTheme, Input, Button } from '../../../design-system';
 import { validateEmail, validatePassword } from '../../../utils/validation';
 import type { AuthStackScreenProps } from '../../../navigation/types';
 
@@ -27,6 +25,7 @@ interface FormErrors {
 }
 
 export function SignUpScreen({ navigation }: Props) {
+  const theme = useTheme();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -87,7 +86,7 @@ export function SignUpScreen({ navigation }: Props) {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.background }]} edges={['top', 'bottom']}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.container}
@@ -98,9 +97,11 @@ export function SignUpScreen({ navigation }: Props) {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <View style={styles.header}>
-            <Text style={styles.title}>Start Your Journey</Text>
-            <Text style={styles.subtitle}>
+          <View style={[styles.header, { marginBottom: theme.spacing.xl }]}>
+            <Text style={[theme.typography.h1, { color: theme.colors.text, marginBottom: theme.spacing.sm }]}>
+              Start Your Journey
+            </Text>
+            <Text style={[theme.typography.body, { color: theme.colors.textSecondary, lineHeight: 24 }]}>
               A private, secure space for your recovery
             </Text>
           </View>
@@ -161,9 +162,19 @@ export function SignUpScreen({ navigation }: Props) {
               testID="signup-confirm-password-input"
             />
 
-            <View style={styles.privacyNotice}>
-              <Text style={styles.privacyIcon}>🔒</Text>
-              <Text style={styles.privacyText}>
+            <View style={[
+              styles.privacyNotice,
+              {
+                backgroundColor: theme.colors.surface,
+                padding: theme.spacing.md,
+                borderRadius: theme.radius.md,
+                marginVertical: theme.spacing.sm,
+                borderWidth: 1,
+                borderColor: theme.colors.border,
+              }
+            ]}>
+              <Text style={[styles.privacyIcon, { marginRight: theme.spacing.sm }]}>🔒</Text>
+              <Text style={[theme.typography.caption, { flex: 1, color: theme.colors.textSecondary, lineHeight: 20 }]}>
                 Your data is encrypted and never shared without your permission.
                 We're committed to your privacy and security.
               </Text>
@@ -177,14 +188,18 @@ export function SignUpScreen({ navigation }: Props) {
             />
           </View>
 
-          <View style={styles.footer}>
-            <Text style={styles.footerText}>Already have an account? </Text>
+          <View style={[styles.footer, { marginTop: theme.spacing.xl, paddingVertical: theme.spacing.md }]}>
+            <Text style={[theme.typography.body, { color: theme.colors.textSecondary }]}>
+              Already have an account?{' '}
+            </Text>
             <TouchableOpacity
               onPress={() => navigation.navigate('Login')}
               accessibilityRole="link"
               accessibilityLabel="Navigate to login"
             >
-              <Text style={styles.link}>Log In</Text>
+              <Text style={[theme.typography.body, { color: theme.colors.primary, fontWeight: '600' }]}>
+                Log In
+              </Text>
             </TouchableOpacity>
           </View>
         </ScrollView>
@@ -196,65 +211,29 @@ export function SignUpScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: theme.colors.background,
   },
   container: {
     flex: 1,
   },
   scrollContent: {
     flexGrow: 1,
-    padding: theme.spacing.lg,
+    padding: 24,
   },
   header: {
-    marginTop: theme.spacing.lg,
-    marginBottom: theme.spacing.xl,
-  },
-  title: {
-    ...theme.typography.h1,
-    color: theme.colors.text,
-    marginBottom: theme.spacing.sm,
-  },
-  subtitle: {
-    ...theme.typography.body,
-    color: theme.colors.textSecondary,
-    lineHeight: 24,
+    marginTop: 24,
   },
   form: {
-    gap: theme.spacing.sm,
+    gap: 8,
   },
   privacyNotice: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    backgroundColor: theme.colors.surface,
-    padding: theme.spacing.md,
-    borderRadius: theme.borderRadius.md,
-    marginVertical: theme.spacing.sm,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
   },
   privacyIcon: {
     fontSize: 20,
-    marginRight: theme.spacing.sm,
-  },
-  privacyText: {
-    flex: 1,
-    ...theme.typography.caption,
-    color: theme.colors.textSecondary,
-    lineHeight: 20,
   },
   footer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginTop: theme.spacing.xl,
-    paddingVertical: theme.spacing.md,
-  },
-  footerText: {
-    ...theme.typography.body,
-    color: theme.colors.textSecondary,
-  },
-  link: {
-    ...theme.typography.body,
-    color: theme.colors.primary,
-    fontWeight: '600',
   },
 });
