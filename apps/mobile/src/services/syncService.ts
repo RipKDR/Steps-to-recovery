@@ -348,7 +348,101 @@ async function deleteFromSupabase(
 }
 
 /**
+ * Process a single sync queue item
+ * Handles routing to correct sync function and result handling
+ */
+async function processSyncItem(
+  db: SQLiteDatabase,
+  item: SyncQueueItem,
+  userId: string
+): Promise<{ success: boolean; error?: string }> {
+  // Handle delete operations
+  if (item.operation === 'delete') {
+    if (item.supabase_id) {
+      return deleteFromSupabase(item.table_name, item.supabase_id, userId);
+    } else {
+      // Record was never synced to cloud, so nothing to delete remotely
+      logger.info('Delete skipped - record was never synced to cloud', {
+        tableName: item.table_name,
+        recordId: item.record_id,
+        operation: item.operation,
+      });
+      return { success: true };
+    }
+  }
+
+  // Handle insert/update operations - route to appropriate sync function
+  switch (item.table_name) {
+    case 'journal_entries':
+      return syncJournalEntry(db, item.record_id, userId);
+    case 'step_work':
+      return syncStepWork(db, item.record_id, userId);
+    case 'daily_checkins':
+      return syncDailyCheckIn(db, item.record_id, userId);
+    default:
+      return {
+        success: false,
+        error: `Unknown table: ${item.table_name}`,
+      };
+  }
+}
+
+/**
+ * Handle the result of a sync operation
+ * Updates queue item on failure, removes on success
+ */
+async function handleSyncResult(
+  db: SQLiteDatabase,
+  item: SyncQueueItem,
+  syncResult: { success: boolean; error?: string },
+  result: SyncResult
+): Promise<void> {
+  if (syncResult.success) {
+    // Remove from sync queue on success
+    await db.runAsync('DELETE FROM sync_queue WHERE id = ?', [item.id]);
+    result.synced++;
+    logger.info('Sync item processed successfully', {
+      tableName: item.table_name,
+      recordId: item.record_id,
+      operation: item.operation,
+    });
+  } else {
+    // Increment retry count and store error
+    const newRetryCount = item.retry_count + 1;
+    await db.runAsync(
+      `UPDATE sync_queue
+       SET retry_count = ?, last_error = ?
+       WHERE id = ?`,
+      [newRetryCount, syncResult.error || 'Unknown error', item.id]
+    );
+    result.failed++;
+    result.errors.push(
+      `[${item.operation}] ${item.table_name}/${item.record_id}: ${syncResult.error || 'Unknown error'}`
+    );
+
+    // Log detailed error for debugging
+    logger.error('Sync failed for queue item', {
+      queueItemId: item.id,
+      tableName: item.table_name,
+      recordId: item.record_id,
+      operation: item.operation,
+      retryCount: newRetryCount,
+      error: syncResult.error,
+    });
+  }
+
+  // Exponential backoff delay between items (1s, 2s, 4s)
+  if (item.retry_count > 0) {
+    const delayMs = Math.pow(2, item.retry_count) * 1000;
+    await new Promise((resolve) => setTimeout(resolve, delayMs));
+  }
+}
+
+/**
  * Process the sync queue with batch processing and retry logic
+ *
+ * IMPORTANT: Deletes are processed BEFORE inserts/updates to avoid
+ * foreign key conflicts and ensure data consistency.
  *
  * @param db - SQLite database instance
  * @param userId - Current user ID
@@ -382,83 +476,40 @@ export async function processSyncQueue(
       return result;
     }
 
-    logger.info('Processing sync queue', { itemCount: queueItems.length });
+    // Separate deletes from inserts/updates
+    // Process deletes FIRST to avoid foreign key conflicts
+    const deleteItems = queueItems.filter(item => item.operation === 'delete');
+    const upsertItems = queueItems.filter(item => item.operation !== 'delete');
 
-    // Process each queue item
-    for (const item of queueItems) {
-      let syncResult: { success: boolean; error?: string };
+    logger.info('Processing sync queue', {
+      total: queueItems.length,
+      deletes: deleteItems.length,
+      upserts: upsertItems.length,
+    });
 
-      // Handle delete operations separately
-      if (item.operation === 'delete') {
-        // For deletes, we use the supabase_id stored in the sync_queue
-        if (item.supabase_id) {
-          syncResult = await deleteFromSupabase(item.table_name, item.supabase_id, userId);
-        } else {
-          // Record was never synced to cloud, so nothing to delete remotely
-          logger.info('Delete skipped - record was never synced to cloud', {
-            tableName: item.table_name,
-            recordId: item.record_id,
-          });
-          syncResult = { success: true };
-        }
-      } else {
-        // Route to appropriate sync function based on table
-        switch (item.table_name) {
-          case 'journal_entries':
-            syncResult = await syncJournalEntry(db, item.record_id, userId);
-            break;
-          case 'step_work':
-            syncResult = await syncStepWork(db, item.record_id, userId);
-            break;
-          case 'daily_checkins':
-            syncResult = await syncDailyCheckIn(db, item.record_id, userId);
-            break;
-          default:
-            syncResult = {
-              success: false,
-              error: `Unknown table: ${item.table_name}`,
-            };
-        }
+    // Phase 1: Process all delete operations first
+    if (deleteItems.length > 0) {
+      logger.info('Phase 1: Processing delete operations', { count: deleteItems.length });
+      for (const item of deleteItems) {
+        const syncResult = await processSyncItem(db, item, userId);
+        await handleSyncResult(db, item, syncResult, result);
       }
+    }
 
-      if (syncResult.success) {
-        // Remove from sync queue on success
-        await db.runAsync('DELETE FROM sync_queue WHERE id = ?', [item.id]);
-        result.synced++;
-      } else {
-        // Increment retry count and store error
-        const newRetryCount = item.retry_count + 1;
-        await db.runAsync(
-          `UPDATE sync_queue
-           SET retry_count = ?, last_error = ?
-           WHERE id = ?`,
-          [newRetryCount, syncResult.error || 'Unknown error', item.id]
-        );
-        result.failed++;
-        result.errors.push(
-          `${item.table_name}/${item.record_id}: ${syncResult.error || 'Unknown error'}`
-        );
-
-        // Log detailed error for debugging
-        logger.error('Sync failed for queue item', {
-          queueItemId: item.id,
-          tableName: item.table_name,
-          recordId: item.record_id,
-          retryCount: newRetryCount,
-          error: syncResult.error,
-        });
-      }
-
-      // Exponential backoff delay between items (1s, 2s, 4s)
-      if (item.retry_count > 0) {
-        const delayMs = Math.pow(2, item.retry_count) * 1000;
-        await new Promise((resolve) => setTimeout(resolve, delayMs));
+    // Phase 2: Process all insert/update operations
+    if (upsertItems.length > 0) {
+      logger.info('Phase 2: Processing insert/update operations', { count: upsertItems.length });
+      for (const item of upsertItems) {
+        const syncResult = await processSyncItem(db, item, userId);
+        await handleSyncResult(db, item, syncResult, result);
       }
     }
 
     logger.info('Sync queue processing complete', {
       synced: result.synced,
       failed: result.failed,
+      deletesProcessed: deleteItems.length,
+      upsertsProcessed: upsertItems.length,
     });
 
     return result;
