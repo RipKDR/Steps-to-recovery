@@ -11,11 +11,13 @@ import { EveningPulseScreen } from '../features/home/screens/EveningPulseScreen'
 import { EmergencyScreen } from '../features/emergency/screens/EmergencyScreen';
 import { StepsOverviewScreen } from '../features/steps/screens/StepsOverviewScreen';
 import { ProfileScreen } from '../features/profile/screens/ProfileScreen';
+import { NotificationSettingsScreen } from '../features/settings/screens/NotificationSettingsScreen';
 
 const Tab = createBottomTabNavigator();
 const HomeStack = createNativeStackNavigator();
 const JournalStack = createNativeStackNavigator();
 const StepsStack = createNativeStackNavigator();
+const ProfileStack = createNativeStackNavigator();
 
 function HomeStackNavigator(): React.ReactElement {
   const { user } = useAuth();
@@ -89,6 +91,23 @@ function StepsStackNavigator(): React.ReactElement {
   );
 }
 
+function ProfileStackNavigator(): React.ReactElement {
+  return (
+    <ProfileStack.Navigator>
+      <ProfileStack.Screen
+        name="ProfileMain"
+        component={ProfileScreen}
+        options={{ title: 'Profile' }}
+      />
+      <ProfileStack.Screen
+        name="NotificationSettings"
+        component={NotificationSettingsScreen}
+        options={{ title: 'Notifications', headerBackTitle: 'Back' }}
+      />
+    </ProfileStack.Navigator>
+  );
+}
+
 export function MainNavigator(): React.ReactElement {
   return (
     <Tab.Navigator
@@ -127,10 +146,9 @@ export function MainNavigator(): React.ReactElement {
       />
       <Tab.Screen
         name="Profile"
-        component={ProfileScreen}
+        component={ProfileStackNavigator}
         options={{
-          headerShown: true,
-          title: 'Profile',
+          headerShown: false,
           tabBarIcon: ({ color, size }) => (
             <MaterialCommunityIcons name="account" size={size} color={color} />
           ),

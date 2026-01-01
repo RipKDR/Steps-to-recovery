@@ -3,9 +3,11 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Card, Text, Button, List, Divider } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../../../contexts/AuthContext';
 
 export function ProfileScreen(): React.ReactElement {
+  const navigation = useNavigation<any>();
   const { user, signOut } = useAuth();
   const [signingOut, setSigningOut] = React.useState(false);
 
@@ -43,31 +45,33 @@ export function ProfileScreen(): React.ReactElement {
             </Text>
             <List.Item
               title="Notifications"
-              description="Coming in Phase 2"
+              description="Manage notification preferences"
               left={(props) => <List.Icon {...props} icon="bell" />}
               right={(props) => <List.Icon {...props} icon="chevron-right" />}
-              disabled
+              onPress={() => navigation.navigate('NotificationSettings')}
               accessibilityLabel="Notifications settings"
               accessibilityRole="button"
             />
             <Divider />
             <List.Item
               title="Privacy & Security"
-              description="Coming in Phase 2"
+              description="Biometrics, auto-lock, and encryption"
               left={(props) => <List.Icon {...props} icon="shield-lock" />}
               right={(props) => <List.Icon {...props} icon="chevron-right" />}
               disabled
-              accessibilityLabel="Privacy and security settings"
+              style={styles.disabledItem}
+              accessibilityLabel="Privacy and security settings - coming soon"
               accessibilityRole="button"
             />
             <Divider />
             <List.Item
               title="Data Export"
-              description="Coming in Phase 2"
+              description="Download your encrypted data"
               left={(props) => <List.Icon {...props} icon="download" />}
               right={(props) => <List.Icon {...props} icon="chevron-right" />}
               disabled
-              accessibilityLabel="Export data"
+              style={styles.disabledItem}
+              accessibilityLabel="Export data - coming soon"
               accessibilityRole="button"
             />
           </Card.Content>
@@ -192,5 +196,8 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     color: '#999',
     marginTop: 8,
+  },
+  disabledItem: {
+    opacity: 0.6,
   },
 });

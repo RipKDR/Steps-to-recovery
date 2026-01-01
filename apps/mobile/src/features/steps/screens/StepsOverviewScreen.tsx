@@ -107,8 +107,9 @@ export function StepsOverviewScreen({ userId }: StepsOverviewScreenProps): React
         })}
 
         <View style={styles.footer}>
+          <MaterialCommunityIcons name="information" size={20} color="#f57c00" style={styles.footerIcon} />
           <Text variant="bodySmall" style={styles.footerText}>
-            Phase 2 includes Step 1 work. Full 12-step work coming in Phase 3.
+            Tap on any step to begin your step work. Your progress is saved locally and encrypted for privacy.
           </Text>
         </View>
       </ScrollView>
@@ -216,11 +217,17 @@ const styles = StyleSheet.create({
   footer: {
     marginTop: 16,
     padding: 16,
-    backgroundColor: '#fff9c4',
+    backgroundColor: '#e3f2fd',
     borderRadius: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  footerIcon: {
+    marginRight: 12,
   },
   footerText: {
-    color: '#666',
-    textAlign: 'center',
+    color: '#1565c0',
+    flex: 1,
+    lineHeight: 20,
   },
 });

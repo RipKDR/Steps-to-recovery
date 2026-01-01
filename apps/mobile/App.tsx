@@ -1,6 +1,9 @@
+// CRITICAL: Import polyfills FIRST before any other code
+import './polyfills';
+
 import React, { Suspense, useState, useMemo, useCallback } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { View, ActivityIndicator, Platform } from 'react-native';
+import { View, ActivityIndicator } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from './src/design-system';

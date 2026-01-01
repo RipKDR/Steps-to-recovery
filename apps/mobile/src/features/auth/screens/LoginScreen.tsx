@@ -142,6 +142,17 @@ export function LoginScreen({ navigation }: Props) {
               loading={loading}
               testID="login-submit-button"
             />
+
+            <TouchableOpacity
+              onPress={() => navigation.navigate('ForgotPassword')}
+              style={styles.forgotPassword}
+              accessibilityRole="link"
+              accessibilityLabel="Forgot password"
+            >
+              <Text style={[theme.typography.bodySmall, { color: theme.colors.primary }]}>
+                Forgot your password?
+              </Text>
+            </TouchableOpacity>
           </View>
 
           <View style={[styles.footer, { marginTop: theme.spacing.xl, paddingVertical: theme.spacing.md }]}>
@@ -181,6 +192,10 @@ const styles = StyleSheet.create({
   },
   form: {
     gap: 8,
+  },
+  forgotPassword: {
+    alignSelf: 'center',
+    marginTop: 12,
   },
   footer: {
     flexDirection: 'row',

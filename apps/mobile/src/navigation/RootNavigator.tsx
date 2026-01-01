@@ -7,6 +7,7 @@ import { AuthNavigator } from './AuthNavigator';
 import { MainNavigator } from './MainNavigator';
 import { OnboardingScreen } from '../features/auth/screens/OnboardingScreen';
 import { supabase } from '../lib/supabase';
+import { navigationRef } from './navigationRef';
 import type { RootStackParamList } from './types';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -75,7 +76,7 @@ export function RootNavigator() {
   }
 
   return (
-    <NavigationContainer>
+    <NavigationContainer ref={navigationRef}>
       <Stack.Navigator 
         screenOptions={{ 
           headerShown: false,

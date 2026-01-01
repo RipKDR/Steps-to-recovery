@@ -15,6 +15,7 @@ import {
   type NotificationPermissionStatus,
 } from '../lib/notifications';
 import { logger } from '../utils/logger';
+import { navigateFromNotification, type NotificationScreen } from '../navigation/navigationRef';
 
 interface NotificationContextValue {
   // Permission state
@@ -92,13 +93,16 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
    * Handle user tapping on notification
    */
   const handleNotificationResponse = useCallback((response: Notifications.NotificationResponse) => {
+    const { title, data } = response.notification.request.content;
+    
     logger.info('Notification tapped', {
-      title: response.notification.request.content.title,
-      data: response.notification.request.content.data,
+      title,
+      data,
     });
 
-    // TODO: Navigate to specific screen based on notification data
-    // e.g., if data.screen === 'journal', navigate to journal
+    // Navigate to specific screen based on notification data
+    const screen = (data?.screen as NotificationScreen) || undefined;
+    navigateFromNotification(screen);
   }, []);
 
   /**

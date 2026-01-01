@@ -1,0 +1,86 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Dark Navy Theme as Default - Enhanced UI/UX Palette */
+:root {
+  /* Base colors */
+  --background: #0a0f1c;
+  --foreground: #f1f5f9;
+  --card: rgba(30, 41, 59, 0.3);
+  --card-border: rgba(255, 255, 255, 0.1);
+  
+  /* Primary colors */
+  --primary: #3b82f6;
+  --primary-foreground: #ffffff;
+  --secondary: #14b8a6;
+  --success: #22c55e;
+  --muted: #64748b;
+  --accent: #f97316;
+  --danger: #f43f5e; /* Softer rose tone */
+  
+  /* New emotional colors */
+  --hope: #f59e0b; /* Warm amber for celebrations */
+  --calm: #a855f7; /* Soft lavender for mindfulness */
+  --glow: #0ea5e9; /* Sky blue for achievements */
+  
+  /* Typography */
+  --font-display: 'Outfit_600SemiBold', sans-serif;
+  --font-body: 'PlusJakartaSans_400Regular', sans-serif;
+  --font-mono: 'JetBrainsMono_400Regular', monospace;
+}
+
+/* Base dark theme */
+@layer base {
+  * {
+    border-color: rgba(51, 65, 85, 0.5);
+  }
+}
+
+/* Custom utility classes for animations */
+@layer utilities {
+  .animate-pulse-glow {
+    animation: pulse-glow 2s ease-in-out infinite;
+  }
+  
+  .animate-fade-in-up {
+    animation: fade-in-up 0.4s ease-out;
+  }
+  
+  .animate-scale-in {
+    animation: scale-in 0.3s ease-out;
+  }
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    opacity: 1;
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+  }
+  50% {
+    opacity: 0.8;
+    box-shadow: 0 0 40px rgba(59, 130, 246, 0.5);
+  }
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
