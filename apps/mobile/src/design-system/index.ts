@@ -47,5 +47,5 @@ export {
 export type { SpringConfigKey, TimingDurationKey, EasingCurveKey } from './tokens/animations';
 
 // Components
-export { Button, Card, FloatingActionButton, Input } from './components';
-export type { ButtonProps, CardProps, FloatingActionButtonProps, InputProps } from './components';
+export { Badge, Button, Card, FloatingActionButton, Input } from './components';
+export type { BadgeProps, ButtonProps, CardProps, FloatingActionButtonProps, InputProps } from './components';

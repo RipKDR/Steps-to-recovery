@@ -1,8 +1,8 @@
 import React from 'react';
-import { StyleSheet, View, TouchableOpacity } from 'react-native';
-import { Card, Text, Chip } from 'react-native-paper';
+import { StyleSheet, View, TouchableOpacity, Text } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import type { JournalEntryDecrypted } from '@repo/shared/types';
+import { useTheme, Card, Badge } from '../../../design-system';
 
 interface JournalCardProps {
   entry: JournalEntryDecrypted;
@@ -32,6 +32,8 @@ const CRAVING_COLORS: Record<number, string> = {
 };
 
 export function JournalCard({ entry, onPress }: JournalCardProps): React.ReactElement {
+  const theme = useTheme();
+
   const formatDate = (dateString: string): string => {
     const date = new Date(dateString);
     const now = new Date();
@@ -50,71 +52,68 @@ export function JournalCard({ entry, onPress }: JournalCardProps): React.ReactEl
   };
 
   return (
-    <TouchableOpacity
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel={`Journal entry ${entry.title || 'Untitled'}, ${formatDate(entry.created_at)}`}
-      accessibilityHint="Double tap to view and edit this journal entry"
-    >
-      <Card style={styles.card}>
-        <Card.Content>
-          <View style={styles.header}>
-            <View style={styles.titleContainer}>
-              {entry.title && (
-                <Text variant="titleMedium" style={styles.title} numberOfLines={1}>
-                  {entry.title}
-                </Text>
-              )}
-              <Text variant="bodySmall" style={styles.date}>
-                {formatDate(entry.created_at)}
-              </Text>
-            </View>
-            <MaterialCommunityIcons name="lock" size={16} color="#666" />
-          </View>
-
-          <Text variant="bodyMedium" style={styles.body} numberOfLines={3}>
-            {truncateBody(entry.body)}
+    <Card variant="interactive" onPress={onPress} animate style={styles.cardContainer}>
+      <View style={styles.header}>
+        <View style={styles.titleContainer}>
+          {entry.title && (
+            <Text
+              style={[theme.typography.h3, { color: theme.colors.text, fontWeight: '600' }]}
+              numberOfLines={1}
+            >
+              {entry.title}
+            </Text>
+          )}
+          <Text style={[theme.typography.caption, { color: theme.colors.textSecondary, marginTop: 2 }]}>
+            {formatDate(entry.created_at)}
           </Text>
+        </View>
+        <MaterialCommunityIcons name="lock" size={16} color={theme.colors.textSecondary} />
+      </View>
 
-          <View style={styles.footer}>
-            <View style={styles.indicators}>
-              {entry.mood !== null && (
-                <View style={styles.indicator}>
-                  <Text style={styles.emoji}>{MOOD_EMOJI[entry.mood]}</Text>
-                </View>
-              )}
-              {entry.craving !== null && (
-                <View style={[styles.cravingIndicator, { backgroundColor: CRAVING_COLORS[entry.craving] }]}>
-                  <Text style={styles.cravingText}>{entry.craving}</Text>
-                </View>
-              )}
+      <Text
+        style={[theme.typography.body, { color: theme.colors.text, marginBottom: 12, lineHeight: 20 }]}
+        numberOfLines={3}
+      >
+        {truncateBody(entry.body)}
+      </Text>
+
+      <View style={styles.footer}>
+        <View style={styles.indicators}>
+          {entry.mood !== null && (
+            <View style={styles.indicator}>
+              <Text style={styles.emoji}>{MOOD_EMOJI[entry.mood]}</Text>
             </View>
+          )}
+          {entry.craving !== null && (
+            <View style={[styles.cravingIndicator, { backgroundColor: CRAVING_COLORS[entry.craving] }]}>
+              <Text style={styles.cravingText}>{entry.craving}</Text>
+            </View>
+          )}
+        </View>
 
-            {entry.tags.length > 0 && (
-              <View style={styles.tags}>
-                {entry.tags.slice(0, 2).map((tag, index) => (
-                  <Chip key={index} style={styles.chip} textStyle={styles.chipText} compact>
-                    {tag}
-                  </Chip>
-                ))}
-                {entry.tags.length > 2 && (
-                  <Text style={styles.moreTags}>+{entry.tags.length - 2}</Text>
-                )}
-              </View>
+        {entry.tags.length > 0 && (
+          <View style={styles.tags}>
+            {entry.tags.slice(0, 2).map((tag, index) => (
+              <Badge key={index} variant="primary" size="small">
+                {tag}
+              </Badge>
+            ))}
+            {entry.tags.length > 2 && (
+              <Text style={[theme.typography.caption, { color: theme.colors.textSecondary }]}>
+                +{entry.tags.length - 2}
+              </Text>
             )}
           </View>
-        </Card.Content>
-      </Card>
-    </TouchableOpacity>
+        )}
+      </View>
+    </Card>
   );
 }
 
 const styles = StyleSheet.create({
-  card: {
+  cardContainer: {
     marginHorizontal: 16,
     marginBottom: 12,
-    elevation: 2,
-    backgroundColor: '#ffffff',
   },
   header: {
     flexDirection: 'row',
@@ -125,19 +124,6 @@ const styles = StyleSheet.create({
   titleContainer: {
     flex: 1,
     marginRight: 8,
-  },
-  title: {
-    fontWeight: 'bold',
-    color: '#1a1a1a',
-  },
-  date: {
-    color: '#666',
-    marginTop: 2,
-  },
-  body: {
-    color: '#333',
-    marginBottom: 12,
-    lineHeight: 20,
   },
   footer: {
     flexDirection: 'row',
@@ -171,17 +157,5 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-  },
-  chip: {
-    height: 24,
-    backgroundColor: '#e3f2fd',
-  },
-  chipText: {
-    fontSize: 11,
-    color: '#1976d2',
-  },
-  moreTags: {
-    fontSize: 11,
-    color: '#666',
   },
 });

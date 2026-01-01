@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View, Text, TouchableOpacity, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { TextInput, Button, Chip, Text } from 'react-native-paper';
+import { MaterialIcons } from '@expo/vector-icons';
 import { Slider } from '../../../components/Slider';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useCreateJournalEntry, useUpdateJournalEntry, useJournalEntries } from '../hooks/useJournalEntries';
+import { useTheme, Input, Button, Badge } from '../../../design-system';
 
 const MOOD_LABELS: Record<number, string> = {
   1: 'Very Sad',
@@ -27,6 +28,7 @@ interface JournalEditorScreenProps {
 }
 
 export function JournalEditorScreen({ userId }: JournalEditorScreenProps): React.ReactElement {
+  const theme = useTheme();
   const navigation = useNavigation();
   const route = useRoute();
   const params = route.params as { mode?: 'create' | 'edit'; entryId?: string } | undefined;
@@ -87,32 +89,48 @@ export function JournalEditorScreen({ userId }: JournalEditorScreenProps): React
   const isPending = isCreating || isUpdating;
 
   return (
-    <SafeAreaView style={styles.container} edges={['bottom']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]} edges={['bottom']}>
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.contentContainer}>
-        <TextInput
-          mode="outlined"
+        <Input
           label="Title (optional)"
           value={title}
           onChangeText={setTitle}
-          style={styles.input}
-          accessibilityLabel="Journal entry title"
-          accessibilityRole="text"
+          placeholder="Give your entry a title"
+          containerStyle={styles.inputContainer}
         />
 
-        <TextInput
-          mode="outlined"
-          label="Write your thoughts..."
-          value={body}
-          onChangeText={setBody}
-          multiline
-          numberOfLines={10}
-          style={[styles.input, styles.bodyInput]}
-          accessibilityLabel="Journal entry body"
-          accessibilityRole="text"
-        />
+        <View style={styles.bodyContainer}>
+          <Text style={[theme.typography.label, { color: theme.colors.text, marginBottom: 8 }]}>
+            Write your thoughts...
+          </Text>
+          <View
+            style={[
+              styles.bodyInputContainer,
+              {
+                backgroundColor: theme.colors.surface,
+                borderColor: theme.colors.border,
+                borderRadius: theme.radius.input,
+              },
+            ]}
+          >
+            <TextInput
+              style={[
+                styles.bodyInput,
+                theme.typography.body,
+                { color: theme.colors.text },
+              ]}
+              value={body}
+              onChangeText={setBody}
+              multiline
+              placeholder="Share your thoughts, feelings, and progress..."
+              placeholderTextColor={theme.colors.textSecondary}
+              textAlignVertical="top"
+            />
+          </View>
+        </View>
 
         <View style={styles.section}>
-          <Text variant="titleMedium" style={styles.sectionTitle}>
+          <Text style={[theme.typography.h3, { marginBottom: 12, fontWeight: '600', color: theme.colors.text }]}>
             How are you feeling? {mood !== null && MOOD_EMOJI[mood]}
           </Text>
           <View style={styles.sliderContainer}>
@@ -122,19 +140,19 @@ export function JournalEditorScreen({ userId }: JournalEditorScreenProps): React
               minimumValue={1}
               maximumValue={5}
               step={1}
-              minimumTrackTintColor="#2196f3"
-              maximumTrackTintColor="#e0e0e0"
+              minimumTrackTintColor={theme.colors.primary}
+              maximumTrackTintColor={theme.colors.border}
               accessibilityLabel={`Mood: ${mood !== null ? MOOD_LABELS[mood] : 'Not set'}`}
               accessibilityRole="adjustable"
             />
-            <Text variant="bodySmall" style={styles.sliderLabel}>
+            <Text style={[theme.typography.caption, { textAlign: 'center', marginTop: 8, color: theme.colors.textSecondary }]}>
               {mood !== null ? MOOD_LABELS[mood] : 'Not set'}
             </Text>
           </View>
         </View>
 
         <View style={styles.section}>
-          <Text variant="titleMedium" style={styles.sectionTitle}>
+          <Text style={[theme.typography.h3, { marginBottom: 12, fontWeight: '600', color: theme.colors.text }]}>
             Craving level (0-10)
           </Text>
           <View style={styles.sliderContainer}>
@@ -144,64 +162,67 @@ export function JournalEditorScreen({ userId }: JournalEditorScreenProps): React
               minimumValue={0}
               maximumValue={10}
               step={1}
-              minimumTrackTintColor={craving && craving > 5 ? '#ff5722' : '#4caf50'}
-              maximumTrackTintColor="#e0e0e0"
+              minimumTrackTintColor={craving && craving > 5 ? theme.colors.danger : theme.colors.success}
+              maximumTrackTintColor={theme.colors.border}
               accessibilityLabel={`Craving level: ${craving || 0} out of 10`}
               accessibilityRole="adjustable"
             />
-            <Text variant="bodySmall" style={styles.sliderLabel}>
+            <Text style={[theme.typography.caption, { textAlign: 'center', marginTop: 8, color: theme.colors.textSecondary }]}>
               {craving || 0}/10
             </Text>
           </View>
         </View>
 
         <View style={styles.section}>
-          <Text variant="titleMedium" style={styles.sectionTitle}>
+          <Text style={[theme.typography.h3, { marginBottom: 12, fontWeight: '600', color: theme.colors.text }]}>
             Tags
           </Text>
           <View style={styles.tagInputContainer}>
-            <TextInput
-              mode="outlined"
-              label="Add tag"
+            <Input
+              label=""
               value={tagInput}
               onChangeText={setTagInput}
               onSubmitEditing={handleAddTag}
-              style={styles.tagInput}
-              accessibilityLabel="Add tag"
-              accessibilityRole="text"
+              placeholder="Add a tag"
+              containerStyle={styles.tagInputField}
             />
-            <Button mode="contained" onPress={handleAddTag} style={styles.addTagButton}>
-              Add
-            </Button>
+            <Button
+              title="Add"
+              onPress={handleAddTag}
+              variant="primary"
+              size="medium"
+              style={styles.addTagButton}
+            />
           </View>
           <View style={styles.tagsContainer}>
             {tags.map((tag, index) => (
-              <Chip
-                key={index}
-                onClose={() => handleRemoveTag(tag)}
-                style={styles.tag}
-                accessibilityLabel={`Tag: ${tag}`}
-                accessibilityRole="button"
-              >
-                {tag}
-              </Chip>
+              <View key={index} style={styles.tagWrapper}>
+                <Badge variant="primary" size="medium">
+                  {tag}
+                </Badge>
+                <TouchableOpacity
+                  onPress={() => handleRemoveTag(tag)}
+                  style={styles.removeTagButton}
+                  accessibilityLabel={`Remove tag ${tag}`}
+                  accessibilityRole="button"
+                >
+                  <MaterialIcons name="close" size={16} color={theme.colors.danger} />
+                </TouchableOpacity>
+              </View>
             ))}
           </View>
         </View>
       </ScrollView>
 
-      <View style={styles.footer}>
+      <View style={[styles.footer, { backgroundColor: theme.colors.surface, borderTopColor: theme.colors.border }]}>
         <Button
-          mode="contained"
+          title={isEditMode ? 'Update' : 'Save'}
           onPress={handleSave}
           disabled={!body.trim() || isPending}
           loading={isPending}
-          style={styles.saveButton}
-          accessibilityLabel={isEditMode ? 'Update entry' : 'Save entry'}
-          accessibilityRole="button"
-        >
-          {isEditMode ? 'Update' : 'Save'}
-        </Button>
+          variant="primary"
+          fullWidth
+        />
       </View>
     </SafeAreaView>
   );
@@ -210,7 +231,6 @@ export function JournalEditorScreen({ userId }: JournalEditorScreenProps): React
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
   },
   scrollView: {
     flex: 1,
@@ -218,56 +238,60 @@ const styles = StyleSheet.create({
   contentContainer: {
     padding: 16,
   },
-  input: {
+  inputContainer: {
+    marginBottom: 0,
+  },
+  bodyContainer: {
     marginBottom: 16,
-    backgroundColor: '#ffffff',
+  },
+  bodyInputContainer: {
+    borderWidth: 2,
+    padding: 16,
+    minHeight: 200,
   },
   bodyInput: {
-    minHeight: 200,
+    flex: 1,
+    padding: 0,
+    minHeight: 168,
   },
   section: {
     marginBottom: 24,
   },
-  sectionTitle: {
-    marginBottom: 12,
-    fontWeight: '600',
-    color: '#1a1a1a',
-  },
   sliderContainer: {
     paddingHorizontal: 8,
-  },
-  sliderLabel: {
-    textAlign: 'center',
-    marginTop: 8,
-    color: '#666',
   },
   tagInputContainer: {
     flexDirection: 'row',
     marginBottom: 12,
     gap: 8,
+    alignItems: 'flex-start',
   },
-  tagInput: {
+  tagInputField: {
     flex: 1,
-    backgroundColor: '#ffffff',
+    marginBottom: 0,
   },
   addTagButton: {
-    justifyContent: 'center',
+    minWidth: 80,
   },
   tagsContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
   },
-  tag: {
-    backgroundColor: '#e3f2fd',
+  tagWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    position: 'relative',
+  },
+  removeTagButton: {
+    marginLeft: -8,
+    marginTop: -8,
+    padding: 4,
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    borderRadius: 12,
   },
   footer: {
     padding: 16,
-    backgroundColor: '#ffffff',
     borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
-  },
-  saveButton: {
-    paddingVertical: 6,
   },
 });
