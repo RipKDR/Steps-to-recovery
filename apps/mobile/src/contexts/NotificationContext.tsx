@@ -6,6 +6,7 @@
  */
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import {
   requestNotificationPermissions,
@@ -102,8 +103,14 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
   /**
    * Register notification handlers on mount
+   * Skip on web - notifications not fully supported
    */
   useEffect(() => {
+    if (Platform.OS === 'web') {
+      // Notifications not supported on web, skip registration
+      return;
+    }
+
     const cleanup = registerNotificationHandlers({
       onNotificationReceived: handleNotificationReceived,
       onNotificationResponse: handleNotificationResponse,
@@ -114,8 +121,16 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
   /**
    * Check permission status on mount
+   * Skip on web - notifications not fully supported
    */
   useEffect(() => {
+    if (Platform.OS === 'web') {
+      // On web, set status to unavailable
+      setPermissionStatus('unavailable');
+      setIsLoading(false);
+      return;
+    }
+
     checkPermissionStatus();
   }, [checkPermissionStatus]);
 

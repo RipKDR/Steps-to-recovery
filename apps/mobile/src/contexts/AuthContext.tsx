@@ -44,6 +44,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         loading: false,
         error: error ?? null,
       }));
+    }).catch((error) => {
+      setState(prev => ({
+        ...prev,
+        loading: false,
+        error: error as AuthError,
+      }));
     });
 
     // Listen for auth changes

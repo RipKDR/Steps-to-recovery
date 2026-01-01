@@ -1,9 +1,9 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
-import { AppState } from 'react-native';
+import { AppState, Platform } from 'react-native';
 import NetInfo from '@react-native-community/netinfo';
-import { useSQLiteContext } from 'expo-sqlite';
 import { processSyncQueue } from '../services/syncService';
 import { useAuth } from './AuthContext';
+import { useDatabase } from './DatabaseContext';
 import { clearDatabase } from '../utils/database';
 import { logger } from '../utils/logger';
 import type { StorageAdapter } from '../adapters/storage';
@@ -26,7 +26,7 @@ const SyncContext = createContext<SyncContextType | undefined>(undefined);
 const SYNC_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 
 export function SyncProvider({ children }: { children: React.ReactNode }) {
-  const db = useSQLiteContext();
+  const { db, isReady } = useDatabase();
   const { user } = useAuth();
   const syncIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const isOnlineRef = useRef<boolean>(false);
@@ -57,7 +57,7 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
    * Update pending count from sync_queue
    */
   const updatePendingCount = useCallback(async () => {
-    if (!user) return;
+    if (!user || !db || !isReady) return;
 
     try {
       const result = await db.getFirstAsync<{ count: number }>(
@@ -67,7 +67,7 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       logger.error('Failed to update pending count', error);
     }
-  }, [db, user]);
+  }, [db, user, isReady]);
 
   /**
    * Trigger sync operation
@@ -75,6 +75,11 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
   const triggerSync = useCallback(async () => {
     if (!user) {
       logger.warn('Cannot sync: no user logged in');
+      return;
+    }
+
+    if (!db || !isReady) {
+      logger.warn('Cannot sync: database not ready');
       return;
     }
 
@@ -123,7 +128,7 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
       }));
       isSyncingRef.current = false;
     }
-  }, [db, user, updatePendingCount]);
+  }, [db, user, isReady, updatePendingCount]);
 
   // Expose latest triggerSync to effects without re-subscribing them
   useEffect(() => {
@@ -136,36 +141,69 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
 
   /**
    * Set up network listener
+   * On web, use navigator.onLine API instead of NetInfo
    */
   useEffect(() => {
-    const unsubscribe = NetInfo.addEventListener((netState) => {
-      const isConnected = netState.isConnected;
-      const isInternetReachable = netState.isInternetReachable;
-      const nextOnline = isConnected === true && isInternetReachable === true;
+    // On web, NetInfo may not work properly, use browser API instead
+    if (Platform.OS === 'web') {
+      // Set initial state
+      const initialOnline = typeof navigator !== 'undefined' && navigator.onLine;
+      isOnlineRef.current = initialOnline;
+      setState((prev) => ({ ...prev, isOnline: initialOnline }));
 
-      // Deduplicate noisy NetInfo events (it can emit the same state many times)
-      if (nextOnline === isOnlineRef.current) {
-        return;
-      }
+      // Listen for online/offline events
+      const handleOnline = () => {
+        isOnlineRef.current = true;
+        setState((prev) => ({ ...prev, isOnline: true }));
+        if (userIdRef.current) {
+          logger.info('Device came online, triggering sync');
+          void triggerSyncRef.current();
+        }
+      };
 
-      const prevOnline = isOnlineRef.current;
-      isOnlineRef.current = nextOnline;
+      const handleOffline = () => {
+        isOnlineRef.current = false;
+        setState((prev) => ({ ...prev, isOnline: false }));
+      };
 
-      logger.info('Network state changed', {
-        isConnected,
-        isInternetReachable,
+      window.addEventListener('online', handleOnline);
+      window.addEventListener('offline', handleOffline);
+
+      return () => {
+        window.removeEventListener('online', handleOnline);
+        window.removeEventListener('offline', handleOffline);
+      };
+    } else {
+      // Mobile: Use NetInfo
+      const unsubscribe = NetInfo.addEventListener((netState) => {
+        const isConnected = netState.isConnected;
+        const isInternetReachable = netState.isInternetReachable;
+        const nextOnline = isConnected === true && isInternetReachable === true;
+
+        // Deduplicate noisy NetInfo events (it can emit the same state many times)
+        if (nextOnline === isOnlineRef.current) {
+          return;
+        }
+
+        const prevOnline = isOnlineRef.current;
+        isOnlineRef.current = nextOnline;
+
+        logger.info('Network state changed', {
+          isConnected,
+          isInternetReachable,
+        });
+
+        setState((prev) => (prev.isOnline === nextOnline ? prev : { ...prev, isOnline: nextOnline }));
+
+        // Trigger sync only on offline -> online transitions
+        if (nextOnline && !prevOnline && userIdRef.current) {
+          logger.info('Device came online, triggering sync');
+          void triggerSyncRef.current();
+        }
       });
 
-      setState((prev) => (prev.isOnline === nextOnline ? prev : { ...prev, isOnline: nextOnline }));
-
-      // Trigger sync only on offline -> online transitions
-      if (nextOnline && !prevOnline && userIdRef.current) {
-        logger.info('Device came online, triggering sync');
-        void triggerSyncRef.current();
-      }
-    });
-
-    return () => unsubscribe();
+      return () => unsubscribe();
+    }
   }, []);
 
   /**
@@ -175,29 +213,20 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
     const previousUser = userIdRef.current;
 
     // If we had a user and now don't (logout), clear the database
-    if (previousUser && !user) {
+    if (previousUser && !user && db && isReady) {
       logger.info('User logged out, clearing local database');
 
-      // Create adapter wrapper for the raw SQLite database
-      const adapter: StorageAdapter = {
-        getAllAsync: (query, params) => db.getAllAsync(query, params || []),
-        getFirstAsync: (query, params) => db.getFirstAsync(query, params || []),
-        runAsync: async (query, params) => { await db.runAsync(query, params || []); },
-        execAsync: (sql) => db.execAsync(sql),
-        withTransactionAsync: (callback) => db.withTransactionAsync(callback),
-      };
-
-      clearDatabase(adapter).catch((error) => {
+      clearDatabase(db).catch((error) => {
         logger.error('Failed to clear database on logout', error);
       });
     }
-  }, [user, db]);
+  }, [user, db, isReady]);
 
   /**
    * Set up periodic background sync (every 5 minutes when online)
    */
   useEffect(() => {
-    if (!user) return;
+    if (!user || !db || !isReady) return;
 
     // Initial pending count
     updatePendingCount();
@@ -216,22 +245,40 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
         syncIntervalRef.current = null;
       }
     };
-  }, [user, state.isOnline, state.isSyncing, triggerSync, updatePendingCount]);
+  }, [user, db, isReady, state.isOnline, state.isSyncing, triggerSync, updatePendingCount]);
 
   /**
    * Set up AppState listener to sync when app comes to foreground
+   * On web, use visibilitychange API instead
    */
   useEffect(() => {
     if (!user) return;
 
-    const subscription = AppState.addEventListener('change', (nextAppState) => {
-      if (nextAppState === 'active' && state.isOnline && !state.isSyncing) {
-        logger.info('App foregrounded, triggering sync');
-        triggerSync();
-      }
-    });
+    if (Platform.OS === 'web') {
+      // Web: Use visibilitychange API
+      const handleVisibilityChange = () => {
+        if (document.visibilityState === 'visible' && state.isOnline && !state.isSyncing) {
+          logger.info('App foregrounded, triggering sync');
+          triggerSync();
+        }
+      };
 
-    return () => subscription.remove();
+      document.addEventListener('visibilitychange', handleVisibilityChange);
+
+      return () => {
+        document.removeEventListener('visibilitychange', handleVisibilityChange);
+      };
+    } else {
+      // Mobile: Use AppState
+      const subscription = AppState.addEventListener('change', (nextAppState) => {
+        if (nextAppState === 'active' && state.isOnline && !state.isSyncing) {
+          logger.info('App foregrounded, triggering sync');
+          triggerSync();
+        }
+      });
+
+      return () => subscription.remove();
+    }
   }, [user, state.isOnline, state.isSyncing, triggerSync]);
 
   const value: SyncContextType = {
