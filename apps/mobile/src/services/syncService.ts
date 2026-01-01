@@ -19,6 +19,7 @@ interface SyncQueueItem {
   table_name: string;
   record_id: string;
   operation: 'insert' | 'update' | 'delete';
+  supabase_id: string | null;
   retry_count: number;
   last_error: string | null;
 }
@@ -389,12 +390,17 @@ export async function processSyncQueue(
 
       // Handle delete operations separately
       if (item.operation === 'delete') {
-        // For deletes, get the supabase_id from the record before it was deleted
-        // Since the record is already deleted locally, we need to handle this differently
-        // For now, we'll try to delete by looking up the supabase_id mapping
-        // This is a limitation - ideally we'd store supabase_id in the sync_queue
-        syncResult = { success: true }; // Skip delete sync for now - records are already deleted locally
-        logger.warn(`Delete sync not fully implemented - record already deleted locally (${item.table_name}/${item.record_id})`);
+        // For deletes, we use the supabase_id stored in the sync_queue
+        if (item.supabase_id) {
+          syncResult = await deleteFromSupabase(item.table_name, item.supabase_id, userId);
+        } else {
+          // Record was never synced to cloud, so nothing to delete remotely
+          logger.info('Delete skipped - record was never synced to cloud', {
+            tableName: item.table_name,
+            recordId: item.record_id,
+          });
+          syncResult = { success: true };
+        }
       } else {
         // Route to appropriate sync function based on table
         switch (item.table_name) {
@@ -471,26 +477,67 @@ export async function processSyncQueue(
  * @param tableName - Name of the table (journal_entries, daily_checkins, step_work)
  * @param recordId - ID of the record to sync
  * @param operation - Type of operation (insert, update, delete)
+ * @param supabaseId - Optional Supabase ID (required for delete operations)
  */
 export async function addToSyncQueue(
   db: SQLiteDatabase,
   tableName: string,
   recordId: string,
-  operation: 'insert' | 'update' | 'delete'
+  operation: 'insert' | 'update' | 'delete',
+  supabaseId?: string | null
 ): Promise<void> {
   try {
     const queueId = `sync_${Date.now()}_${Math.random().toString(36).substring(7)}`;
     const now = new Date().toISOString();
 
     await db.runAsync(
-      `INSERT OR REPLACE INTO sync_queue (id, table_name, record_id, operation, created_at, retry_count)
-       VALUES (?, ?, ?, ?, ?, 0)`,
-      [queueId, tableName, recordId, operation, now]
+      `INSERT OR REPLACE INTO sync_queue (id, table_name, record_id, operation, supabase_id, created_at, retry_count)
+       VALUES (?, ?, ?, ?, ?, ?, 0)`,
+      [queueId, tableName, recordId, operation, supabaseId || null, now]
     );
 
-    logger.info('Added to sync queue', { tableName, recordId, operation });
+    logger.info('Added to sync queue', { tableName, recordId, operation, supabaseId: supabaseId || null });
   } catch (error) {
     logger.error('Failed to add to sync queue', { tableName, recordId, error });
+    throw error;
+  }
+}
+
+/**
+ * Queue a delete operation with proper supabase_id capture
+ * This helper fetches the supabase_id before the record is deleted
+ *
+ * @param db - SQLite database instance
+ * @param tableName - Name of the table
+ * @param recordId - ID of the record to delete
+ * @param userId - User ID for ownership verification
+ */
+export async function addDeleteToSyncQueue(
+  db: SQLiteDatabase,
+  tableName: string,
+  recordId: string,
+  userId: string
+): Promise<void> {
+  try {
+    // Fetch the supabase_id before deletion
+    const record = await db.getFirstAsync<{ supabase_id: string | null }>(
+      `SELECT supabase_id FROM ${tableName} WHERE id = ? AND user_id = ?`,
+      [recordId, userId]
+    );
+
+    const supabaseId = record?.supabase_id || null;
+
+    // Add to sync queue with the supabase_id
+    await addToSyncQueue(db, tableName, recordId, 'delete', supabaseId);
+
+    if (!supabaseId) {
+      logger.info('Delete queued for unsynced record - will skip cloud delete', {
+        tableName,
+        recordId,
+      });
+    }
+  } catch (error) {
+    logger.error('Failed to queue delete operation', { tableName, recordId, error });
     throw error;
   }
 }

@@ -104,6 +104,7 @@ export async function initDatabase(db: StorageAdapter): Promise<void> {
         table_name TEXT NOT NULL,
         record_id TEXT NOT NULL,
         operation TEXT NOT NULL CHECK(operation IN ('insert','update','delete')),
+        supabase_id TEXT,
         created_at TEXT NOT NULL,
         retry_count INTEGER DEFAULT 0,
         last_error TEXT,
@@ -130,6 +131,8 @@ export async function initDatabase(db: StorageAdapter): Promise<void> {
       `ALTER TABLE daily_checkins ADD COLUMN supabase_id TEXT;`,
       // Add updated_at to daily_checkins for conflict resolution
       `ALTER TABLE daily_checkins ADD COLUMN updated_at TEXT NOT NULL DEFAULT (datetime('now'));`,
+      // Add supabase_id to sync_queue for delete operations (Story 3.1.2)
+      `ALTER TABLE sync_queue ADD COLUMN supabase_id TEXT;`,
     ];
 
     for (const migration of migrations) {
