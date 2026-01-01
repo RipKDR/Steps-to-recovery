@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   TextInputProps,
   ViewStyle,
+  Platform,
 } from 'react-native';
 import { theme } from '../utils/theme';
 
@@ -77,6 +78,7 @@ export const Input = forwardRef<TextInput, InputProps>(({
           accessibilityHint={hint}
           accessibilityState={{ disabled }}
           testID={testID}
+          {...(Platform.OS === 'web' && secureTextEntry ? { type: 'password' } : {})}
           {...rest}
         />
         {showPasswordToggle && (

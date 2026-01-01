@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useSQLiteContext } from 'expo-sqlite';
+import { useDatabase } from '../../../contexts/DatabaseContext';
 import { decryptContent, encryptContent } from '../../../utils/encryption';
 import { logger } from '../../../utils/logger';
 import { addToSyncQueue, addDeleteToSyncQueue } from '../../../services/syncService';
@@ -39,10 +39,13 @@ export function useJournalEntries(userId: string): {
   error: Error | null;
   refetch: () => Promise<void>;
 } {
-  const db = useSQLiteContext();
+  const { db, isReady } = useDatabase();
   const { data: entries = [], isLoading, error, refetch } = useQuery({
     queryKey: ['journal_entries', userId],
     queryFn: async () => {
+      if (!db || !isReady) {
+        throw new Error('Database not ready');
+      }
       try {
         const result = await db.getAllAsync<JournalEntry>(
           'SELECT * FROM journal_entries WHERE user_id = ? ORDER BY created_at DESC',
@@ -56,6 +59,7 @@ export function useJournalEntries(userId: string): {
         throw err;
       }
     },
+    enabled: isReady && !!db,
   });
 
   return {
@@ -75,7 +79,7 @@ export function useCreateJournalEntry(userId: string): {
   createEntry: (entry: Omit<JournalEntryDecrypted, 'id' | 'user_id' | 'created_at' | 'updated_at' | 'sync_status' | 'supabase_id'>) => Promise<void>;
   isPending: boolean;
 } {
-  const db = useSQLiteContext();
+  const { db, isReady } = useDatabase();
   const queryClient = useQueryClient();
 
   const mutation = useMutation({
@@ -123,7 +127,7 @@ export function useUpdateJournalEntry(userId: string): {
   updateEntry: (id: string, entry: Partial<Omit<JournalEntryDecrypted, 'id' | 'user_id' | 'created_at' | 'updated_at' | 'sync_status' | 'supabase_id'>>) => Promise<void>;
   isPending: boolean;
 } {
-  const db = useSQLiteContext();
+  const { db, isReady } = useDatabase();
   const queryClient = useQueryClient();
 
   const mutation = useMutation({
@@ -194,7 +198,7 @@ export function useDeleteJournalEntry(userId: string): {
   deleteEntry: (id: string) => Promise<void>;
   isPending: boolean;
 } {
-  const db = useSQLiteContext();
+  const { db, isReady } = useDatabase();
   const queryClient = useQueryClient();
 
   const mutation = useMutation({

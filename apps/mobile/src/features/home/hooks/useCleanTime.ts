@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useSQLiteContext } from 'expo-sqlite';
+import { useDatabase } from '../../../contexts/DatabaseContext';
 import { logger } from '../../../utils/logger';
 import { scheduleAllMilestones, MILESTONE_DAYS } from '../../../services/notificationService';
 import type { UserProfile, Milestone } from '@repo/shared/types';
@@ -60,11 +60,14 @@ export function useCleanTime(userId: string): {
   isLoading: boolean;
   error: Error | null;
 } {
-  const db = useSQLiteContext();
+  const { db, isReady } = useDatabase();
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['clean_time', userId],
     queryFn: async () => {
+      if (!db || !isReady) {
+        throw new Error('Database not ready');
+      }
       try {
         const result = await db.getFirstAsync<UserProfile>(
           'SELECT * FROM user_profile WHERE id = ?',
@@ -89,6 +92,7 @@ export function useCleanTime(userId: string): {
         throw err;
       }
     },
+    enabled: isReady && !!db,
     refetchInterval: 1000, // Update every second for live counter
   });
 
@@ -112,7 +116,7 @@ export function useMilestones(userId: string): {
   checkForNewMilestones: () => Promise<Milestone[]>;
   newMilestone: Milestone | null;
 } {
-  const db = useSQLiteContext();
+  const { db, isReady } = useDatabase();
   const [newMilestone, setNewMilestone] = React.useState<Milestone | null>(null);
   const hasScheduledNotifications = useRef(false);
 

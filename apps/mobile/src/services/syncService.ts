@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase';
-import type { SQLiteDatabase } from 'expo-sqlite';
+import type { StorageAdapter } from '../adapters/storage';
 import { logger } from '../utils/logger';
 
 /**
@@ -91,7 +91,7 @@ function generateUUID(): string {
  * Maps local encrypted fields to Supabase schema
  */
 export async function syncJournalEntry(
-  db: SQLiteDatabase,
+  db: StorageAdapter,
   entryId: string,
   userId: string
 ): Promise<{ success: boolean; error?: string }> {
@@ -167,7 +167,7 @@ export async function syncJournalEntry(
  * Note: Supabase step_work schema differs from local (content vs question_number/encrypted_answer)
  */
 export async function syncStepWork(
-  db: SQLiteDatabase,
+  db: StorageAdapter,
   stepWorkId: string,
   userId: string
 ): Promise<{ success: boolean; error?: string }> {
@@ -241,7 +241,7 @@ export async function syncStepWork(
  * - encrypted_craving → day_rating (converted: 0-10 craving → inverted 1-10 rating)
  */
 export async function syncDailyCheckIn(
-  db: SQLiteDatabase,
+  db: StorageAdapter,
   checkInId: string,
   userId: string
 ): Promise<{ success: boolean; error?: string }> {
@@ -352,7 +352,7 @@ async function deleteFromSupabase(
  * Handles routing to correct sync function and result handling
  */
 async function processSyncItem(
-  db: SQLiteDatabase,
+  db: StorageAdapter,
   item: SyncQueueItem,
   userId: string
 ): Promise<{ success: boolean; error?: string }> {
@@ -392,7 +392,7 @@ async function processSyncItem(
  * Updates queue item on failure, removes on success
  */
 async function handleSyncResult(
-  db: SQLiteDatabase,
+  db: StorageAdapter,
   item: SyncQueueItem,
   syncResult: { success: boolean; error?: string },
   result: SyncResult
@@ -444,13 +444,13 @@ async function handleSyncResult(
  * IMPORTANT: Deletes are processed BEFORE inserts/updates to avoid
  * foreign key conflicts and ensure data consistency.
  *
- * @param db - SQLite database instance
+ * @param db - Storage adapter instance (SQLite on mobile, IndexedDB on web)
  * @param userId - Current user ID
  * @param maxBatchSize - Maximum items to process per batch (default: 50)
  * @returns SyncResult with counts and errors
  */
 export async function processSyncQueue(
-  db: SQLiteDatabase,
+  db: StorageAdapter,
   userId: string,
   maxBatchSize: number = 50
 ): Promise<SyncResult> {
@@ -524,14 +524,14 @@ export async function processSyncQueue(
  * Add a record to the sync queue
  * This should be called whenever a record is created, updated, or deleted
  *
- * @param db - SQLite database instance
+ * @param db - Storage adapter instance (SQLite on mobile, IndexedDB on web)
  * @param tableName - Name of the table (journal_entries, daily_checkins, step_work)
  * @param recordId - ID of the record to sync
  * @param operation - Type of operation (insert, update, delete)
  * @param supabaseId - Optional Supabase ID (required for delete operations)
  */
 export async function addToSyncQueue(
-  db: SQLiteDatabase,
+  db: StorageAdapter,
   tableName: string,
   recordId: string,
   operation: 'insert' | 'update' | 'delete',
@@ -558,13 +558,13 @@ export async function addToSyncQueue(
  * Queue a delete operation with proper supabase_id capture
  * This helper fetches the supabase_id before the record is deleted
  *
- * @param db - SQLite database instance
+ * @param db - Storage adapter instance (SQLite on mobile, IndexedDB on web)
  * @param tableName - Name of the table
  * @param recordId - ID of the record to delete
  * @param userId - User ID for ownership verification
  */
 export async function addDeleteToSyncQueue(
-  db: SQLiteDatabase,
+  db: StorageAdapter,
   tableName: string,
   recordId: string,
   userId: string

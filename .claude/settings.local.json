@@ -26,7 +26,10 @@
       "Bash(taskkill:*)",
       "Bash(npx expo prebuild:*)",
       "Bash(npx expo run:android:*)",
-      "Bash(npx expo start:*)"
+      "Bash(npx expo start:*)",
+      "Bash(if not exist \"C:\\\\Users\\\\laine\\\\.claude\" mkdir \"C:\\\\Users\\\\laine\\\\.claude\")",
+      "WebFetch(domain:12-step-companion.vercel.app)",
+      "Bash(git commit:*)"
     ]
   },
   "outputStyle": "Explanatory"

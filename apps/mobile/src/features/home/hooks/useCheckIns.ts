@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useSQLiteContext } from 'expo-sqlite';
+import { useDatabase } from '../../../contexts/DatabaseContext';
 import { decryptContent, encryptContent } from '../../../utils/encryption';
 import { logger } from '../../../utils/logger';
 import { addToSyncQueue } from '../../../services/syncService';
@@ -37,12 +37,15 @@ export function useTodayCheckIns(userId: string): {
   isLoading: boolean;
   error: Error | null;
 } {
-  const db = useSQLiteContext();
+  const { db, isReady } = useDatabase();
   const today = new Date().toISOString().split('T')[0];
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['daily_checkins', userId, today],
     queryFn: async () => {
+      if (!db || !isReady) {
+        throw new Error('Database not ready');
+      }
       try {
         const result = await db.getAllAsync<DailyCheckIn>(
           'SELECT * FROM daily_checkins WHERE user_id = ? AND check_in_date = ?',
@@ -59,6 +62,7 @@ export function useTodayCheckIns(userId: string): {
         throw err;
       }
     },
+    enabled: isReady && !!db,
   });
 
   return {
@@ -76,7 +80,7 @@ export function useCreateCheckIn(userId: string): {
   createCheckIn: (data: { type: CheckInType; intention?: string; reflection?: string; mood?: number; craving?: number }) => Promise<void>;
   isPending: boolean;
 } {
-  const db = useSQLiteContext();
+  const { db, isReady } = useDatabase();
   const queryClient = useQueryClient();
 
   const mutation = useMutation({
@@ -127,7 +131,7 @@ export function useStreak(userId: string): {
   total_check_ins: number;
   isLoading: boolean;
 } {
-  const db = useSQLiteContext();
+  const { db, isReady } = useDatabase();
 
   const { data, isLoading } = useQuery({
     queryKey: ['streak', userId],

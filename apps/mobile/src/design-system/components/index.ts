@@ -17,12 +17,16 @@ export type { FloatingActionButtonProps } from './FloatingActionButton';
 export { Input } from './Input';
 export type { InputProps } from './Input';
 
+export { ProgressBar } from './ProgressBar';
+export type { ProgressBarProps } from './ProgressBar';
+
+export { Toggle } from './Toggle';
+export type { ToggleProps } from './Toggle';
+
+export { SobrietyCounter } from './SobrietyCounter';
+export type { SobrietyCounterProps, Milestone } from './SobrietyCounter';
+
 // Additional components will be exported here as they're built
-// export { Input } from './Input';
-// export { Badge } from './Badge';
-// export { ProgressBar } from './ProgressBar';
-// export { Toggle } from './Toggle';
-// export { SobrietyCounter } from './SobrietyCounter';
 // export { StreakCard } from './StreakCard';
 // export { ChallengeCard } from './ChallengeCard';
 // export { MilestoneCelebration } from './MilestoneCelebration';

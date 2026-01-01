@@ -13,21 +13,24 @@ import { logger } from '../utils/logger';
  * Configure notification behavior
  * - Show notifications when app is in foreground
  * - Play sound and show badge
+ * Skip on web - notifications not fully supported
  */
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldShowBanner: true,
-    shouldShowList: true,
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-  }),
-});
+if (Platform.OS !== 'web') {
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowAlert: true,
+      shouldShowBanner: true,
+      shouldShowList: true,
+      shouldPlaySound: true,
+      shouldSetBadge: true,
+    }),
+  });
+}
 
 /**
  * Notification permission status
  */
-export type NotificationPermissionStatus = 'granted' | 'denied' | 'undetermined';
+export type NotificationPermissionStatus = 'granted' | 'denied' | 'undetermined' | 'unavailable';
 
 /**
  * Result of permission request
@@ -44,6 +47,14 @@ export interface NotificationPermissionResult {
  * @returns Permission result with status and optional Expo push token
  */
 export async function requestNotificationPermissions(): Promise<NotificationPermissionResult> {
+  if (Platform.OS === 'web') {
+    // Notifications not supported on web
+    return {
+      status: 'unavailable' as NotificationPermissionStatus,
+      canAskAgain: false,
+    };
+  }
+
   try {
     // Check current permission status
     const { status: existingStatus } = await Notifications.getPermissionsAsync();
@@ -89,6 +100,11 @@ export async function requestNotificationPermissions(): Promise<NotificationPerm
  * @returns Current permission status
  */
 export async function getNotificationPermissionStatus(): Promise<NotificationPermissionStatus> {
+  if (Platform.OS === 'web') {
+    // Notifications not supported on web
+    return 'unavailable' as NotificationPermissionStatus;
+  }
+
   try {
     const { status } = await Notifications.getPermissionsAsync();
     return status as NotificationPermissionStatus;
@@ -143,6 +159,11 @@ export interface NotificationHandlers {
  * @returns Cleanup function to remove listeners
  */
 export function registerNotificationHandlers(handlers: NotificationHandlers): () => void {
+  if (Platform.OS === 'web') {
+    // Notifications not supported on web, return no-op cleanup
+    return () => {};
+  }
+
   const subscriptions: Notifications.Subscription[] = [];
 
   // Handler for notifications received while app is foregrounded

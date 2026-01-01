@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useSQLiteContext } from 'expo-sqlite';
+import { useDatabase } from '../../../contexts/DatabaseContext';
 import { decryptContent, encryptContent } from '../../../utils/encryption';
 import { logger } from '../../../utils/logger';
 import { addToSyncQueue } from '../../../services/syncService';
@@ -34,11 +34,14 @@ export function useStepWork(userId: string, stepNumber: number): {
   isLoading: boolean;
   error: Error | null;
 } {
-  const db = useSQLiteContext();
+  const { db, isReady } = useDatabase();
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['step_work', userId, stepNumber],
     queryFn: async () => {
+      if (!db || !isReady) {
+        throw new Error('Database not ready');
+      }
       try {
         const result = await db.getAllAsync<StepWork>(
           'SELECT * FROM step_work WHERE user_id = ? AND step_number = ? ORDER BY question_number ASC',
@@ -56,6 +59,7 @@ export function useStepWork(userId: string, stepNumber: number): {
         throw err;
       }
     },
+    enabled: isReady && !!db,
   });
 
   return {
@@ -73,7 +77,7 @@ export function useSaveStepAnswer(userId: string): {
   saveAnswer: (stepNumber: number, questionNumber: number, answer: string, isComplete: boolean) => Promise<void>;
   isPending: boolean;
 } {
-  const db = useSQLiteContext();
+  const { db, isReady } = useDatabase();
   const queryClient = useQueryClient();
 
   const mutation = useMutation({
@@ -136,7 +140,7 @@ export function useStepProgress(userId: string): {
   overallProgress: number;
   isLoading: boolean;
 } {
-  const db = useSQLiteContext();
+  const { db, isReady } = useDatabase();
 
   const { data, isLoading } = useQuery({
     queryKey: ['step_progress', userId],

@@ -1,0 +1,116 @@
+/**
+ * iOS-style ProgressBar Component
+ * Animated progress indicator with smooth transitions
+ */
+
+import React, { useEffect, useRef } from 'react';
+import { View, Animated, StyleSheet, ViewStyle } from 'react-native';
+import { useTheme } from '../hooks/useTheme';
+
+export interface ProgressBarProps {
+  /**
+   * Progress value between 0 and 1 (0% to 100%)
+   */
+  progress: number;
+  /**
+   * Height of the progress bar
+   * @default 8
+   */
+  height?: number;
+  /**
+   * Color of the filled portion
+   * If not provided, uses theme.colors.primary
+   */
+  color?: string;
+  /**
+   * Color of the unfilled portion
+   * If not provided, uses theme.colors.border
+   */
+  backgroundColor?: string;
+  /**
+   * Whether to animate progress changes
+   * @default true
+   */
+  animated?: boolean;
+  /**
+   * Custom container style
+   */
+  style?: ViewStyle;
+}
+
+export function ProgressBar({
+  progress,
+  height = 8,
+  color,
+  backgroundColor,
+  animated = true,
+  style,
+}: ProgressBarProps) {
+  const theme = useTheme();
+  const progressAnim = useRef(new Animated.Value(0)).current;
+
+  // Clamp progress between 0 and 1
+  const clampedProgress = Math.max(0, Math.min(1, progress));
+
+  useEffect(() => {
+    if (animated) {
+      Animated.spring(progressAnim, {
+        toValue: clampedProgress,
+        tension: 40,
+        friction: 8,
+        useNativeDriver: false, // Cannot use native driver for width animation
+      }).start();
+    } else {
+      progressAnim.setValue(clampedProgress);
+    }
+  }, [clampedProgress, animated, progressAnim]);
+
+  const fillColor = color || theme.colors.primary;
+  const bgColor = backgroundColor || theme.colors.border;
+
+  const progressWidth = progressAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0%', '100%'],
+  });
+
+  return (
+    <View
+      style={[
+        styles.container,
+        {
+          height,
+          backgroundColor: bgColor,
+          borderRadius: height / 2,
+        },
+        style,
+      ]}
+      accessibilityRole="progressbar"
+      accessibilityValue={{
+        min: 0,
+        max: 100,
+        now: Math.round(clampedProgress * 100),
+      }}
+    >
+      <Animated.View
+        style={[
+          styles.fill,
+          {
+            width: progressWidth,
+            backgroundColor: fillColor,
+            borderRadius: height / 2,
+          },
+        ]}
+      />
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    width: '100%',
+    overflow: 'hidden',
+  },
+  fill: {
+    height: '100%',
+  },
+});
