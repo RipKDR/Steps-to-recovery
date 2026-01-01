@@ -1,9 +1,9 @@
 import React, { Suspense, useState, useMemo, useCallback } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { View, ActivityIndicator } from 'react-native';
+import { View, ActivityIndicator, Platform } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { PaperProvider } from 'react-native-paper';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ThemeProvider } from './src/design-system';
 import { DatabaseProvider } from './src/contexts/DatabaseContext';
 import { AuthProvider } from './src/contexts/AuthContext';
 import { SyncProvider } from './src/contexts/SyncContext';
@@ -46,7 +46,7 @@ export default function App(): React.ReactElement {
     <ErrorBoundary key={resetKey} onReset={handleReset}>
       <QueryClientProvider client={queryClient}>
         <SafeAreaProvider>
-          <PaperProvider>
+          <ThemeProvider>
             <Suspense fallback={<LoadingFallback />}>
               <DatabaseProvider>
                 <AuthProvider>
@@ -59,7 +59,7 @@ export default function App(): React.ReactElement {
                 </AuthProvider>
               </DatabaseProvider>
             </Suspense>
-          </PaperProvider>
+          </ThemeProvider>
         </SafeAreaProvider>
       </QueryClientProvider>
     </ErrorBoundary>

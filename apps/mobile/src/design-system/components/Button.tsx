@@ -1,0 +1,182 @@
+/**
+ * iOS-style Button Component
+ * Replaces react-native-paper Button with custom iOS design
+ */
+
+import React, { useRef } from 'react';
+import {
+  TouchableOpacity,
+  Text,
+  StyleSheet,
+  ActivityIndicator,
+  ViewStyle,
+  TextStyle,
+  Animated,
+  View,
+} from 'react-native';
+import { useTheme } from '../hooks/useTheme';
+import { usePressAnimation } from '../hooks/useAnimation';
+
+type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'danger';
+type ButtonSize = 'small' | 'medium' | 'large';
+
+export interface ButtonProps {
+  title: string;
+  onPress: () => void;
+  variant?: ButtonVariant;
+  size?: ButtonSize;
+  loading?: boolean;
+  disabled?: boolean;
+  fullWidth?: boolean;
+  icon?: React.ReactNode;
+  style?: ViewStyle;
+  textStyle?: TextStyle;
+  accessibilityLabel?: string;
+  testID?: string;
+}
+
+const sizeStyles = {
+  small: { paddingVertical: 8, paddingHorizontal: 16, minHeight: 36 },
+  medium: { paddingVertical: 12, paddingHorizontal: 20, minHeight: 44 },
+  large: { paddingVertical: 16, paddingHorizontal: 24, minHeight: 52 },
+};
+
+const textSizes = {
+  small: 14,
+  medium: 16,
+  large: 18,
+};
+
+export function Button({
+  title,
+  onPress,
+  variant = 'primary',
+  size = 'medium',
+  loading = false,
+  disabled = false,
+  fullWidth = true,
+  icon,
+  style,
+  textStyle: customTextStyle,
+  accessibilityLabel,
+  testID,
+}: ButtonProps) {
+  const theme = useTheme();
+  const { scaleAnim, animatePress } = usePressAnimation(theme.animations.scales.press);
+  const isDisabled = disabled || loading;
+
+  // Determine colors based on variant
+  const getColors = () => {
+    switch (variant) {
+      case 'primary':
+        return {
+          background: theme.colors.primary,
+          text: '#FFFFFF',
+          indicator: '#FFFFFF',
+        };
+      case 'secondary':
+        return {
+          background: theme.colors.secondary,
+          text: '#FFFFFF',
+          indicator: '#FFFFFF',
+        };
+      case 'danger':
+        return {
+          background: theme.colors.danger,
+          text: '#FFFFFF',
+          indicator: '#FFFFFF',
+        };
+      case 'outline':
+        return {
+          background: 'transparent',
+          text: theme.colors.primary,
+          indicator: theme.colors.primary,
+        };
+      default:
+        return {
+          background: theme.colors.primary,
+          text: '#FFFFFF',
+          indicator: '#FFFFFF',
+        };
+    }
+  };
+
+  const colors = getColors();
+
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      onPressIn={() => !isDisabled && animatePress(true)}
+      onPressOut={() => !isDisabled && animatePress(false)}
+      disabled={isDisabled}
+      activeOpacity={0.9}
+      accessibilityLabel={accessibilityLabel || title}
+      accessibilityRole="button"
+      accessibilityState={{ disabled: isDisabled, busy: loading }}
+      testID={testID}
+      style={[
+        styles.touchable,
+        fullWidth && styles.fullWidth,
+      ]}
+    >
+      <Animated.View
+        style={[
+          styles.button,
+          {
+            backgroundColor: colors.background,
+            borderRadius: theme.radius.button,
+            opacity: isDisabled ? theme.animations.opacities.disabled : 1,
+            transform: [{ scale: scaleAnim }],
+          },
+          variant === 'outline' && {
+            borderWidth: 2,
+            borderColor: theme.colors.primary,
+          },
+          sizeStyles[size],
+          style,
+        ]}
+      >
+        {loading ? (
+          <ActivityIndicator color={colors.indicator} size="small" />
+        ) : (
+          <View style={styles.content}>
+            {icon && <View style={styles.iconContainer}>{icon}</View>}
+            <Text
+              style={[
+                {
+                  fontSize: textSizes[size],
+                  fontWeight: '600',
+                  color: colors.text,
+                },
+                customTextStyle,
+              ]}
+            >
+              {title}
+            </Text>
+          </View>
+        )}
+      </Animated.View>
+    </TouchableOpacity>
+  );
+}
+
+const styles = StyleSheet.create({
+  touchable: {
+    alignSelf: 'flex-start',
+  },
+  fullWidth: {
+    width: '100%',
+  },
+  button: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  content: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  iconContainer: {
+    marginRight: 8,
+  },
+});

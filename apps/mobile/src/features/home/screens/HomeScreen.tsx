@@ -1,8 +1,10 @@
 import React from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Text, FAB } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
+import { MaterialIcons } from '@expo/vector-icons';
+import { useTheme } from '../../../design-system';
+import { FloatingActionButton } from '../../../design-system';
 import { CleanTimeTracker } from '../components/CleanTimeTracker';
 import { DailyCheckInCard } from '../components/DailyCheckInCard';
 import { QuickActions } from '../components/QuickActions';
@@ -16,6 +18,7 @@ interface HomeScreenProps {
 
 export function HomeScreen({ userId }: HomeScreenProps): React.ReactElement {
   const navigation = useNavigation();
+  const theme = useTheme();
   const { days, hours, minutes, seconds, nextMilestone, isLoading: cleanTimeLoading } = useCleanTime(userId);
   const { morning, evening, isLoading: checkInsLoading } = useTodayCheckIns(userId);
 
@@ -25,7 +28,7 @@ export function HomeScreen({ userId }: HomeScreenProps): React.ReactElement {
 
   return (
     <>
-      <SafeAreaView style={styles.container} edges={['top']}>
+      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]} edges={['top']}>
         <ScrollView
           style={styles.scrollView}
           contentContainerStyle={styles.contentContainer}
@@ -33,7 +36,7 @@ export function HomeScreen({ userId }: HomeScreenProps): React.ReactElement {
           accessibilityLabel="Home screen content"
         >
           <View style={styles.header}>
-            <Text variant="headlineMedium" style={styles.headerText}>
+            <Text style={[theme.typography.h1, { color: theme.colors.text }]}>
               Welcome Back
             </Text>
           </View>
@@ -60,15 +63,12 @@ export function HomeScreen({ userId }: HomeScreenProps): React.ReactElement {
         </ScrollView>
       </SafeAreaView>
 
-      <FAB
-        icon="phone-alert"
+      <FloatingActionButton
+        icon={<MaterialIcons name="phone" size={24} color="#FFFFFF" />}
         label="Emergency"
+        variant="danger"
         onPress={handleEmergency}
-        style={styles.fab}
-        color="#ffffff"
         accessibilityLabel="Emergency support button"
-        accessibilityRole="button"
-        accessibilityHint="Opens emergency support tools and resources"
       />
     </>
   );
@@ -77,7 +77,6 @@ export function HomeScreen({ userId }: HomeScreenProps): React.ReactElement {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
   },
   scrollView: {
     flex: 1,
@@ -88,15 +87,5 @@ const styles = StyleSheet.create({
   header: {
     padding: 20,
     paddingTop: 10,
-  },
-  headerText: {
-    fontWeight: 'bold',
-    color: '#1a1a1a',
-  },
-  fab: {
-    position: 'absolute',
-    right: 20,
-    bottom: 20,
-    backgroundColor: '#d32f2f',
   },
 });
