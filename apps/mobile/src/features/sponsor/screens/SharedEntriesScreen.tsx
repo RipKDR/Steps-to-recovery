@@ -1,3 +1,8 @@
+/**
+ * Shared Entries Screen
+ * View journal entries shared by sponsee (read-only)
+ */
+
 import React, { useEffect, useState } from 'react';
 import { View, Text, FlatList, StyleSheet, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -6,6 +11,8 @@ import { supabase } from '../../../lib/supabase';
 import { JournalCard } from '../../journal/components/JournalCard';
 import { decryptContent } from '../../../utils/encryption';
 import { logger } from '../../../utils/logger';
+import { useTheme } from '../../../design-system/hooks/useTheme';
+import { Card, EmptyState } from '../../../design-system/components';
 import type { JournalEntryDecrypted } from '@repo/shared/types';
 
 type RouteParams = {
@@ -16,18 +23,25 @@ type RouteParams = {
 
 export function SharedEntriesScreen(): React.ReactElement {
   const route = useRoute<RouteProp<RouteParams, 'SharedEntries'>>();
+  const theme = useTheme();
   const { sponseeId } = route.params;
+
   const [entries, setEntries] = useState<JournalEntryDecrypted[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     fetchSharedEntries();
   }, [sponseeId]);
 
-  const fetchSharedEntries = async (): Promise<void> => {
+  const fetchSharedEntries = async (isRefresh = false): Promise<void> => {
     try {
-      setLoading(true);
+      if (isRefresh) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
       setError(null);
 
       // Query journal entries where current user is in shared_with array
@@ -71,7 +85,12 @@ export function SharedEntriesScreen(): React.ReactElement {
       setError(err instanceof Error ? err.message : 'Failed to load entries');
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
+  };
+
+  const handleRefresh = (): void => {
+    fetchSharedEntries(true);
   };
 
   const renderItem = ({ item }: { item: JournalEntryDecrypted }): React.ReactElement => (
@@ -83,22 +102,52 @@ export function SharedEntriesScreen(): React.ReactElement {
   );
 
   const renderEmpty = (): React.ReactElement => (
-    <View style={styles.emptyContainer}>
-      <Text style={styles.emptyTitle}>No Shared Entries</Text>
-      <Text style={styles.emptyText}>
-        Your sponsee hasn't shared any journal entries with you yet.
-        {'\n\n'}
-        They can share entries from their journal screen.
-      </Text>
+    <EmptyState
+      icon="folder-shared"
+      title="No Shared Entries"
+      description="Your sponsee hasn't shared any journal entries with you yet. They can share entries from their journal screen."
+    />
+  );
+
+  const renderError = (): React.ReactElement => (
+    <View style={styles.errorContainer}>
+      <Card variant="elevated" style={styles.errorCard}>
+        <Text
+          style={[
+            theme.typography.title2,
+            { color: theme.colors.danger, marginBottom: 8, textAlign: 'center' },
+          ]}
+        >
+          Error
+        </Text>
+        <Text
+          style={[
+            theme.typography.body,
+            { color: theme.colors.text, textAlign: 'center' },
+          ]}
+        >
+          {error}
+        </Text>
+      </Card>
     </View>
   );
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container} edges={['bottom']}>
+      <SafeAreaView
+        style={[styles.container, { backgroundColor: theme.colors.background }]}
+        edges={['bottom']}
+      >
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#6200ee" />
-          <Text style={styles.loadingText}>Loading shared entries...</Text>
+          <ActivityIndicator size="large" color={theme.colors.primary} />
+          <Text
+            style={[
+              theme.typography.body,
+              { color: theme.colors.textSecondary, marginTop: 12 },
+            ]}
+          >
+            Loading shared entries...
+          </Text>
         </View>
       </SafeAreaView>
     );
@@ -106,32 +155,53 @@ export function SharedEntriesScreen(): React.ReactElement {
 
   if (error) {
     return (
-      <SafeAreaView style={styles.container} edges={['bottom']}>
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorTitle}>Error</Text>
-          <Text style={styles.errorText}>{error}</Text>
-        </View>
+      <SafeAreaView
+        style={[styles.container, { backgroundColor: theme.colors.background }]}
+        edges={['bottom']}
+      >
+        {renderError()}
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['bottom']}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Shared Entries</Text>
-        <Text style={styles.headerSubtitle}>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: theme.colors.background }]}
+      edges={['bottom']}
+    >
+      {/* Header */}
+      <Card variant="flat" style={styles.header}>
+        <Text
+          style={[
+            theme.typography.title1,
+            { color: theme.colors.text, marginBottom: 4 },
+          ]}
+        >
+          Shared Entries
+        </Text>
+        <Text
+          style={[
+            theme.typography.caption,
+            { color: theme.colors.textSecondary },
+          ]}
+        >
           Your sponsee's shared journal entries (read-only)
         </Text>
-      </View>
+      </Card>
 
+      {/* Entries List */}
       <FlatList
         data={entries}
         renderItem={renderItem}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.listContent}
-        onRefresh={fetchSharedEntries}
-        refreshing={loading}
+        contentContainerStyle={[
+          styles.listContent,
+          entries.length === 0 && styles.listContentEmpty,
+        ]}
+        onRefresh={handleRefresh}
+        refreshing={refreshing}
         ListEmptyComponent={renderEmpty}
+        showsVerticalScrollIndicator={false}
         accessibilityRole="list"
         accessibilityLabel="Shared journal entries list"
       />
@@ -142,73 +212,33 @@ export function SharedEntriesScreen(): React.ReactElement {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
   },
   header: {
     paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 12,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 4,
-  },
-  headerSubtitle: {
-    fontSize: 14,
-    color: '#666',
+    paddingVertical: 16,
   },
   listContent: {
-    padding: 16,
+    paddingHorizontal: 20,
+    paddingTop: 8,
     paddingBottom: 32,
+  },
+  listContentEmpty: {
+    flexGrow: 1,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  loadingText: {
-    marginTop: 12,
-    fontSize: 16,
-    color: '#666',
+    paddingHorizontal: 32,
   },
   errorContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    paddingHorizontal: 32,
   },
-  errorTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#d32f2f',
-    marginBottom: 8,
-  },
-  errorText: {
-    fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
-  },
-  emptyContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 60,
-    paddingHorizontal: 40,
-  },
-  emptyTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#999',
-    marginBottom: 12,
-  },
-  emptyText: {
-    fontSize: 16,
-    color: '#999',
-    textAlign: 'center',
-    lineHeight: 22,
+  errorCard: {
+    padding: 24,
+    width: '100%',
   },
 });

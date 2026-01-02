@@ -1,12 +1,12 @@
-import React, { useState } from 'react';
-import { FlatList, StyleSheet, View, TextInput, ActivityIndicator, Text } from 'react-native';
+import React, { useState, useRef, useEffect } from 'react';
+import { FlatList, StyleSheet, View, ActivityIndicator, Animated } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { JournalCard } from '../components/JournalCard';
 import { useJournalEntries } from '../hooks/useJournalEntries';
 import type { JournalEntryDecrypted } from '@repo/shared/types';
-import { useTheme, FloatingActionButton } from '../../../design-system';
+import { useTheme, FloatingActionButton, Input, EmptyState } from '../../../design-system';
 
 interface JournalListScreenProps {
   userId: string;
@@ -17,6 +17,25 @@ export function JournalListScreen({ userId }: JournalListScreenProps): React.Rea
   const navigation = useNavigation();
   const { entries, isLoading, refetch } = useJournalEntries(userId);
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Entrance animations
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(30)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 400,
+        useNativeDriver: true,
+      }),
+      Animated.spring(slideAnim, {
+        toValue: 0,
+        friction: 8,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [fadeAnim, slideAnim]);
 
   const filteredEntries = entries.filter((entry) => {
     if (!searchQuery) return true;
@@ -41,43 +60,41 @@ export function JournalListScreen({ userId }: JournalListScreenProps): React.Rea
   );
 
   const renderEmpty = (): React.ReactElement => (
-    <View style={styles.emptyContainer}>
-      <Text style={[theme.typography.h2, { marginBottom: 8, color: theme.colors.textSecondary }]}>
-        No Journal Entries
-      </Text>
-      <Text style={[theme.typography.body, { textAlign: 'center', color: theme.colors.textSecondary }]}>
-        Start writing your first entry to track your thoughts and progress
-      </Text>
-    </View>
+    <EmptyState
+      icon={<MaterialIcons name="book" size={64} color={theme.colors.textSecondary} />}
+      title={searchQuery ? 'No entries found' : 'Your thoughts are safe here'}
+      description={
+        searchQuery
+          ? `No entries match "${searchQuery}". Try a different search term.`
+          : 'Start your first journal entry to track your thoughts, feelings, and progress on your recovery journey.'
+      }
+      actionLabel={searchQuery ? undefined : 'Create Entry'}
+      onAction={searchQuery ? undefined : handleNewEntry}
+    />
   );
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]} edges={['bottom']}>
-      <View
+      <Animated.View
         style={[
-          styles.searchBar,
+          styles.searchContainer,
           {
-            backgroundColor: theme.colors.surface,
-            borderRadius: theme.radius.input,
-            borderColor: theme.colors.border,
+            opacity: fadeAnim,
+            transform: [{ translateY: slideAnim }],
           },
         ]}
       >
-        <MaterialIcons name="search" size={20} color={theme.colors.textSecondary} style={styles.searchIcon} />
-        <TextInput
-          placeholder="Search entries..."
-          onChangeText={setSearchQuery}
+        <Input
+          label=""
           value={searchQuery}
-          style={[
-            styles.searchInput,
-            theme.typography.body,
-            { color: theme.colors.text },
-          ]}
-          placeholderTextColor={theme.colors.textSecondary}
+          onChangeText={setSearchQuery}
+          placeholder="Search entries..."
+          leftIcon={<MaterialIcons name="search" size={20} color={theme.colors.textSecondary} />}
+          containerStyle={styles.searchInputContainer}
           accessibilityLabel="Search journal entries"
           accessibilityRole="search"
         />
-      </View>
+      </Animated.View>
 
       {isLoading ? (
         <View style={styles.loadingContainer}>
@@ -111,21 +128,13 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  searchBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    margin: 16,
+  searchContainer: {
     paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderWidth: 2,
-    minHeight: 44,
+    paddingTop: 8,
+    paddingBottom: 8,
   },
-  searchIcon: {
-    marginRight: 8,
-  },
-  searchInput: {
-    flex: 1,
-    padding: 0,
+  searchInputContainer: {
+    marginBottom: 0,
   },
   loadingContainer: {
     flex: 1,
@@ -134,11 +143,5 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingBottom: 100,
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 40,
   },
 });

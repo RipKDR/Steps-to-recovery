@@ -1,12 +1,13 @@
-import React, { useState, useCallback } from 'react';
-import { ScrollView, StyleSheet, View, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
+import { ScrollView, StyleSheet, View, KeyboardAvoidingView, Platform, Animated, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Card, Text, ProgressBar, Button, ActivityIndicator } from 'react-native-paper';
 import { useRoute, type RouteProp } from '@react-navigation/native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import { STEP_PROMPTS } from '@repo/shared/constants';
 import { useStepWork, useSaveStepAnswer } from '../hooks/useStepWork';
 import { useAuth } from '../../../contexts/AuthContext';
+import { useTheme, Card, Button, TextArea, ProgressBar, Badge, Toast, Divider, Text } from '../../../design-system';
 
 type RouteParams = {
   StepDetail: {
@@ -19,6 +20,7 @@ export function StepDetailScreen(): React.ReactElement {
   const { stepNumber } = route.params;
   const { user } = useAuth();
   const userId = user?.id || '';
+  const theme = useTheme();
 
   const stepData = STEP_PROMPTS.find(s => s.step === stepNumber);
   const { questions, progress, isLoading } = useStepWork(userId, stepNumber);
@@ -27,8 +29,32 @@ export function StepDetailScreen(): React.ReactElement {
   const [answers, setAnswers] = useState<Record<number, string>>({});
   const [savingQuestion, setSavingQuestion] = useState<number | null>(null);
 
+  // Toast state
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const [toastVariant, setToastVariant] = useState<'success' | 'error' | 'info' | 'warning'>('success');
+
+  // Entrance animations
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(30)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 400,
+        useNativeDriver: true,
+      }),
+      Animated.spring(slideAnim, {
+        toValue: 0,
+        friction: 8,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [fadeAnim, slideAnim]);
+
   // Initialize answers from database
-  React.useEffect(() => {
+  useEffect(() => {
     if (questions.length > 0) {
       const initialAnswers: Record<number, string> = {};
       questions.forEach(q => {
@@ -47,8 +73,18 @@ export function StepDetailScreen(): React.ReactElement {
     setSavingQuestion(questionNumber);
     try {
       await saveAnswer(stepNumber, questionNumber, answer, true);
+
+      // Success feedback
+      if (Platform.OS !== 'web') {
+        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      }
+      setToastMessage('Answer saved successfully');
+      setToastVariant('success');
+      setShowToast(true);
     } catch (error) {
-      // Error logged by hook
+      setToastMessage('Failed to save answer. Please try again.');
+      setToastVariant('error');
+      setShowToast(true);
     } finally {
       setSavingQuestion(null);
     }
@@ -56,128 +92,168 @@ export function StepDetailScreen(): React.ReactElement {
 
   if (!stepData) {
     return (
-      <SafeAreaView style={styles.container}>
-        <Text>Step not found</Text>
+      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+        <View style={styles.errorContainer}>
+          <MaterialIcons name="error-outline" size={48} color={theme.colors.danger} />
+          <Text style={[theme.typography.h2, { color: theme.colors.text, marginTop: 16 }]}>
+            Step not found
+          </Text>
+        </View>
       </SafeAreaView>
     );
   }
 
   if (isLoading) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#2196f3" />
+          <ActivityIndicator size="large" color={theme.colors.primary} />
+          <Text style={[theme.typography.body, { color: theme.colors.textSecondary, marginTop: 16 }]}>
+            Loading step {stepNumber}...
+          </Text>
         </View>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['bottom']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]} edges={['bottom']}>
+      <Toast
+        visible={showToast}
+        message={toastMessage}
+        variant={toastVariant}
+        onDismiss={() => setShowToast(false)}
+      />
+
       <KeyboardAvoidingView
         style={styles.keyboardView}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={100}
       >
-        {/* Header */}
-        <View style={styles.header}>
-          <View style={styles.stepBadge}>
-            <Text style={styles.stepBadgeText}>{stepNumber}</Text>
-          </View>
-          <View style={styles.headerContent}>
-            <Text variant="headlineSmall" style={styles.title}>
-              Step {stepNumber}: {stepData.title}
-            </Text>
-            <Text variant="bodyMedium" style={styles.principle}>
-              Principle: {stepData.principle}
-            </Text>
-          </View>
-        </View>
+        <Animated.View
+          style={[
+            styles.animatedContainer,
+            {
+              opacity: fadeAnim,
+              transform: [{ translateY: slideAnim }],
+            },
+          ]}
+        >
+          {/* Header */}
+          <Card variant="elevated" style={styles.headerCard}>
+            <View style={styles.header}>
+              <View style={[styles.stepBadge, { backgroundColor: theme.colors.primary }]}>
+                <Text style={styles.stepBadgeText}>{stepNumber}</Text>
+              </View>
+              <View style={styles.headerContent}>
+                <Text style={[theme.typography.h2, { color: theme.colors.text, fontWeight: '600' }]}>
+                  Step {stepNumber}: {stepData.title}
+                </Text>
+                <Badge variant="primary" size="medium" style={styles.principleBadge}>
+                  {stepData.principle}
+                </Badge>
+              </View>
+            </View>
 
-        {/* Progress */}
-        <View style={styles.progressSection}>
-          <Text variant="bodyMedium" style={styles.progressText}>
-            Progress: {Math.round(progress)}%
-          </Text>
-          <ProgressBar
-            progress={progress / 100}
-            color="#4caf50"
-            style={styles.progressBar}
-          />
-        </View>
+            {/* Progress */}
+            <View style={styles.progressSection}>
+              <View style={styles.progressHeader}>
+                <Text style={[theme.typography.label, { color: theme.colors.textSecondary }]}>
+                  Your Progress
+                </Text>
+                <Text style={[theme.typography.h3, { color: theme.colors.primary, fontWeight: '600' }]}>
+                  {Math.round(progress)}%
+                </Text>
+              </View>
+              <ProgressBar progress={progress / 100} style={styles.progressBar} />
+            </View>
+          </Card>
 
-        {/* Description */}
-        <Card style={styles.descriptionCard}>
-          <Card.Content>
-            <Text variant="bodyLarge" style={styles.description}>
+          {/* Description */}
+          <Card variant="outlined" style={[styles.descriptionCard, { borderColor: theme.colors.primary }]}>
+            <View style={styles.descriptionHeader}>
+              <MaterialCommunityIcons name="lightbulb-outline" size={24} color={theme.colors.primary} />
+              <Text style={[theme.typography.label, { color: theme.colors.primary, marginLeft: 8 }]}>
+                STEP GUIDANCE
+              </Text>
+            </View>
+            <Text style={[theme.typography.body, { color: theme.colors.text, lineHeight: 24, fontStyle: 'italic' }]}>
               "{stepData.description}"
             </Text>
-          </Card.Content>
-        </Card>
+          </Card>
 
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.contentContainer}
-          keyboardShouldPersistTaps="handled"
-        >
-          {/* Questions */}
-          {stepData.prompts.map((prompt, index) => {
-            const questionNumber = index + 1;
-            const isAnswered = questions.find(q => q.question_number === questionNumber && q.is_complete);
-            const isSaving = savingQuestion === questionNumber;
+          <ScrollView
+            style={styles.scrollView}
+            contentContainerStyle={styles.contentContainer}
+            keyboardShouldPersistTaps="handled"
+          >
+            {/* Questions */}
+            {stepData.prompts.map((prompt, index) => {
+              const questionNumber = index + 1;
+              const isAnswered = questions.find(q => q.question_number === questionNumber && q.is_complete);
+              const isSaving = savingQuestion === questionNumber;
 
-            return (
-              <Card key={questionNumber} style={styles.questionCard}>
-                <Card.Content>
+              return (
+                <Card key={questionNumber} variant="elevated" style={styles.questionCard}>
                   <View style={styles.questionHeader}>
-                    <View style={styles.questionNumber}>
+                    <View
+                      style={[
+                        styles.questionNumber,
+                        isAnswered
+                          ? { backgroundColor: theme.colors.success }
+                          : { backgroundColor: theme.colors.surface, borderWidth: 2, borderColor: theme.colors.border },
+                      ]}
+                    >
                       {isAnswered ? (
-                        <MaterialCommunityIcons name="check-circle" size={24} color="#4caf50" />
+                        <MaterialCommunityIcons name="check" size={20} color="#FFFFFF" />
                       ) : (
-                        <Text style={styles.questionNumberText}>{questionNumber}</Text>
+                        <Text style={[theme.typography.body, { color: theme.colors.textSecondary, fontWeight: '600' }]}>
+                          {questionNumber}
+                        </Text>
                       )}
                     </View>
-                    <Text variant="titleMedium" style={styles.questionText}>
+                    <Text style={[theme.typography.h3, { color: theme.colors.text, flex: 1, lineHeight: 24 }]}>
                       {prompt}
                     </Text>
                   </View>
 
-                  <TextInput
-                    style={styles.answerInput}
+                  <Divider style={styles.questionDivider} />
+
+                  <TextArea
+                    label=""
                     value={answers[questionNumber] || ''}
                     onChangeText={(text) => setAnswers(prev => ({ ...prev, [questionNumber]: text }))}
-                    placeholder="Write your answer here..."
-                    placeholderTextColor="#999"
-                    multiline
-                    numberOfLines={6}
-                    textAlignVertical="top"
+                    placeholder="Take your time to reflect and write your answer here. Remember, this is a private space for your personal growth."
+                    containerStyle={styles.answerTextArea}
+                    minHeight={150}
+                    maxLength={2000}
+                    showCharacterCount
                     editable={!isSaving}
                     accessibilityLabel={`Answer for question ${questionNumber}`}
                   />
 
                   <Button
-                    mode="contained"
+                    title={isSaving ? 'Saving...' : isAnswered ? 'Update Answer' : 'Save Answer'}
                     onPress={() => handleSaveAnswer(questionNumber)}
                     disabled={!answers[questionNumber]?.trim() || isSaving}
                     loading={isSaving}
-                    style={styles.saveButton}
-                    accessibilityLabel="Save answer"
-                    accessibilityRole="button"
-                  >
-                    {isSaving ? 'Saving...' : isAnswered ? 'Update Answer' : 'Save Answer'}
-                  </Button>
-                </Card.Content>
-              </Card>
-            );
-          })}
+                    variant="primary"
+                    fullWidth
+                  />
+                </Card>
+              );
+            })}
 
-          <View style={styles.infoBox}>
-            <MaterialCommunityIcons name="lock" size={20} color="#4caf50" style={styles.infoIcon} />
-            <Text variant="bodySmall" style={styles.infoText}>
-              Your answers are encrypted and stored securely on your device. Only you can read them.
-            </Text>
-          </View>
-        </ScrollView>
+            <Card variant="outlined" style={[styles.infoCard, { borderColor: theme.colors.success }]}>
+              <View style={styles.infoContent}>
+                <MaterialCommunityIcons name="lock" size={24} color={theme.colors.success} />
+                <Text style={[theme.typography.caption, { color: theme.colors.textSecondary, marginLeft: 12, flex: 1, lineHeight: 18 }]}>
+                  Your answers are encrypted and stored securely on your device. Only you can read them. Your progress is private and safe.
+                </Text>
+              </View>
+            </Card>
+          </ScrollView>
+        </Animated.View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -186,29 +262,38 @@ export function StepDetailScreen(): React.ReactElement {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
   },
   keyboardView: {
     flex: 1,
+  },
+  animatedContainer: {
+    flex: 1,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 40,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
+  headerCard: {
+    marginHorizontal: 16,
+    marginTop: 8,
+    marginBottom: 12,
+  },
   header: {
-    backgroundColor: '#fff',
-    padding: 20,
     flexDirection: 'row',
     alignItems: 'center',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    marginBottom: 16,
   },
   stepBadge: {
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: '#2196f3',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16,
@@ -216,109 +301,74 @@ const styles = StyleSheet.create({
   stepBadgeText: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#fff',
+    color: '#FFFFFF',
   },
   headerContent: {
     flex: 1,
   },
-  title: {
-    fontWeight: 'bold',
-    color: '#1a1a1a',
-    marginBottom: 4,
-  },
-  principle: {
-    color: '#2196f3',
-    fontWeight: '600',
+  principleBadge: {
+    marginTop: 8,
+    alignSelf: 'flex-start',
   },
   progressSection: {
-    backgroundColor: '#fff',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(0,0,0,0.05)',
   },
-  progressText: {
-    color: '#666',
+  progressHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 8,
   },
   progressBar: {
-    height: 6,
-    borderRadius: 3,
+    height: 8,
   },
   descriptionCard: {
-    margin: 16,
-    marginBottom: 8,
-    backgroundColor: '#e3f2fd',
+    marginHorizontal: 16,
+    marginBottom: 16,
   },
-  description: {
-    fontStyle: 'italic',
-    color: '#1565c0',
-    lineHeight: 24,
+  descriptionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
   },
   scrollView: {
     flex: 1,
   },
   contentContainer: {
     padding: 16,
-    paddingTop: 8,
+    paddingTop: 0,
     paddingBottom: 32,
   },
   questionCard: {
     marginBottom: 16,
-    backgroundColor: '#fff',
   },
   questionHeader: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    marginBottom: 12,
+    marginBottom: 16,
   },
   questionNumber: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#f5f5f5',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
     marginTop: 2,
   },
-  questionNumberText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#666',
+  questionDivider: {
+    marginBottom: 16,
   },
-  questionText: {
-    flex: 1,
-    color: '#1a1a1a',
-    lineHeight: 24,
+  answerTextArea: {
+    marginBottom: 16,
   },
-  answerInput: {
-    backgroundColor: '#f9f9f9',
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    color: '#333',
-    minHeight: 120,
-    marginBottom: 12,
-  },
-  saveButton: {
-    marginTop: 4,
-  },
-  infoBox: {
+  infoCard: {
     marginTop: 8,
-    padding: 16,
-    backgroundColor: '#e8f5e9',
-    borderRadius: 8,
+  },
+  infoContent: {
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  infoIcon: {
-    marginRight: 12,
-  },
-  infoText: {
-    flex: 1,
-    color: '#2e7d32',
-    lineHeight: 18,
   },
 });

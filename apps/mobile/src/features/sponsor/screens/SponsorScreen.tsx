@@ -1,14 +1,33 @@
+/**
+ * Sponsor Connections Screen
+ * Manages sponsor relationships and sponsee connections
+ * Design: iOS-style with proper confirmation modals (no Alert dialogs)
+ */
+
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, FlatList, ActivityIndicator, Alert } from 'react-native';
-import { useSponsorships } from '../hooks';
+import { View, StyleSheet, FlatList, ActivityIndicator } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { ProfileStackParamList } from '../../../navigation/types';
+import { useTheme, Card, Button, Modal } from '../../../design-system';
+import { useSponsorships } from '../hooks';
+import { Text } from 'react-native';
 
 type NavigationProp = NativeStackNavigationProp<ProfileStackParamList>;
 
-export function SponsorScreen() {
+interface ConfirmationState {
+  visible: boolean;
+  title: string;
+  message: string;
+  action: () => Promise<void>;
+  variant: 'danger' | 'primary';
+}
+
+export function SponsorScreen(): React.ReactElement {
   const navigation = useNavigation<NavigationProp>();
+  const theme = useTheme();
   const {
     mySponsor,
     mySponsees,
@@ -17,276 +36,486 @@ export function SponsorScreen() {
     loading,
     acceptRequest,
     declineRequest,
-    removeSponsor
+    removeSponsor,
   } = useSponsorships();
 
   const [processingId, setProcessingId] = useState<string | null>(null);
+  const [confirmation, setConfirmation] = useState<ConfirmationState>({
+    visible: false,
+    title: '',
+    message: '',
+    action: async () => {},
+    variant: 'primary',
+  });
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  const handleAccept = async (id: string) => {
-    setProcessingId(id);
-    try {
-      await acceptRequest(id);
-      Alert.alert('Success', 'Sponsor request accepted!');
-    } catch (error) {
-      Alert.alert('Error', error instanceof Error ? error.message : 'Failed to accept');
-    } finally {
-      setProcessingId(null);
-    }
+  const showConfirmation = (
+    title: string,
+    message: string,
+    action: () => Promise<void>,
+    variant: 'danger' | 'primary' = 'primary'
+  ): void => {
+    setConfirmation({
+      visible: true,
+      title,
+      message,
+      action,
+      variant,
+    });
   };
 
-  const handleDecline = async (id: string) => {
-    setProcessingId(id);
-    try {
-      await declineRequest(id);
-    } catch (error) {
-      Alert.alert('Error', error instanceof Error ? error.message : 'Failed to decline');
-    } finally {
-      setProcessingId(null);
-    }
+  const handleAccept = async (id: string): Promise<void> => {
+    showConfirmation(
+      'Accept Sponsorship',
+      'Are you ready to take on this sponsorship responsibility?',
+      async () => {
+        setProcessingId(id);
+        try {
+          await acceptRequest(id);
+          setSuccessMessage('Sponsorship request accepted!');
+          setTimeout(() => setSuccessMessage(null), 3000);
+        } catch (error) {
+          // Error handled by hook
+        } finally {
+          setProcessingId(null);
+        }
+      }
+    );
   };
 
-  const handleRemove = (id: string, isSponsor: boolean) => {
-    Alert.alert(
-      'Confirm Remove',
-      isSponsor ? 'Remove your sponsor?' : 'Remove this sponsee?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Remove',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await removeSponsor(id);
-              Alert.alert('Success', isSponsor ? 'Sponsor removed' : 'Sponsee removed');
-            } catch (error) {
-              Alert.alert('Error', 'Failed to remove');
-            }
-          },
-        },
-      ]
+  const handleDecline = async (id: string): Promise<void> => {
+    showConfirmation(
+      'Decline Request',
+      'Are you sure you want to decline this sponsorship request?',
+      async () => {
+        setProcessingId(id);
+        try {
+          await declineRequest(id);
+        } catch (error) {
+          // Error handled by hook
+        } finally {
+          setProcessingId(null);
+        }
+      },
+      'danger'
+    );
+  };
+
+  const handleRemove = (id: string, isSponsor: boolean): void => {
+    showConfirmation(
+      isSponsor ? 'Remove Sponsor' : 'Remove Sponsee',
+      isSponsor
+        ? 'Are you sure you want to remove your sponsor? This will end your sponsorship relationship.'
+        : 'Are you sure you want to remove this sponsee? This will end your sponsorship relationship with them.',
+      async () => {
+        try {
+          await removeSponsor(id);
+          setSuccessMessage(isSponsor ? 'Sponsor removed' : 'Sponsee removed');
+          setTimeout(() => setSuccessMessage(null), 3000);
+        } catch (error) {
+          // Error handled by hook
+        }
+      },
+      'danger'
     );
   };
 
   if (loading) {
     return (
-      <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color="#6200ee" />
-      </View>
+      <SafeAreaView
+        style={[styles.container, { backgroundColor: theme.colors.background }]}
+        edges={['bottom']}
+      >
+        <View style={styles.centerContainer}>
+          <ActivityIndicator size="large" color={theme.colors.primary} />
+          <Text
+            style={[
+              theme.typography.body,
+              { color: theme.colors.textSecondary, marginTop: theme.spacing.md },
+            ]}
+          >
+            Loading connections...
+          </Text>
+        </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.header}>Sponsor Connections</Text>
-
-      {/* My Sponsor Section */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>My Sponsor</Text>
-        {mySponsor ? (
-          <View style={styles.card}>
-            <View style={styles.cardContent}>
-              <Text style={styles.cardTitle}>Connected</Text>
-              <Text style={styles.cardSubtitle}>Active sponsor relationship</Text>
-            </View>
-            <TouchableOpacity
-              style={styles.dangerButton}
-              onPress={() => handleRemove(mySponsor.id, true)}
+    <>
+      <SafeAreaView
+        style={[styles.container, { backgroundColor: theme.colors.background }]}
+        edges={['bottom']}
+      >
+        <View style={[styles.content, { paddingHorizontal: theme.spacing.md }]}>
+          {/* Header */}
+          <View style={[styles.header, { marginBottom: theme.spacing.lg }]}>
+            <Text
+              style={[theme.typography.h1, { color: theme.colors.text }]}
+              accessibilityRole="header"
             >
-              <Text style={styles.dangerButtonText}>Remove</Text>
-            </TouchableOpacity>
-          </View>
-        ) : (
-          <View style={styles.emptyCard}>
-            <Text style={styles.emptyText}>No sponsor connected</Text>
-            <TouchableOpacity
-              style={styles.primaryButton}
-              onPress={() => navigation.navigate('InviteSponsor')}
+              Sponsor Connections
+            </Text>
+            <Text
+              style={[
+                theme.typography.body,
+                { color: theme.colors.textSecondary, marginTop: theme.spacing.xs },
+              ]}
             >
-              <Text style={styles.primaryButtonText}>Find a Sponsor</Text>
-            </TouchableOpacity>
+              Build and maintain recovery relationships
+            </Text>
           </View>
-        )}
 
-        {/* Sent Requests */}
-        {sentRequests.length > 0 && (
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>Pending Request</Text>
-            <Text style={styles.cardSubtitle}>Waiting for sponsor to accept</Text>
-          </View>
-        )}
-      </View>
-
-      {/* Pending Requests (as potential sponsor) */}
-      {pendingRequests.length > 0 && (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Sponsorship Requests</Text>
           <FlatList
-            data={pendingRequests}
-            keyExtractor={(item) => item.id}
-            renderItem={({ item }) => (
-              <View style={styles.card}>
-                <View style={styles.cardContent}>
-                  <Text style={styles.cardTitle}>New Request</Text>
-                  <Text style={styles.cardSubtitle}>Someone wants you as their sponsor</Text>
-                </View>
-                <View style={styles.buttonRow}>
-                  <TouchableOpacity
-                    style={[styles.secondaryButton, { marginRight: 8 }]}
-                    onPress={() => handleDecline(item.id)}
-                    disabled={processingId === item.id}
-                  >
-                    <Text style={styles.secondaryButtonText}>Decline</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.primaryButton}
-                    onPress={() => handleAccept(item.id)}
-                    disabled={processingId === item.id}
-                  >
-                    <Text style={styles.primaryButtonText}>Accept</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            )}
+            data={[
+              { type: 'my-sponsor' },
+              { type: 'sent-requests' },
+              { type: 'pending-requests' },
+              { type: 'my-sponsees' },
+            ]}
+            keyExtractor={(item) => item.type}
+            showsVerticalScrollIndicator={false}
+            renderItem={({ item }) => {
+              if (item.type === 'my-sponsor') {
+                return (
+                  <View style={{ marginBottom: theme.spacing.lg }}>
+                    <Text
+                      style={[
+                        theme.typography.h3,
+                        { color: theme.colors.text, marginBottom: theme.spacing.sm },
+                      ]}
+                      accessibilityRole="header"
+                    >
+                      My Sponsor
+                    </Text>
+                    {mySponsor ? (
+                      <Card variant="elevated">
+                        <View style={styles.cardHeader}>
+                          <MaterialCommunityIcons
+                            name="account-supervisor"
+                            size={24}
+                            color={theme.colors.primary}
+                          />
+                          <Text
+                            style={[
+                              theme.typography.h3,
+                              { color: theme.colors.text, marginLeft: theme.spacing.sm },
+                            ]}
+                          >
+                            Connected
+                          </Text>
+                        </View>
+                        <Text
+                          style={[
+                            theme.typography.bodySmall,
+                            { color: theme.colors.textSecondary, marginTop: theme.spacing.xs },
+                          ]}
+                        >
+                          Active sponsor relationship
+                        </Text>
+                        <Button
+                          title="Remove Sponsor"
+                          onPress={() => handleRemove(mySponsor.id, true)}
+                          variant="outline"
+                          size="small"
+                          style={{ marginTop: theme.spacing.md }}
+                          textStyle={{ color: theme.colors.danger }}
+                          accessibilityLabel="Remove your sponsor"
+                          accessibilityHint="Ends your sponsorship relationship"
+                        />
+                      </Card>
+                    ) : (
+                      <Card variant="elevated">
+                        <View style={styles.emptyState}>
+                          <MaterialCommunityIcons
+                            name="account-search"
+                            size={48}
+                            color={theme.colors.muted}
+                            style={{ marginBottom: theme.spacing.sm }}
+                          />
+                          <Text
+                            style={[
+                              theme.typography.body,
+                              { color: theme.colors.textSecondary, textAlign: 'center' },
+                            ]}
+                          >
+                            No sponsor connected
+                          </Text>
+                          <Button
+                            title="Find a Sponsor"
+                            onPress={() => navigation.navigate('InviteSponsor')}
+                            variant="primary"
+                            size="medium"
+                            style={{ marginTop: theme.spacing.md }}
+                            accessibilityLabel="Find and invite a sponsor"
+                            accessibilityHint="Navigate to sponsor invitation screen"
+                          />
+                        </View>
+                      </Card>
+                    )}
+                  </View>
+                );
+              }
+
+              if (item.type === 'sent-requests' && sentRequests.length > 0) {
+                return (
+                  <View style={{ marginBottom: theme.spacing.lg }}>
+                    <Card variant="elevated">
+                      <View style={styles.cardHeader}>
+                        <MaterialCommunityIcons
+                          name="clock-outline"
+                          size={20}
+                          color={theme.colors.warning}
+                        />
+                        <Text
+                          style={[
+                            theme.typography.label,
+                            { color: theme.colors.warning, marginLeft: theme.spacing.sm },
+                          ]}
+                        >
+                          Pending Request
+                        </Text>
+                      </View>
+                      <Text
+                        style={[
+                          theme.typography.bodySmall,
+                          { color: theme.colors.textSecondary, marginTop: theme.spacing.xs },
+                        ]}
+                      >
+                        Waiting for sponsor to accept your request
+                      </Text>
+                    </Card>
+                  </View>
+                );
+              }
+
+              if (item.type === 'pending-requests' && pendingRequests.length > 0) {
+                return (
+                  <View style={{ marginBottom: theme.spacing.lg }}>
+                    <Text
+                      style={[
+                        theme.typography.h3,
+                        { color: theme.colors.text, marginBottom: theme.spacing.sm },
+                      ]}
+                      accessibilityRole="header"
+                    >
+                      Sponsorship Requests
+                    </Text>
+                    <FlatList
+                      data={pendingRequests}
+                      keyExtractor={(request) => request.id}
+                      renderItem={({ item: request }) => (
+                        <Card variant="elevated" style={{ marginBottom: theme.spacing.sm }}>
+                          <View style={styles.cardHeader}>
+                            <MaterialCommunityIcons
+                              name="account-plus"
+                              size={24}
+                              color={theme.colors.secondary}
+                            />
+                            <Text
+                              style={[
+                                theme.typography.h3,
+                                { color: theme.colors.text, marginLeft: theme.spacing.sm },
+                              ]}
+                            >
+                              New Request
+                            </Text>
+                          </View>
+                          <Text
+                            style={[
+                              theme.typography.bodySmall,
+                              { color: theme.colors.textSecondary, marginTop: theme.spacing.xs },
+                            ]}
+                          >
+                            Someone wants you as their sponsor
+                          </Text>
+                          <View style={[styles.buttonRow, { marginTop: theme.spacing.md }]}>
+                            <Button
+                              title="Decline"
+                              onPress={() => handleDecline(request.id)}
+                              variant="outline"
+                              size="small"
+                              disabled={processingId === request.id}
+                              style={{ flex: 1, marginRight: theme.spacing.xs }}
+                              accessibilityLabel="Decline sponsorship request"
+                            />
+                            <Button
+                              title="Accept"
+                              onPress={() => handleAccept(request.id)}
+                              variant="secondary"
+                              size="small"
+                              disabled={processingId === request.id}
+                              loading={processingId === request.id}
+                              style={{ flex: 1, marginLeft: theme.spacing.xs }}
+                              accessibilityLabel="Accept sponsorship request"
+                            />
+                          </View>
+                        </Card>
+                      )}
+                    />
+                  </View>
+                );
+              }
+
+              if (item.type === 'my-sponsees' && mySponsees.length > 0) {
+                return (
+                  <View style={{ marginBottom: theme.spacing.xl }}>
+                    <Text
+                      style={[
+                        theme.typography.h3,
+                        { color: theme.colors.text, marginBottom: theme.spacing.sm },
+                      ]}
+                      accessibilityRole="header"
+                    >
+                      My Sponsees ({mySponsees.length})
+                    </Text>
+                    <FlatList
+                      data={mySponsees}
+                      keyExtractor={(sponsee) => sponsee.id}
+                      renderItem={({ item: sponsee }) => (
+                        <Card variant="interactive" style={{ marginBottom: theme.spacing.sm }}>
+                          <View style={styles.cardHeader}>
+                            <MaterialCommunityIcons
+                              name="account-check"
+                              size={24}
+                              color={theme.colors.success}
+                            />
+                            <Text
+                              style={[
+                                theme.typography.h3,
+                                { color: theme.colors.text, marginLeft: theme.spacing.sm },
+                              ]}
+                            >
+                              Sponsee Connected
+                            </Text>
+                          </View>
+                          <Button
+                            title="View Shared Entries →"
+                            onPress={() =>
+                              navigation.navigate('SharedEntries', {
+                                sponseeId: sponsee.sponsee_id,
+                              })
+                            }
+                            variant="outline"
+                            size="small"
+                            style={{ marginTop: theme.spacing.md }}
+                            accessibilityLabel="View shared journal entries from this sponsee"
+                          />
+                          <Button
+                            title="Remove Sponsee"
+                            onPress={() => handleRemove(sponsee.id, false)}
+                            variant="outline"
+                            size="small"
+                            textStyle={{ color: theme.colors.danger }}
+                            style={{ marginTop: theme.spacing.sm }}
+                            accessibilityLabel="Remove this sponsee"
+                            accessibilityHint="Ends your sponsorship relationship with this person"
+                          />
+                        </Card>
+                      )}
+                    />
+                  </View>
+                );
+              }
+
+              return null;
+            }}
           />
         </View>
-      )}
 
-      {/* My Sponsees */}
-      {mySponsees.length > 0 && (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>My Sponsees</Text>
-          <FlatList
-            data={mySponsees}
-            keyExtractor={(item) => item.id}
-            renderItem={({ item }) => (
-              <View style={styles.card}>
-                <View style={styles.cardContent}>
-                  <Text style={styles.cardTitle}>Sponsee Connected</Text>
-                  <TouchableOpacity
-                    onPress={() => navigation.navigate('SharedEntries', { sponseeId: item.sponsee_id })}
-                  >
-                    <Text style={styles.linkText}>View Shared Entries →</Text>
-                  </TouchableOpacity>
-                </View>
-                <TouchableOpacity
-                  style={styles.dangerButton}
-                  onPress={() => handleRemove(item.id, false)}
-                >
-                  <Text style={styles.dangerButtonText}>Remove</Text>
-                </TouchableOpacity>
-              </View>
-            )}
-          />
-        </View>
-      )}
-    </View>
+        {/* Success Message Toast */}
+        {successMessage && (
+          <View
+            style={[
+              styles.successToast,
+              {
+                backgroundColor: theme.colors.success,
+                borderRadius: theme.radius.button,
+                paddingHorizontal: theme.spacing.md,
+                paddingVertical: theme.spacing.sm,
+              },
+            ]}
+          >
+            <MaterialCommunityIcons name="check-circle" size={20} color="#FFFFFF" />
+            <Text
+              style={[
+                theme.typography.label,
+                { color: '#FFFFFF', marginLeft: theme.spacing.sm },
+              ]}
+            >
+              {successMessage}
+            </Text>
+          </View>
+        )}
+      </SafeAreaView>
+
+      {/* Confirmation Modal */}
+      <Modal
+        visible={confirmation.visible}
+        onClose={() => setConfirmation({ ...confirmation, visible: false })}
+        title={confirmation.title}
+        message={confirmation.message}
+        variant="center"
+        actions={[
+          {
+            title: 'Cancel',
+            onPress: () => {},
+            variant: 'outline',
+            accessibilityLabel: 'Cancel action',
+          },
+          {
+            title: 'Confirm',
+            onPress: confirmation.action,
+            variant: confirmation.variant === 'danger' ? 'danger' : 'primary',
+            accessibilityLabel: 'Confirm action',
+          },
+        ]}
+        dismissable
+      />
+    </>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
-    padding: 16,
   },
   centerContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
+  content: {
+    flex: 1,
+    paddingTop: 16,
+  },
   header: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 24,
+    // Spacing handled inline
   },
-  section: {
-    marginBottom: 24,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#666',
-    marginBottom: 12,
-  },
-  card: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  emptyCard: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 24,
+  cardHeader: {
+    flexDirection: 'row',
     alignItems: 'center',
   },
-  cardContent: {
-    flex: 1,
-  },
-  cardTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 4,
-  },
-  cardSubtitle: {
-    fontSize: 14,
-    color: '#666',
-  },
-  emptyText: {
-    fontSize: 16,
-    color: '#999',
-    marginBottom: 16,
-  },
-  linkText: {
-    fontSize: 14,
-    color: '#6200ee',
-    marginTop: 8,
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: 16,
   },
   buttonRow: {
     flexDirection: 'row',
-    marginTop: 12,
+    justifyContent: 'space-between',
   },
-  primaryButton: {
-    backgroundColor: '#6200ee',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 8,
-  },
-  primaryButtonText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  secondaryButton: {
-    backgroundColor: '#e0e0e0',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 8,
-  },
-  secondaryButtonText: {
-    color: '#666',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  dangerButton: {
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#d32f2f',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
-    marginTop: 8,
-  },
-  dangerButtonText: {
-    color: '#d32f2f',
-    fontSize: 14,
-    fontWeight: '600',
+  successToast: {
+    position: 'absolute',
+    bottom: 20,
+    left: 20,
+    right: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
   },
 });

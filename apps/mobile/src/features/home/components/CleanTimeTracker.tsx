@@ -1,6 +1,7 @@
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
-import { Card, Text, ProgressBar, ActivityIndicator } from 'react-native-paper';
+import { View, StyleSheet, Text, ActivityIndicator } from 'react-native';
+import { Card, ProgressBar } from '../../../design-system/components';
+import { useTheme } from '../../../design-system/hooks/useTheme';
 import type { Milestone } from '@repo/shared/types';
 
 interface CleanTimeTrackerProps {
@@ -20,12 +21,14 @@ export function CleanTimeTracker({
   nextMilestone,
   isLoading,
 }: CleanTimeTrackerProps): React.ReactElement {
+  const theme = useTheme();
+
   if (isLoading) {
     return (
-      <Card style={styles.card} accessibilityRole="progressbar" accessibilityLabel="Loading clean time">
-        <Card.Content style={styles.loadingContainer}>
-          <ActivityIndicator size="large" />
-        </Card.Content>
+      <Card variant="elevated" style={styles.card} accessibilityRole="progressbar" accessibilityLabel="Loading clean time">
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={theme.colors.primary} />
+        </View>
       </Card>
     );
   }
@@ -34,75 +37,73 @@ export function CleanTimeTracker({
   const daysUntilNext = nextMilestone ? nextMilestone.days - days : 0;
 
   return (
-    <Card style={styles.card} accessibilityRole="none" accessibilityLabel={`Clean time: ${days} days, ${hours} hours, ${minutes} minutes, ${seconds} seconds`}>
-      <Card.Content>
-        <Text variant="titleLarge" style={styles.title}>
-          Clean Time
-        </Text>
+    <Card variant="elevated" style={styles.card} accessibilityRole="none" accessibilityLabel={`Clean time: ${days} days, ${hours} hours, ${minutes} minutes, ${seconds} seconds`}>
+      <Text style={[theme.typography.title2, styles.title]}>
+        Clean Time
+      </Text>
 
-        <View style={styles.timeContainer}>
-          <View style={styles.timeBlock}>
-            <Text variant="displayMedium" style={styles.timeValue}>
-              {days}
-            </Text>
-            <Text variant="bodyMedium" style={styles.timeLabel}>
-              Days
-            </Text>
-          </View>
-
-          <View style={styles.timeBlock}>
-            <Text variant="displaySmall" style={styles.timeValue}>
-              {hours}
-            </Text>
-            <Text variant="bodySmall" style={styles.timeLabel}>
-              Hours
-            </Text>
-          </View>
-
-          <View style={styles.timeBlock}>
-            <Text variant="displaySmall" style={styles.timeValue}>
-              {minutes}
-            </Text>
-            <Text variant="bodySmall" style={styles.timeLabel}>
-              Minutes
-            </Text>
-          </View>
-
-          <View style={styles.timeBlock}>
-            <Text variant="displaySmall" style={styles.timeValue}>
-              {seconds}
-            </Text>
-            <Text variant="bodySmall" style={styles.timeLabel}>
-              Seconds
-            </Text>
-          </View>
+      <View style={styles.timeContainer}>
+        <View style={styles.timeBlock}>
+          <Text style={[theme.typography.largeTitle, { color: theme.colors.success }]}>
+            {days}
+          </Text>
+          <Text style={[theme.typography.body, { color: theme.colors.textSecondary, marginTop: 4 }]}>
+            Days
+          </Text>
         </View>
 
-        {nextMilestone && (
-          <View style={styles.milestoneContainer}>
-            <View style={styles.milestoneHeader}>
-              <Text variant="bodyLarge" style={styles.milestoneEmoji}>
-                {nextMilestone.icon}
+        <View style={styles.timeBlock}>
+          <Text style={[theme.typography.title1, { color: theme.colors.success }]}>
+            {hours}
+          </Text>
+          <Text style={[theme.typography.caption1, { color: theme.colors.textSecondary, marginTop: 4 }]}>
+            Hours
+          </Text>
+        </View>
+
+        <View style={styles.timeBlock}>
+          <Text style={[theme.typography.title1, { color: theme.colors.success }]}>
+            {minutes}
+          </Text>
+          <Text style={[theme.typography.caption1, { color: theme.colors.textSecondary, marginTop: 4 }]}>
+            Minutes
+          </Text>
+        </View>
+
+        <View style={styles.timeBlock}>
+          <Text style={[theme.typography.title1, { color: theme.colors.success }]}>
+            {seconds}
+          </Text>
+          <Text style={[theme.typography.caption1, { color: theme.colors.textSecondary, marginTop: 4 }]}>
+            Seconds
+          </Text>
+        </View>
+      </View>
+
+      {nextMilestone && (
+        <View style={styles.milestoneContainer}>
+          <View style={styles.milestoneHeader}>
+            <Text style={styles.milestoneEmoji}>
+              {nextMilestone.icon}
+            </Text>
+            <View style={styles.milestoneTextContainer}>
+              <Text style={[theme.typography.body, { fontWeight: '600', color: theme.colors.text }]}>
+                Next: {nextMilestone.title}
               </Text>
-              <View style={styles.milestoneTextContainer}>
-                <Text variant="bodyMedium" style={styles.milestoneTitle}>
-                  Next: {nextMilestone.title}
-                </Text>
-                <Text variant="bodySmall" style={styles.milestoneDays}>
-                  {daysUntilNext} days to go
-                </Text>
-              </View>
+              <Text style={[theme.typography.caption1, { color: theme.colors.textSecondary, marginTop: 2 }]}>
+                {daysUntilNext} days to go
+              </Text>
             </View>
-            <ProgressBar
-              progress={progress}
-              color="#4caf50"
-              style={styles.progressBar}
-              accessibilityLabel={`Progress to ${nextMilestone.title}: ${Math.round(progress * 100)}%`}
-              accessibilityRole="progressbar"
-            />
           </View>
-        )}
-      </Card.Content>
+          <ProgressBar
+            progress={progress}
+            variant="primary"
+            style={styles.progressBar}
+            accessibilityLabel={`Progress to ${nextMilestone.title}: ${Math.round(progress * 100)}%`}
+            accessibilityRole="progressbar"
+          />
+        </View>
+      )}
     </Card>
   );
 }
@@ -111,8 +112,6 @@ const styles = StyleSheet.create({
   card: {
     margin: 16,
     marginTop: 8,
-    elevation: 2,
-    backgroundColor: '#ffffff',
   },
   loadingContainer: {
     padding: 40,
@@ -121,7 +120,6 @@ const styles = StyleSheet.create({
   title: {
     fontWeight: 'bold',
     marginBottom: 16,
-    color: '#1a1a1a',
   },
   timeContainer: {
     flexDirection: 'row',
@@ -130,14 +128,6 @@ const styles = StyleSheet.create({
   },
   timeBlock: {
     alignItems: 'center',
-  },
-  timeValue: {
-    fontWeight: 'bold',
-    color: '#4caf50',
-  },
-  timeLabel: {
-    color: '#666',
-    marginTop: 4,
   },
   milestoneContainer: {
     marginTop: 8,
@@ -153,14 +143,6 @@ const styles = StyleSheet.create({
   },
   milestoneTextContainer: {
     flex: 1,
-  },
-  milestoneTitle: {
-    fontWeight: '600',
-    color: '#1a1a1a',
-  },
-  milestoneDays: {
-    color: '#666',
-    marginTop: 2,
   },
   progressBar: {
     height: 8,

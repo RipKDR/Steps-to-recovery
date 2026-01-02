@@ -1,11 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import { ScrollView, StyleSheet, View, Text, TouchableOpacity, TextInput } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { ScrollView, StyleSheet, View, Text, TouchableOpacity, Animated, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import { Slider } from '../../../components/Slider';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useCreateJournalEntry, useUpdateJournalEntry, useJournalEntries } from '../hooks/useJournalEntries';
-import { useTheme, Input, Button, Badge } from '../../../design-system';
+import { useTheme, Input, Button, Badge, TextArea, Toast, Card, Divider } from '../../../design-system';
 
 const MOOD_LABELS: Record<number, string> = {
   1: 'Very Sad',
@@ -44,6 +45,30 @@ export function JournalEditorScreen({ userId }: JournalEditorScreenProps): React
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
 
+  // Toast state
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const [toastVariant, setToastVariant] = useState<'success' | 'error' | 'info' | 'warning'>('success');
+
+  // Entrance animations
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(30)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 400,
+        useNativeDriver: true,
+      }),
+      Animated.spring(slideAnim, {
+        toValue: 0,
+        friction: 8,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [fadeAnim, slideAnim]);
+
   const isEditMode = params?.mode === 'edit';
   const entryId = params?.entryId;
 
@@ -80,9 +105,23 @@ export function JournalEditorScreen({ userId }: JournalEditorScreenProps): React
       } else {
         await createEntry({ title: title.trim() || null, body: body.trim(), mood, craving, tags });
       }
-      navigation.goBack();
+
+      // Success feedback
+      if (Platform.OS !== 'web') {
+        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      }
+      setToastMessage(isEditMode ? 'Entry updated successfully' : 'Entry saved successfully');
+      setToastVariant('success');
+      setShowToast(true);
+
+      // Navigate back after short delay
+      setTimeout(() => {
+        navigation.goBack();
+      }, 1000);
     } catch (err) {
-      // Error handled by hook
+      setToastMessage('Failed to save entry. Please try again.');
+      setToastVariant('error');
+      setShowToast(true);
     }
   };
 
@@ -90,44 +129,51 @@ export function JournalEditorScreen({ userId }: JournalEditorScreenProps): React
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]} edges={['bottom']}>
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.contentContainer}>
+      <Toast
+        visible={showToast}
+        message={toastMessage}
+        variant={toastVariant}
+        onDismiss={() => setShowToast(false)}
+      />
+
+      <Animated.ScrollView
+        style={[
+          styles.scrollView,
+          {
+            opacity: fadeAnim,
+            transform: [{ translateY: slideAnim }],
+          },
+        ]}
+        contentContainerStyle={styles.contentContainer}
+      >
+        <Card variant="elevated" style={styles.headerCard}>
+          <View style={styles.headerContent}>
+            <MaterialIcons name="lock" size={20} color={theme.colors.success} />
+            <Text style={[theme.typography.caption, { color: theme.colors.textSecondary, marginLeft: 8 }]}>
+              Your entry is encrypted and private
+            </Text>
+          </View>
+        </Card>
+
         <Input
           label="Title (optional)"
           value={title}
           onChangeText={setTitle}
           placeholder="Give your entry a title"
           containerStyle={styles.inputContainer}
+          maxLength={100}
         />
 
-        <View style={styles.bodyContainer}>
-          <Text style={[theme.typography.label, { color: theme.colors.text, marginBottom: 8 }]}>
-            Write your thoughts...
-          </Text>
-          <View
-            style={[
-              styles.bodyInputContainer,
-              {
-                backgroundColor: theme.colors.surface,
-                borderColor: theme.colors.border,
-                borderRadius: theme.radius.input,
-              },
-            ]}
-          >
-            <TextInput
-              style={[
-                styles.bodyInput,
-                theme.typography.body,
-                { color: theme.colors.text },
-              ]}
-              value={body}
-              onChangeText={setBody}
-              multiline
-              placeholder="Share your thoughts, feelings, and progress..."
-              placeholderTextColor={theme.colors.textSecondary}
-              textAlignVertical="top"
-            />
-          </View>
-        </View>
+        <TextArea
+          label="Write your thoughts..."
+          value={body}
+          onChangeText={setBody}
+          placeholder="Share your thoughts, feelings, and progress on your recovery journey. Remember, this is a safe space for you."
+          containerStyle={styles.textAreaContainer}
+          minHeight={200}
+          maxLength={5000}
+          showCharacterCount
+        />
 
         <View style={styles.section}>
           <Text style={[theme.typography.h3, { marginBottom: 12, fontWeight: '600', color: theme.colors.text }]}>
@@ -151,6 +197,8 @@ export function JournalEditorScreen({ userId }: JournalEditorScreenProps): React
           </View>
         </View>
 
+        <Divider style={styles.divider} />
+
         <View style={styles.section}>
           <Text style={[theme.typography.h3, { marginBottom: 12, fontWeight: '600', color: theme.colors.text }]}>
             Craving level (0-10)
@@ -171,6 +219,16 @@ export function JournalEditorScreen({ userId }: JournalEditorScreenProps): React
               {craving || 0}/10
             </Text>
           </View>
+          {craving !== null && craving >= 7 && (
+            <Card variant="outlined" style={[styles.warningCard, { borderColor: theme.colors.danger }]}>
+              <View style={styles.warningContent}>
+                <MaterialIcons name="warning" size={20} color={theme.colors.danger} />
+                <Text style={[theme.typography.caption, { color: theme.colors.danger, marginLeft: 8, flex: 1 }]}>
+                  High craving detected. Consider reaching out to your sponsor or using emergency tools.
+                </Text>
+              </View>
+            </Card>
+          )}
         </View>
 
         <View style={styles.section}>
@@ -212,11 +270,11 @@ export function JournalEditorScreen({ userId }: JournalEditorScreenProps): React
             ))}
           </View>
         </View>
-      </ScrollView>
+      </Animated.ScrollView>
 
       <View style={[styles.footer, { backgroundColor: theme.colors.surface, borderTopColor: theme.colors.border }]}>
         <Button
-          title={isEditMode ? 'Update' : 'Save'}
+          title={isEditMode ? 'Update Entry' : 'Save Entry'}
           onPress={handleSave}
           disabled={!body.trim() || isPending}
           loading={isPending}
@@ -237,28 +295,37 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     padding: 16,
+    paddingBottom: 32,
   },
-  inputContainer: {
-    marginBottom: 0,
-  },
-  bodyContainer: {
+  headerCard: {
     marginBottom: 16,
   },
-  bodyInputContainer: {
-    borderWidth: 2,
-    padding: 16,
-    minHeight: 200,
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  bodyInput: {
-    flex: 1,
-    padding: 0,
-    minHeight: 168,
+  inputContainer: {
+    marginBottom: 16,
+  },
+  textAreaContainer: {
+    marginBottom: 16,
+  },
+  divider: {
+    marginVertical: 24,
   },
   section: {
     marginBottom: 24,
   },
   sliderContainer: {
     paddingHorizontal: 8,
+  },
+  warningCard: {
+    marginTop: 12,
+  },
+  warningContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   tagInputContainer: {
     flexDirection: 'row',

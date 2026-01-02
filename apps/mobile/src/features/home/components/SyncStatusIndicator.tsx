@@ -1,18 +1,19 @@
 import React from 'react';
-import { View, StyleSheet, TouchableOpacity } from 'react-native';
-import { Text, ActivityIndicator } from 'react-native-paper';
+import { View, StyleSheet, TouchableOpacity, Text, ActivityIndicator } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSync } from '../../../contexts/SyncContext';
+import { useTheme } from '../../../design-system/hooks/useTheme';
 
 export function SyncStatusIndicator() {
   const { isSyncing, lastSyncTime, pendingCount, error, isOnline, triggerSync } = useSync();
+  const theme = useTheme();
 
   // Determine sync status
   const getStatus = () => {
     if (!isOnline) {
       return {
         icon: 'cloud-off-outline' as const,
-        color: '#9E9E9E', // Gray
+        color: theme.colors.muted,
         label: 'Offline',
         subtext: 'Sync paused',
       };
@@ -21,7 +22,7 @@ export function SyncStatusIndicator() {
     if (isSyncing) {
       return {
         icon: 'cloud-sync' as const,
-        color: '#2196F3', // Blue
+        color: theme.colors.primary,
         label: 'Syncing...',
         subtext: `${pendingCount} item${pendingCount !== 1 ? 's' : ''}`,
       };
@@ -30,7 +31,7 @@ export function SyncStatusIndicator() {
     if (error) {
       return {
         icon: 'cloud-alert' as const,
-        color: '#F44336', // Red
+        color: theme.colors.danger,
         label: 'Sync Error',
         subtext: 'Tap to retry',
       };
@@ -39,7 +40,7 @@ export function SyncStatusIndicator() {
     if (pendingCount > 0) {
       return {
         icon: 'cloud-upload-outline' as const,
-        color: '#FF9800', // Orange
+        color: theme.colors.warning,
         label: `${pendingCount} Pending`,
         subtext: 'Tap to sync',
       };
@@ -47,7 +48,7 @@ export function SyncStatusIndicator() {
 
     return {
       icon: 'cloud-check' as const,
-      color: '#4CAF50', // Green
+      color: theme.colors.success,
       label: 'Synced',
       subtext: lastSyncTime ? formatSyncTime(lastSyncTime) : 'Never',
     };
@@ -78,7 +79,7 @@ export function SyncStatusIndicator() {
 
   return (
     <TouchableOpacity
-      style={styles.container}
+      style={[styles.container, { backgroundColor: theme.colors.surface }]}
       onPress={handlePress}
       disabled={isSyncing || !isOnline}
       activeOpacity={0.7}
@@ -90,8 +91,8 @@ export function SyncStatusIndicator() {
           <MaterialCommunityIcons name={status.icon} size={20} color={status.color} />
         )}
         <View style={styles.textContainer}>
-          <Text style={[styles.label, { color: status.color }]}>{status.label}</Text>
-          <Text style={styles.subtext}>{status.subtext}</Text>
+          <Text style={[theme.typography.subheadline, { color: status.color, fontWeight: '600' }]}>{status.label}</Text>
+          <Text style={[theme.typography.caption1, { color: theme.colors.textSecondary, marginTop: 2 }]}>{status.subtext}</Text>
         </View>
       </View>
     </TouchableOpacity>
@@ -100,7 +101,6 @@ export function SyncStatusIndicator() {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#F5F5F5',
     borderRadius: 12,
     padding: 12,
     marginHorizontal: 16,
@@ -113,14 +113,5 @@ const styles = StyleSheet.create({
   },
   textContainer: {
     flex: 1,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  subtext: {
-    fontSize: 12,
-    color: '#757575',
-    marginTop: 2,
   },
 });

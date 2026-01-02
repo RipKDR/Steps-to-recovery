@@ -1,6 +1,7 @@
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
-import { Card, Text, Button, Chip, ActivityIndicator } from 'react-native-paper';
+import { View, StyleSheet, Text, ActivityIndicator } from 'react-native';
+import { Card, Button, Badge } from '../../../design-system/components';
+import { useTheme } from '../../../design-system/hooks/useTheme';
 import { useNavigation } from '@react-navigation/native';
 import type { DailyCheckInDecrypted } from '@repo/shared/types';
 
@@ -18,6 +19,7 @@ export function DailyCheckInCard({
   userId,
 }: DailyCheckInCardProps): React.ReactElement {
   const navigation = useNavigation();
+  const theme = useTheme();
 
   const handleMorningCheckIn = (): void => {
     (navigation.navigate as (screen: string, params?: Record<string, unknown>) => void)('MorningIntention', { userId });
@@ -29,104 +31,98 @@ export function DailyCheckInCard({
 
   if (isLoading) {
     return (
-      <Card style={styles.card} accessibilityRole="none" accessibilityLabel="Loading daily check-ins">
-        <Card.Content style={styles.loadingContainer}>
-          <ActivityIndicator size="small" />
-        </Card.Content>
+      <Card variant="elevated" style={styles.card} accessibilityRole="none" accessibilityLabel="Loading daily check-ins">
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="small" color={theme.colors.primary} />
+        </View>
       </Card>
     );
   }
 
   return (
-    <Card style={styles.card} accessibilityRole="none" accessibilityLabel="Daily check-in card">
-      <Card.Content>
-        <Text variant="titleLarge" style={styles.title}>
-          Daily Check-In
-        </Text>
+    <Card variant="elevated" style={styles.card} accessibilityRole="none" accessibilityLabel="Daily check-in card">
+      <Text style={[theme.typography.title2, styles.title]}>
+        Daily Check-In
+      </Text>
 
-        <View style={styles.checkInRow}>
-          <View style={styles.checkInItem}>
-            <View style={styles.checkInHeader}>
-              <Text variant="bodyLarge" style={styles.checkInEmoji}>
-                🌅
-              </Text>
-              <Text variant="titleMedium" style={styles.checkInTitle}>
-                Morning
-              </Text>
-            </View>
-            {morningCheckIn ? (
-              <Chip
-                icon="check-circle"
-                style={styles.completedChip}
-                textStyle={styles.chipText}
-                accessibilityLabel="Morning check-in completed"
-                accessibilityRole="text"
-              >
-                Completed
-              </Chip>
-            ) : (
-              <Button
-                mode="contained"
-                onPress={handleMorningCheckIn}
-                style={styles.checkInButton}
-                accessibilityLabel="Start morning intention"
-                accessibilityRole="button"
-                accessibilityHint="Opens morning intention check-in form"
-              >
-                Start
-              </Button>
-            )}
+      <View style={styles.checkInRow}>
+        <View style={styles.checkInItem}>
+          <View style={styles.checkInHeader}>
+            <Text style={styles.checkInEmoji}>
+              🌅
+            </Text>
+            <Text style={[theme.typography.headline, { fontWeight: '600', color: theme.colors.text }]}>
+              Morning
+            </Text>
           </View>
-
-          <View style={styles.divider} />
-
-          <View style={styles.checkInItem}>
-            <View style={styles.checkInHeader}>
-              <Text variant="bodyLarge" style={styles.checkInEmoji}>
-                🌙
-              </Text>
-              <Text variant="titleMedium" style={styles.checkInTitle}>
-                Evening
-              </Text>
-            </View>
-            {eveningCheckIn ? (
-              <Chip
-                icon="check-circle"
-                style={styles.completedChip}
-                textStyle={styles.chipText}
-                accessibilityLabel="Evening check-in completed"
-                accessibilityRole="text"
-              >
-                Completed
-              </Chip>
-            ) : (
-              <Button
-                mode="contained"
-                onPress={handleEveningCheckIn}
-                style={styles.checkInButton}
-                disabled={!morningCheckIn}
-                accessibilityLabel="Start evening pulse check"
-                accessibilityRole="button"
-                accessibilityHint="Opens evening pulse check-in form"
-                accessibilityState={{ disabled: !morningCheckIn }}
-              >
-                Start
-              </Button>
-            )}
-          </View>
+          {morningCheckIn ? (
+            <Badge
+              variant="success"
+              size="medium"
+              accessibilityLabel="Morning check-in completed"
+              accessibilityRole="text"
+            >
+              ✓ Completed
+            </Badge>
+          ) : (
+            <Button
+              variant="primary"
+              onPress={handleMorningCheckIn}
+              title="Start"
+              style={styles.checkInButton}
+              accessibilityLabel="Start morning intention"
+              accessibilityRole="button"
+              accessibilityHint="Opens morning intention check-in form"
+            />
+          )}
         </View>
 
-        {morningCheckIn && morningCheckIn.intention && (
-          <View style={styles.intentionPreview}>
-            <Text variant="bodySmall" style={styles.intentionLabel}>
-              Today's Intention:
+        <View style={[styles.divider, { backgroundColor: theme.colors.border }]} />
+
+        <View style={styles.checkInItem}>
+          <View style={styles.checkInHeader}>
+            <Text style={styles.checkInEmoji}>
+              🌙
             </Text>
-            <Text variant="bodyMedium" style={styles.intentionText}>
-              "{morningCheckIn.intention}"
+            <Text style={[theme.typography.headline, { fontWeight: '600', color: theme.colors.text }]}>
+              Evening
             </Text>
           </View>
-        )}
-      </Card.Content>
+          {eveningCheckIn ? (
+            <Badge
+              variant="success"
+              size="medium"
+              accessibilityLabel="Evening check-in completed"
+              accessibilityRole="text"
+            >
+              ✓ Completed
+            </Badge>
+          ) : (
+            <Button
+              variant="primary"
+              onPress={handleEveningCheckIn}
+              title="Start"
+              style={styles.checkInButton}
+              disabled={!morningCheckIn}
+              accessibilityLabel="Start evening pulse check"
+              accessibilityRole="button"
+              accessibilityHint="Opens evening pulse check-in form"
+              accessibilityState={{ disabled: !morningCheckIn }}
+            />
+          )}
+        </View>
+      </View>
+
+      {morningCheckIn && morningCheckIn.intention && (
+        <View style={[styles.intentionPreview, { backgroundColor: theme.colors.background }]}>
+          <Text style={[theme.typography.caption1, { color: theme.colors.textSecondary, marginBottom: 4 }]}>
+            Today's Intention:
+          </Text>
+          <Text style={[theme.typography.body, { fontStyle: 'italic', color: theme.colors.text }]}>
+            "{morningCheckIn.intention}"
+          </Text>
+        </View>
+      )}
     </Card>
   );
 }
@@ -135,8 +131,6 @@ const styles = StyleSheet.create({
   card: {
     margin: 16,
     marginTop: 8,
-    elevation: 2,
-    backgroundColor: '#ffffff',
   },
   loadingContainer: {
     padding: 20,
@@ -145,7 +139,6 @@ const styles = StyleSheet.create({
   title: {
     fontWeight: 'bold',
     marginBottom: 16,
-    color: '#1a1a1a',
   },
   checkInRow: {
     flexDirection: 'row',
@@ -164,37 +157,17 @@ const styles = StyleSheet.create({
     fontSize: 32,
     marginBottom: 4,
   },
-  checkInTitle: {
-    fontWeight: '600',
-    color: '#1a1a1a',
-  },
   checkInButton: {
     minWidth: 100,
-  },
-  completedChip: {
-    backgroundColor: '#e8f5e9',
-  },
-  chipText: {
-    color: '#2e7d32',
   },
   divider: {
     width: 1,
     height: 60,
-    backgroundColor: '#e0e0e0',
     marginHorizontal: 16,
   },
   intentionPreview: {
     marginTop: 16,
     padding: 12,
-    backgroundColor: '#f5f5f5',
     borderRadius: 8,
-  },
-  intentionLabel: {
-    color: '#666',
-    marginBottom: 4,
-  },
-  intentionText: {
-    fontStyle: 'italic',
-    color: '#1a1a1a',
   },
 });

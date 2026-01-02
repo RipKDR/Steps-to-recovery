@@ -1,62 +1,129 @@
+/**
+ * Invite Sponsor Screen
+ * Send sponsor connection request via email
+ */
+
 import React, { useState } from 'react';
-import { View, Text, TextInput, StyleSheet, TouchableOpacity, ActivityIndicator, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { useSponsorships } from '../hooks';
+import { useTheme } from '../../../design-system/hooks/useTheme';
+import { Input, Button, Card, Modal, Toast } from '../../../design-system/components';
+import type { ModalAction } from '../../../design-system/components';
 
 export function InviteSponsorScreen(): React.ReactElement {
   const navigation = useNavigation();
+  const theme = useTheme();
   const { sendRequest } = useSponsorships();
+
   const [email, setEmail] = useState('');
+  const [emailError, setEmailError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [showToast, setShowToast] = useState(false);
+
+  const validateEmail = (emailAddress: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(emailAddress);
+  };
 
   const handleSendRequest = async (): Promise<void> => {
+    // Validation
     if (!email.trim()) {
-      Alert.alert('Email Required', 'Please enter your sponsor\'s email address');
+      setEmailError('Email address is required');
       return;
     }
 
-    // Basic email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email.trim())) {
-      Alert.alert('Invalid Email', 'Please enter a valid email address');
+    if (!validateEmail(email.trim())) {
+      setEmailError('Please enter a valid email address');
       return;
     }
 
+    setEmailError('');
     setLoading(true);
+
     try {
       await sendRequest(email.trim().toLowerCase());
-      Alert.alert(
-        'Request Sent!',
-        'Your sponsor request has been sent. They\'ll receive a notification to accept your request.',
-        [{ text: 'OK', onPress: () => navigation.goBack() }]
-      );
-      setEmail('');
+      setShowSuccessModal(true);
+      setEmail(''); // Clear form
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to send request';
-      Alert.alert('Error', message);
+      setErrorMessage(message);
+      setShowErrorModal(true);
     } finally {
       setLoading(false);
     }
   };
 
-  return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      <View style={styles.content}>
-        <Text style={styles.header}>Find a Sponsor</Text>
-        <Text style={styles.description}>
-          Enter your sponsor's email address to send them a connection request.
-          They'll need to have an account in the app.
-        </Text>
+  const handleSuccessModalClose = (): void => {
+    setShowSuccessModal(false);
+    navigation.goBack();
+  };
 
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>Sponsor's Email</Text>
-          <TextInput
-            style={styles.input}
+  const successActions: ModalAction[] = [
+    {
+      label: 'Done',
+      onPress: handleSuccessModalClose,
+      style: 'primary',
+    },
+  ];
+
+  const errorActions: ModalAction[] = [
+    {
+      label: 'OK',
+      onPress: () => setShowErrorModal(false),
+      style: 'primary',
+    },
+  ];
+
+  return (
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: theme.colors.background }]}
+      edges={['bottom']}
+    >
+      <KeyboardAvoidingView
+        style={styles.keyboardView}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+      >
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.contentContainer}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Header */}
+          <View style={styles.header}>
+            <Text
+              style={[
+                theme.typography.largeTitle,
+                { color: theme.colors.text, marginBottom: 8 },
+              ]}
+            >
+              Find a Sponsor
+            </Text>
+            <Text
+              style={[
+                theme.typography.body,
+                { color: theme.colors.textSecondary, lineHeight: 22 },
+              ]}
+            >
+              Enter your sponsor's email address to send them a connection request.
+              They'll need to have an account in the app.
+            </Text>
+          </View>
+
+          {/* Email Input */}
+          <Input
+            label="Sponsor's Email"
             value={email}
-            onChangeText={setEmail}
+            onChangeText={(text) => {
+              setEmail(text);
+              setEmailError(''); // Clear error on change
+            }}
+            error={emailError}
             placeholder="sponsor@example.com"
             keyboardType="email-address"
             autoCapitalize="none"
@@ -66,130 +133,137 @@ export function InviteSponsorScreen(): React.ReactElement {
             accessibilityLabel="Sponsor email input"
             accessibilityHint="Enter your sponsor's email address"
           />
-        </View>
 
-        <TouchableOpacity
-          style={[styles.sendButton, loading && styles.sendButtonDisabled]}
-          onPress={handleSendRequest}
-          disabled={loading}
-          accessibilityLabel="Send sponsor request"
-          accessibilityRole="button"
-          accessibilityState={{ disabled: loading }}
-        >
-          {loading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.sendButtonText}>Send Request</Text>
-          )}
-        </TouchableOpacity>
+          {/* Action Buttons */}
+          <View style={styles.buttonContainer}>
+            <Button
+              variant="primary"
+              size="large"
+              onPress={handleSendRequest}
+              disabled={loading}
+              loading={loading}
+              accessibilityLabel="Send sponsor request"
+              style={styles.button}
+            >
+              Send Request
+            </Button>
 
-        <TouchableOpacity
-          style={styles.cancelButton}
-          onPress={() => navigation.goBack()}
-          disabled={loading}
-          accessibilityLabel="Cancel"
-          accessibilityRole="button"
-        >
-          <Text style={styles.cancelButtonText}>Cancel</Text>
-        </TouchableOpacity>
+            <Button
+              variant="secondary"
+              size="large"
+              onPress={() => navigation.goBack()}
+              disabled={loading}
+              accessibilityLabel="Cancel"
+              style={styles.button}
+            >
+              Cancel
+            </Button>
+          </View>
 
-        <View style={styles.infoBox}>
-          <Text style={styles.infoTitle}>How it works:</Text>
-          <Text style={styles.infoText}>
-            1. Enter your sponsor's email{'\n'}
-            2. They'll receive your request{'\n'}
-            3. Once accepted, you can share journal entries{'\n'}
-            4. Only you control what gets shared
-          </Text>
-        </View>
-      </View>
-    </KeyboardAvoidingView>
+          {/* Info Card */}
+          <Card
+            variant="flat"
+            style={[
+              styles.infoCard,
+              { backgroundColor: theme.colors.primaryLight },
+            ]}
+          >
+            <Text
+              style={[
+                theme.typography.title3,
+                { color: theme.colors.primary, marginBottom: 12 },
+              ]}
+            >
+              How it works:
+            </Text>
+            <View style={styles.infoList}>
+              <InfoItem theme={theme} text="Enter your sponsor's email" />
+              <InfoItem theme={theme} text="They'll receive your request" />
+              <InfoItem theme={theme} text="Once accepted, you can share journal entries" />
+              <InfoItem theme={theme} text="Only you control what gets shared" />
+            </View>
+          </Card>
+        </ScrollView>
+      </KeyboardAvoidingView>
+
+      {/* Success Modal */}
+      <Modal
+        visible={showSuccessModal}
+        title="Request Sent!"
+        message="Your sponsor request has been sent. They'll receive a notification to accept your request."
+        actions={successActions}
+        variant="center"
+        onClose={handleSuccessModalClose}
+      />
+
+      {/* Error Modal */}
+      <Modal
+        visible={showErrorModal}
+        title="Error"
+        message={errorMessage}
+        actions={errorActions}
+        variant="center"
+        onClose={() => setShowErrorModal(false)}
+      />
+
+      {/* Toast (for non-critical feedback) */}
+      <Toast
+        visible={showToast}
+        message="Request sent successfully"
+        variant="success"
+        duration={2000}
+        onDismiss={() => setShowToast(false)}
+      />
+    </SafeAreaView>
+  );
+}
+
+// Info List Item Component
+function InfoItem({ theme, text }: { theme: any; text: string }): React.ReactElement {
+  return (
+    <View style={styles.infoItem}>
+      <Text
+        style={[
+          theme.typography.body,
+          { color: theme.colors.primary },
+        ]}
+      >
+        • {text}
+      </Text>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
   },
-  content: {
+  keyboardView: {
     flex: 1,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  contentContainer: {
     padding: 20,
   },
   header: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 12,
-  },
-  description: {
-    fontSize: 16,
-    color: '#666',
     marginBottom: 32,
-    lineHeight: 22,
   },
-  inputContainer: {
+  buttonContainer: {
+    marginTop: 8,
     marginBottom: 24,
   },
-  label: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 8,
-  },
-  input: {
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 16,
-    color: '#333',
-  },
-  sendButton: {
-    backgroundColor: '#6200ee',
-    paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: 'center',
+  button: {
     marginBottom: 12,
   },
-  sendButtonDisabled: {
-    backgroundColor: '#9e9e9e',
+  infoCard: {
+    padding: 20,
   },
-  sendButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+  infoList: {
+    gap: 8,
   },
-  cancelButton: {
-    backgroundColor: '#fff',
-    paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#ddd',
-    marginBottom: 24,
-  },
-  cancelButtonText: {
-    color: '#666',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  infoBox: {
-    backgroundColor: '#e3f2fd',
-    borderRadius: 12,
-    padding: 16,
-  },
-  infoTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1976d2',
-    marginBottom: 8,
-  },
-  infoText: {
-    fontSize: 14,
-    color: '#1565c0',
-    lineHeight: 20,
+  infoItem: {
+    paddingVertical: 4,
   },
 });

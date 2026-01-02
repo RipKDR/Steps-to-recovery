@@ -1,138 +1,355 @@
+/**
+ * Emergency Support Screen
+ * CRITICAL: This screen must be immediately accessible for users in crisis
+ * Design: Calming, clear visual hierarchy, large touch targets (≥48x48dp)
+ * Accessibility: WCAG AAA compliant, high contrast, clear labels
+ */
+
 import React from 'react';
 import { ScrollView, StyleSheet, View, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Card, Text, Button } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useTheme, Card, Button } from '../../../design-system';
+import { Text } from 'react-native';
 
 interface EmergencyScreenProps {
   userId: string;
 }
 
-const CRISIS_HOTLINES = [
+interface CrisisHotline {
+  name: string;
+  number: string;
+  description: string;
+  icon: keyof typeof MaterialCommunityIcons.glyphMap;
+}
+
+const CRISIS_HOTLINES: CrisisHotline[] = [
   {
     name: 'National Suicide Prevention Lifeline',
     number: '988',
     description: '24/7 free and confidential support',
+    icon: 'phone-alert',
   },
   {
     name: 'SAMHSA National Helpline',
     number: '1-800-662-4357',
     description: 'Substance abuse treatment referral',
+    icon: 'hospital-box',
   },
   {
     name: 'Crisis Text Line',
     number: 'Text HOME to 741741',
     description: 'Free 24/7 crisis support via text',
+    icon: 'message-text',
   },
 ];
 
 export function EmergencyScreen({ userId }: EmergencyScreenProps): React.ReactElement {
+  const theme = useTheme();
+
   const handleCall = (number: string): void => {
     const phoneNumber = number.replace(/[^0-9]/g, '');
     Linking.openURL(`tel:${phoneNumber}`);
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['bottom']}>
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.contentContainer}>
-        <View style={styles.header}>
-          <MaterialCommunityIcons name="phone-alert" size={64} color="#d32f2f" />
-          <Text variant="headlineLarge" style={styles.title}>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: theme.colors.background }]}
+      edges={['bottom']}
+    >
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.contentContainer}
+        accessibilityRole="scrollbar"
+        accessibilityLabel="Emergency support resources"
+      >
+        {/* Header Section */}
+        <View style={[styles.header, { paddingHorizontal: theme.spacing.lg }]}>
+          <View
+            style={[
+              styles.iconContainer,
+              { backgroundColor: theme.colors.danger + '20' },
+            ]}
+          >
+            <MaterialCommunityIcons
+              name="phone-alert"
+              size={48}
+              color={theme.colors.danger}
+            />
+          </View>
+          <Text
+            style={[
+              theme.typography.h1,
+              { color: theme.colors.text, textAlign: 'center', marginTop: theme.spacing.md },
+            ]}
+            accessibilityRole="header"
+          >
             Emergency Support
           </Text>
-          <Text variant="bodyLarge" style={styles.subtitle}>
+          <Text
+            style={[
+              theme.typography.body,
+              {
+                color: theme.colors.textSecondary,
+                textAlign: 'center',
+                marginTop: theme.spacing.xs,
+              },
+            ]}
+          >
             You're not alone. Help is available 24/7.
           </Text>
         </View>
 
-        <View style={styles.section}>
-          <Text variant="titleLarge" style={styles.sectionTitle}>
+        {/* Crisis Hotlines Section */}
+        <View style={[styles.section, { paddingHorizontal: theme.spacing.md }]}>
+          <Text
+            style={[
+              theme.typography.h2,
+              { color: theme.colors.text, marginBottom: theme.spacing.md },
+            ]}
+            accessibilityRole="header"
+          >
             Crisis Hotlines
           </Text>
+
           {CRISIS_HOTLINES.map((hotline, index) => (
-            <Card key={index} style={styles.card}>
-              <Card.Content>
-                <Text variant="titleMedium" style={styles.hotlineName}>
-                  {hotline.name}
-                </Text>
-                <Text variant="bodyMedium" style={styles.hotlineDescription}>
-                  {hotline.description}
-                </Text>
-                <Button
-                  mode="contained"
-                  onPress={() => handleCall(hotline.number)}
-                  style={styles.callButton}
-                  icon="phone"
-                  buttonColor="#d32f2f"
-                  accessibilityLabel={`Call ${hotline.name}`}
-                  accessibilityRole="button"
-                >
-                  {hotline.number}
-                </Button>
-              </Card.Content>
+            <Card
+              key={index}
+              variant="elevated"
+              style={{ marginBottom: theme.spacing.md }}
+            >
+              <View style={styles.hotlineCard}>
+                <View style={styles.hotlineIcon}>
+                  <MaterialCommunityIcons
+                    name={hotline.icon}
+                    size={32}
+                    color={theme.colors.danger}
+                  />
+                </View>
+                <View style={styles.hotlineContent}>
+                  <Text
+                    style={[
+                      theme.typography.h3,
+                      { color: theme.colors.text, marginBottom: theme.spacing.xs },
+                    ]}
+                  >
+                    {hotline.name}
+                  </Text>
+                  <Text
+                    style={[
+                      theme.typography.bodySmall,
+                      { color: theme.colors.textSecondary, marginBottom: theme.spacing.md },
+                    ]}
+                  >
+                    {hotline.description}
+                  </Text>
+                  <Button
+                    title={hotline.number}
+                    onPress={() => handleCall(hotline.number)}
+                    variant="danger"
+                    size="large"
+                    fullWidth
+                    icon={<MaterialCommunityIcons name="phone" size={20} color="#FFFFFF" />}
+                    accessibilityLabel={`Call ${hotline.name} at ${hotline.number}`}
+                    accessibilityHint="Initiates a phone call to crisis support"
+                  />
+                </View>
+              </View>
             </Card>
           ))}
         </View>
 
-        <View style={styles.section}>
-          <Text variant="titleLarge" style={styles.sectionTitle}>
+        {/* Grounding Techniques Section */}
+        <View style={[styles.section, { paddingHorizontal: theme.spacing.md }]}>
+          <Text
+            style={[
+              theme.typography.h2,
+              { color: theme.colors.text, marginBottom: theme.spacing.md },
+            ]}
+            accessibilityRole="header"
+          >
             Grounding Techniques
           </Text>
-          <Card style={styles.card}>
-            <Card.Content>
-              <Text variant="titleMedium" style={styles.techniqueTitle}>
-                5-4-3-2-1 Grounding
-              </Text>
-              <Text variant="bodyMedium" style={styles.techniqueStep}>
-                <Text style={styles.bold}>5</Text> things you can see
-              </Text>
-              <Text variant="bodyMedium" style={styles.techniqueStep}>
-                <Text style={styles.bold}>4</Text> things you can touch
-              </Text>
-              <Text variant="bodyMedium" style={styles.techniqueStep}>
-                <Text style={styles.bold}>3</Text> things you can hear
-              </Text>
-              <Text variant="bodyMedium" style={styles.techniqueStep}>
-                <Text style={styles.bold}>2</Text> things you can smell
-              </Text>
-              <Text variant="bodyMedium" style={styles.techniqueStep}>
-                <Text style={styles.bold}>1</Text> thing you can taste
-              </Text>
-            </Card.Content>
+
+          {/* 5-4-3-2-1 Grounding */}
+          <Card variant="elevated" style={{ marginBottom: theme.spacing.md }}>
+            <Text
+              style={[
+                theme.typography.h3,
+                { color: theme.colors.text, marginBottom: theme.spacing.sm },
+              ]}
+            >
+              5-4-3-2-1 Grounding
+            </Text>
+            <Text
+              style={[
+                theme.typography.bodySmall,
+                { color: theme.colors.textSecondary, marginBottom: theme.spacing.sm },
+              ]}
+            >
+              Use your senses to anchor yourself in the present moment:
+            </Text>
+            {[
+              { count: '5', sense: 'things you can see' },
+              { count: '4', sense: 'things you can touch' },
+              { count: '3', sense: 'things you can hear' },
+              { count: '2', sense: 'things you can smell' },
+              { count: '1', sense: 'thing you can taste' },
+            ].map((step, index) => (
+              <View key={index} style={styles.techniqueStep}>
+                <Text
+                  style={[
+                    theme.typography.labelLarge,
+                    { color: theme.colors.primary, width: 28 },
+                  ]}
+                >
+                  {step.count}
+                </Text>
+                <Text
+                  style={[
+                    theme.typography.body,
+                    { color: theme.colors.text, flex: 1 },
+                  ]}
+                >
+                  {step.sense}
+                </Text>
+              </View>
+            ))}
           </Card>
 
-          <Card style={styles.card}>
-            <Card.Content>
-              <Text variant="titleMedium" style={styles.techniqueTitle}>
-                Box Breathing
-              </Text>
-              <Text variant="bodyMedium" style={styles.techniqueDescription}>
-                1. Breathe in for 4 seconds{'\n'}
-                2. Hold for 4 seconds{'\n'}
-                3. Breathe out for 4 seconds{'\n'}
-                4. Hold for 4 seconds{'\n'}
-                Repeat 4 times
-              </Text>
-            </Card.Content>
+          {/* Box Breathing */}
+          <Card variant="elevated" style={{ marginBottom: theme.spacing.md }}>
+            <Text
+              style={[
+                theme.typography.h3,
+                { color: theme.colors.text, marginBottom: theme.spacing.sm },
+              ]}
+            >
+              Box Breathing
+            </Text>
+            <Text
+              style={[
+                theme.typography.bodySmall,
+                { color: theme.colors.textSecondary, marginBottom: theme.spacing.sm },
+              ]}
+            >
+              A simple breathing technique to calm your nervous system:
+            </Text>
+            {[
+              'Breathe in for 4 seconds',
+              'Hold for 4 seconds',
+              'Breathe out for 4 seconds',
+              'Hold for 4 seconds',
+            ].map((instruction, index) => (
+              <View key={index} style={styles.techniqueStep}>
+                <Text
+                  style={[
+                    theme.typography.labelLarge,
+                    { color: theme.colors.secondary, width: 28 },
+                  ]}
+                >
+                  {index + 1}.
+                </Text>
+                <Text
+                  style={[
+                    theme.typography.body,
+                    { color: theme.colors.text, flex: 1 },
+                  ]}
+                >
+                  {instruction}
+                </Text>
+              </View>
+            ))}
+            <Text
+              style={[
+                theme.typography.bodySmall,
+                { color: theme.colors.textSecondary, marginTop: theme.spacing.sm, fontStyle: 'italic' },
+              ]}
+            >
+              Repeat this cycle 4 times
+            </Text>
           </Card>
         </View>
 
-        <View style={styles.section}>
-          <Text variant="titleLarge" style={styles.sectionTitle}>
+        {/* Immediate Actions Section */}
+        <View style={[styles.section, { paddingHorizontal: theme.spacing.md }]}>
+          <Text
+            style={[
+              theme.typography.h2,
+              { color: theme.colors.text, marginBottom: theme.spacing.md },
+            ]}
+            accessibilityRole="header"
+          >
             Immediate Actions
           </Text>
-          <Card style={styles.card}>
-            <Card.Content>
-              <Text variant="bodyMedium" style={styles.actionText}>
-                • Remove yourself from triggering situations{'\n'}
-                • Call your sponsor or a trusted friend{'\n'}
-                • Attend a meeting (in-person or virtual){'\n'}
-                • Journal your feelings{'\n'}
-                • Practice deep breathing{'\n'}
-                • Remember: This feeling is temporary
-              </Text>
-            </Card.Content>
+
+          <Card variant="elevated" style={{ marginBottom: theme.spacing.xl }}>
+            <Text
+              style={[
+                theme.typography.bodySmall,
+                { color: theme.colors.textSecondary, marginBottom: theme.spacing.sm },
+              ]}
+            >
+              When you're feeling overwhelmed:
+            </Text>
+            {[
+              'Remove yourself from triggering situations',
+              'Call your sponsor or a trusted friend',
+              'Attend a meeting (in-person or virtual)',
+              'Journal your feelings',
+              'Practice deep breathing',
+              'Remember: This feeling is temporary',
+            ].map((action, index) => (
+              <View key={index} style={styles.actionItem}>
+                <MaterialCommunityIcons
+                  name="check-circle"
+                  size={20}
+                  color={theme.colors.success}
+                  style={{ marginRight: theme.spacing.sm }}
+                />
+                <Text
+                  style={[
+                    theme.typography.body,
+                    { color: theme.colors.text, flex: 1 },
+                  ]}
+                >
+                  {action}
+                </Text>
+              </View>
+            ))}
           </Card>
+        </View>
+
+        {/* Safety Reminder */}
+        <View style={[styles.reminderCard, {
+          backgroundColor: theme.colors.success + '15',
+          marginHorizontal: theme.spacing.md,
+          marginBottom: theme.spacing.xl,
+          padding: theme.spacing.md,
+          borderRadius: theme.radius.card,
+        }]}>
+          <MaterialCommunityIcons
+            name="shield-heart"
+            size={28}
+            color={theme.colors.success}
+            style={{ marginBottom: theme.spacing.sm }}
+          />
+          <Text
+            style={[
+              theme.typography.label,
+              { color: theme.colors.success, marginBottom: theme.spacing.xs },
+            ]}
+          >
+            You are stronger than you know
+          </Text>
+          <Text
+            style={[
+              theme.typography.bodySmall,
+              { color: theme.colors.text, textAlign: 'center', lineHeight: 20 },
+            ]}
+          >
+            Every moment you choose recovery is a victory. This crisis will pass, and you have the tools to get through it.
+          </Text>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -142,76 +359,49 @@ export function EmergencyScreen({ userId }: EmergencyScreenProps): React.ReactEl
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fafafa',
   },
   scrollView: {
     flex: 1,
   },
   contentContainer: {
-    padding: 16,
     paddingBottom: 32,
   },
   header: {
     alignItems: 'center',
-    marginBottom: 24,
-    padding: 16,
+    paddingVertical: 24,
   },
-  title: {
-    fontWeight: 'bold',
-    color: '#d32f2f',
-    marginTop: 16,
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  subtitle: {
-    color: '#666',
-    textAlign: 'center',
+  iconContainer: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   section: {
-    marginBottom: 24,
+    marginTop: 24,
   },
-  sectionTitle: {
-    fontWeight: 'bold',
-    color: '#1a1a1a',
-    marginBottom: 12,
+  hotlineCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
   },
-  card: {
-    marginBottom: 12,
-    elevation: 2,
-    backgroundColor: '#ffffff',
+  hotlineIcon: {
+    marginRight: 16,
+    paddingTop: 4,
   },
-  hotlineName: {
-    fontWeight: 'bold',
-    color: '#1a1a1a',
-    marginBottom: 4,
-  },
-  hotlineDescription: {
-    color: '#666',
-    marginBottom: 12,
-  },
-  callButton: {
-    marginTop: 8,
-  },
-  techniqueTitle: {
-    fontWeight: 'bold',
-    color: '#1a1a1a',
-    marginBottom: 12,
+  hotlineContent: {
+    flex: 1,
   },
   techniqueStep: {
-    color: '#333',
-    marginBottom: 6,
-    lineHeight: 24,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 8,
   },
-  techniqueDescription: {
-    color: '#333',
-    lineHeight: 24,
+  actionItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 12,
   },
-  bold: {
-    fontWeight: 'bold',
-    color: '#2196f3',
-  },
-  actionText: {
-    color: '#333',
-    lineHeight: 24,
+  reminderCard: {
+    alignItems: 'center',
   },
 });

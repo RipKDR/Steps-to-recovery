@@ -17,18 +17,12 @@ const MOOD_EMOJI: Record<number, string> = {
   5: '😊',
 };
 
-const CRAVING_COLORS: Record<number, string> = {
-  0: '#4caf50',
-  1: '#4caf50',
-  2: '#4caf50',
-  3: '#8bc34a',
-  4: '#cddc39',
-  5: '#ffeb3b',
-  6: '#ffc107',
-  7: '#ff9800',
-  8: '#ff5722',
-  9: '#f44336',
-  10: '#d32f2f',
+// Helper function to get craving color based on level
+const getCravingColor = (craving: number, theme: ReturnType<typeof useTheme>): string => {
+  if (craving <= 2) return theme.colors.success;
+  if (craving <= 4) return theme.colors.successMuted;
+  if (craving <= 6) return theme.colors.warning;
+  return theme.colors.danger;
 };
 
 export function JournalCard({ entry, onPress }: JournalCardProps): React.ReactElement {
@@ -80,12 +74,20 @@ export function JournalCard({ entry, onPress }: JournalCardProps): React.ReactEl
       <View style={styles.footer}>
         <View style={styles.indicators}>
           {entry.mood !== null && (
-            <View style={styles.indicator}>
+            <View
+              style={styles.indicator}
+              accessibilityLabel={`Mood: ${MOOD_EMOJI[entry.mood]}`}
+              accessibilityRole="text"
+            >
               <Text style={styles.emoji}>{MOOD_EMOJI[entry.mood]}</Text>
             </View>
           )}
           {entry.craving !== null && (
-            <View style={[styles.cravingIndicator, { backgroundColor: CRAVING_COLORS[entry.craving] }]}>
+            <View
+              style={[styles.cravingIndicator, { backgroundColor: getCravingColor(entry.craving, theme) }]}
+              accessibilityLabel={`Craving level: ${entry.craving} out of 10`}
+              accessibilityRole="text"
+            >
               <Text style={styles.cravingText}>{entry.craving}</Text>
             </View>
           )}
@@ -151,7 +153,7 @@ const styles = StyleSheet.create({
   cravingText: {
     fontSize: 12,
     fontWeight: 'bold',
-    color: '#ffffff',
+    color: '#FFFFFF',
   },
   tags: {
     flexDirection: 'row',
