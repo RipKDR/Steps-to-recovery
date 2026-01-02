@@ -44,6 +44,16 @@ export function ProfileScreen(): React.ReactElement {
               App Settings
             </Text>
             <List.Item
+              title="Sponsor"
+              description="Connect with sponsor or sponsees"
+              left={(props) => <List.Icon {...props} icon="account-supervisor" />}
+              right={(props) => <List.Icon {...props} icon="chevron-right" />}
+              onPress={() => navigation.navigate('Sponsor')}
+              accessibilityLabel="Sponsor connections"
+              accessibilityRole="button"
+            />
+            <Divider />
+            <List.Item
               title="Notifications"
               description="Manage notification preferences"
               left={(props) => <List.Icon {...props} icon="bell" />}

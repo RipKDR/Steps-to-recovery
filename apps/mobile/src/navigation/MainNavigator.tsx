@@ -10,8 +10,12 @@ import { MorningIntentionScreen } from '../features/home/screens/MorningIntentio
 import { EveningPulseScreen } from '../features/home/screens/EveningPulseScreen';
 import { EmergencyScreen } from '../features/emergency/screens/EmergencyScreen';
 import { StepsOverviewScreen } from '../features/steps/screens/StepsOverviewScreen';
+import { StepDetailScreen } from '../features/steps/screens/StepDetailScreen';
 import { ProfileScreen } from '../features/profile/screens/ProfileScreen';
 import { NotificationSettingsScreen } from '../features/settings/screens/NotificationSettingsScreen';
+import { SponsorScreen } from '../features/sponsor/screens/SponsorScreen';
+import { InviteSponsorScreen } from '../features/sponsor/screens/InviteSponsorScreen';
+import { SharedEntriesScreen } from '../features/sponsor/screens/SharedEntriesScreen';
 
 const Tab = createBottomTabNavigator();
 const HomeStack = createNativeStackNavigator();
@@ -87,6 +91,14 @@ function StepsStackNavigator(): React.ReactElement {
       >
         {() => <StepsOverviewScreen userId={userId} />}
       </StepsStack.Screen>
+      <StepsStack.Screen
+        name="StepDetail"
+        component={StepDetailScreen}
+        options={({ route }) => ({
+          title: `Step ${(route.params as { stepNumber: number }).stepNumber}`,
+          headerBackTitle: 'Steps',
+        })}
+      />
     </StepsStack.Navigator>
   );
 }
@@ -95,14 +107,29 @@ function ProfileStackNavigator(): React.ReactElement {
   return (
     <ProfileStack.Navigator>
       <ProfileStack.Screen
-        name="ProfileMain"
+        name="ProfileHome"
         component={ProfileScreen}
         options={{ title: 'Profile' }}
+      />
+      <ProfileStack.Screen
+        name="Sponsor"
+        component={SponsorScreen}
+        options={{ title: 'Sponsor', headerBackTitle: 'Back' }}
       />
       <ProfileStack.Screen
         name="NotificationSettings"
         component={NotificationSettingsScreen}
         options={{ title: 'Notifications', headerBackTitle: 'Back' }}
+      />
+      <ProfileStack.Screen
+        name="InviteSponsor"
+        component={InviteSponsorScreen}
+        options={{ title: 'Find a Sponsor', headerBackTitle: 'Back' }}
+      />
+      <ProfileStack.Screen
+        name="SharedEntries"
+        component={SharedEntriesScreen}
+        options={{ title: 'Shared Entries', headerBackTitle: 'Back' }}
       />
     </ProfileStack.Navigator>
   );

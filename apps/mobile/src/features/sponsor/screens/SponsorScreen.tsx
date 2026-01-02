@@ -3,11 +3,9 @@ import { View, Text, StyleSheet, TouchableOpacity, FlatList, ActivityIndicator, 
 import { useSponsorships } from '../hooks';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-// TODO: Complete sponsor feature navigation integration
-// import type { MainStackParamList } from '../../../navigation/types';
-import type { MainTabParamList } from '../../../navigation/types';
+import type { ProfileStackParamList } from '../../../navigation/types';
 
-type NavigationProp = NativeStackNavigationProp<MainTabParamList, 'Profile'>;
+type NavigationProp = NativeStackNavigationProp<ProfileStackParamList>;
 
 export function SponsorScreen() {
   const navigation = useNavigation<NavigationProp>();
@@ -102,11 +100,7 @@ export function SponsorScreen() {
             <Text style={styles.emptyText}>No sponsor connected</Text>
             <TouchableOpacity
               style={styles.primaryButton}
-              onPress={() => {
-                // TODO: Implement sponsor invitation flow
-                // navigation.navigate('InviteSponsor')
-                Alert.alert('Coming Soon', 'Sponsor invitation feature is under development');
-              }}
+              onPress={() => navigation.navigate('InviteSponsor')}
             >
               <Text style={styles.primaryButtonText}>Find a Sponsor</Text>
             </TouchableOpacity>
@@ -169,11 +163,7 @@ export function SponsorScreen() {
                 <View style={styles.cardContent}>
                   <Text style={styles.cardTitle}>Sponsee Connected</Text>
                   <TouchableOpacity
-                    onPress={() => {
-                      // TODO: Implement shared entries view
-                      // navigation.navigate('SharedEntries', { sponseeId: item.sponsee_id })
-                      Alert.alert('Coming Soon', 'Shared entries view is under development');
-                    }}
+                    onPress={() => navigation.navigate('SharedEntries', { sponseeId: item.sponsee_id })}
                   >
                     <Text style={styles.linkText}>View Shared Entries →</Text>
                   </TouchableOpacity>

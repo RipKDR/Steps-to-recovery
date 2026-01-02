@@ -10,6 +10,7 @@
 import * as Notifications from 'expo-notifications';
 import { SchedulableTriggerInputTypes } from 'expo-notifications';
 import { logger } from '../utils/logger';
+import type { NotificationPayload } from '../types/notifications';
 
 /**
  * Notification identifiers for managing specific notifications
@@ -64,9 +65,9 @@ export async function scheduleMorningReminder(
         sound: true,
         priority: Notifications.AndroidNotificationPriority.HIGH,
         data: {
-          screen: 'MorningIntention',
+          screen: 'Home.MorningIntention',
           type: 'morning-checkin',
-        },
+        } as NotificationPayload,
       },
       trigger: {
         type: SchedulableTriggerInputTypes.DAILY,
@@ -114,9 +115,9 @@ export async function scheduleEveningReminder(
         sound: true,
         priority: Notifications.AndroidNotificationPriority.HIGH,
         data: {
-          screen: 'EveningPulse',
+          screen: 'Home.EveningPulse',
           type: 'evening-checkin',
-        },
+        } as NotificationPayload,
       },
       trigger: {
         type: SchedulableTriggerInputTypes.DAILY,
@@ -302,10 +303,10 @@ export async function scheduleMilestoneNotification(
         sound: true,
         priority: Notifications.AndroidNotificationPriority.MAX,
         data: {
-          type: 'milestone',
-          days,
           screen: 'Home',
-        },
+          params: { days },
+          type: 'milestone',
+        } as NotificationPayload,
       },
       trigger: {
         type: SchedulableTriggerInputTypes.DATE,

@@ -16,12 +16,41 @@ export type AuthStackParamList = {
     ForgotPassword: undefined;
 };
 
+// Home Stack
+export type HomeStackParamList = {
+    HomeMain: undefined;
+    MorningIntention: undefined;
+    EveningPulse: undefined;
+    Emergency: undefined;
+};
+
+// Journal Stack
+export type JournalStackParamList = {
+    JournalList: undefined;
+    JournalEditor: { mode?: 'create' | 'edit'; entryId?: string } | undefined;
+};
+
+// Steps Stack
+export type StepsStackParamList = {
+    StepsOverview: undefined;
+    StepDetail: { stepNumber: number };
+};
+
+// Profile Stack
+export type ProfileStackParamList = {
+    ProfileHome: undefined;
+    Sponsor: undefined;
+    InviteSponsor: undefined;
+    SharedEntries: { sponseeId: string };
+    NotificationSettings: undefined;
+};
+
 // Main Tab Navigator
 export type MainTabParamList = {
-    Home: undefined;
-    Journal: undefined;
-    Steps: undefined;
-    Profile: undefined;
+    Home: NavigatorScreenParams<HomeStackParamList>;
+    Journal: NavigatorScreenParams<JournalStackParamList>;
+    Steps: NavigatorScreenParams<StepsStackParamList>;
+    Profile: NavigatorScreenParams<ProfileStackParamList>;
 };
 
 // Screen Props Types
@@ -38,6 +67,30 @@ export type MainTabScreenProps<T extends keyof MainTabParamList> =
     CompositeScreenProps<
         BottomTabScreenProps<MainTabParamList, T>,
         RootStackScreenProps<keyof RootStackParamList>
+    >;
+
+export type HomeStackScreenProps<T extends keyof HomeStackParamList> =
+    CompositeScreenProps<
+        NativeStackScreenProps<HomeStackParamList, T>,
+        MainTabScreenProps<keyof MainTabParamList>
+    >;
+
+export type JournalStackScreenProps<T extends keyof JournalStackParamList> =
+    CompositeScreenProps<
+        NativeStackScreenProps<JournalStackParamList, T>,
+        MainTabScreenProps<keyof MainTabParamList>
+    >;
+
+export type StepsStackScreenProps<T extends keyof StepsStackParamList> =
+    CompositeScreenProps<
+        NativeStackScreenProps<StepsStackParamList, T>,
+        MainTabScreenProps<keyof MainTabParamList>
+    >;
+
+export type ProfileStackScreenProps<T extends keyof ProfileStackParamList> =
+    CompositeScreenProps<
+        NativeStackScreenProps<ProfileStackParamList, T>,
+        MainTabScreenProps<keyof MainTabParamList>
     >;
 
 // Declaration for useNavigation hook typing

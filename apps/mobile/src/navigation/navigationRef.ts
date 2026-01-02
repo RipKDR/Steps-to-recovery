@@ -5,6 +5,8 @@
 
 import { createNavigationContainerRef, CommonActions } from '@react-navigation/native';
 import type { RootStackParamList, MainTabParamList } from './types';
+import type { NotificationPayload, NotificationScreen } from '../types/notifications';
+import { logger } from '../utils/logger';
 
 // Create a navigation ref that can be accessed anywhere
 export const navigationRef = createNavigationContainerRef<RootStackParamList>();
@@ -50,33 +52,77 @@ export function isNavigationReady(): boolean {
 }
 
 /**
- * Map notification screen names to actual navigation actions
+ * Navigate based on notification payload
+ * Supports nested navigation and screen parameters
+ *
+ * @param payload - Full notification payload or legacy screen string
  */
-export type NotificationScreen = 
-  | 'journal'
-  | 'checkin'
-  | 'steps'
-  | 'home'
-  | 'profile'
-  | 'meeting'
-  | 'reading';
-
-/**
- * Navigate based on notification data
- */
-export function navigateFromNotification(screen?: NotificationScreen) {
-  if (!screen) {
-    // Default to home
+export function navigateFromNotification(
+  payload: NotificationPayload | NotificationScreen | string | undefined
+): void {
+  if (!payload) {
     navigateToTab('Home');
     return;
   }
 
+  // Handle legacy string format (backwards compatibility)
+  if (typeof payload === 'string') {
+    navigateFromLegacyScreen(payload);
+    return;
+  }
+
+  // Extract screen and params from payload
+  const { screen, params } = payload;
+
+  // Parse screen identifier (format: 'Tab' or 'Tab.Screen')
+  const [tab, nestedScreen] = screen.split('.') as [string, string | undefined];
+
+  if (!navigationRef.isReady()) {
+    logger.warn('Navigation not ready, cannot handle notification');
+    return;
+  }
+
+  try {
+    // Navigate to nested screen within tab
+    if (nestedScreen) {
+      navigationRef.dispatch(
+        CommonActions.navigate({
+          name: 'MainApp',
+          params: {
+            screen: tab,
+            params: {
+              screen: nestedScreen,
+              params: params || {},
+            },
+          },
+        })
+      );
+    } else {
+      // Navigate to top-level tab
+      navigateToTab(tab as keyof MainTabParamList);
+    }
+
+    logger.info('Navigated from notification', { screen, params });
+  } catch (error) {
+    logger.error('Error navigating from notification', { error, screen, params });
+    // Fallback to home on error
+    navigateToTab('Home');
+  }
+}
+
+/**
+ * Legacy navigation handler for backwards compatibility
+ * Supports old notification format with simple string screen names
+ */
+function navigateFromLegacyScreen(screen: string): void {
   switch (screen) {
     case 'journal':
       navigateToTab('Journal');
       break;
     case 'checkin':
-      navigateToTab('Home'); // Check-in is typically on home screen
+    case 'MorningIntention':
+    case 'EveningPulse':
+      navigateToTab('Home');
       break;
     case 'steps':
       navigateToTab('Steps');

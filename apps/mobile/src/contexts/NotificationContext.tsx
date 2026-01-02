@@ -12,10 +12,12 @@ import {
   requestNotificationPermissions,
   getNotificationPermissionStatus,
   registerNotificationHandlers,
+  getLastNotificationResponse,
   type NotificationPermissionStatus,
 } from '../lib/notifications';
 import { logger } from '../utils/logger';
-import { navigateFromNotification, type NotificationScreen } from '../navigation/navigationRef';
+import { navigateFromNotification } from '../navigation/navigationRef';
+import type { NotificationPayload } from '../types/notifications';
 
 interface NotificationContextValue {
   // Permission state
@@ -94,15 +96,16 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
    */
   const handleNotificationResponse = useCallback((response: Notifications.NotificationResponse) => {
     const { title, data } = response.notification.request.content;
-    
+
     logger.info('Notification tapped', {
       title,
       data,
     });
 
-    // Navigate to specific screen based on notification data
-    const screen = (data?.screen as NotificationScreen) || undefined;
-    navigateFromNotification(screen);
+    // Navigate using new payload structure
+    // Falls back to legacy format if data.screen is a string
+    const payload = data as unknown as NotificationPayload | undefined;
+    navigateFromNotification(payload);
   }, []);
 
   /**
@@ -137,6 +140,47 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
     checkPermissionStatus();
   }, [checkPermissionStatus]);
+
+  /**
+   * Handle notification that launched the app (cold start)
+   * Check for last notification response and navigate after mount
+   */
+  useEffect(() => {
+    if (Platform.OS === 'web') {
+      return; // Not applicable on web
+    }
+
+    let isMounted = true;
+
+    async function handleInitialNotification(): Promise<void> {
+      try {
+        // Wait for navigation to be ready
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
+        if (!isMounted) return;
+
+        const response = await getLastNotificationResponse();
+
+        if (response) {
+          logger.info('App launched from notification', {
+            title: response.notification.request.content.title,
+          });
+
+          const data = response.notification.request.content.data;
+          const payload = data as unknown as NotificationPayload | undefined;
+          navigateFromNotification(payload);
+        }
+      } catch (error) {
+        logger.error('Error handling initial notification', { error });
+      }
+    }
+
+    handleInitialNotification();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const value: NotificationContextValue = {
     permissionStatus,

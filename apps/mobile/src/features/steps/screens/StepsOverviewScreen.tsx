@@ -1,9 +1,14 @@
 import React from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Card, Text, ProgressBar } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { StepsStackParamList } from '../../../navigation/types';
 import { useStepProgress } from '../hooks/useStepWork';
+
+type NavigationProp = NativeStackNavigationProp<StepsStackParamList>;
 
 interface StepsOverviewScreenProps {
   userId: string;
@@ -25,6 +30,7 @@ const STEPS = [
 ];
 
 export function StepsOverviewScreen({ userId }: StepsOverviewScreenProps): React.ReactElement {
+  const navigation = useNavigation<NavigationProp>();
   const { stepsCompleted, currentStep, overallProgress } = useStepProgress(userId);
 
   const isStepCompleted = (stepNumber: number): boolean => {
@@ -33,6 +39,10 @@ export function StepsOverviewScreen({ userId }: StepsOverviewScreenProps): React
 
   const isStepCurrent = (stepNumber: number): boolean => {
     return stepNumber === currentStep;
+  };
+
+  const handleStepPress = (stepNumber: number): void => {
+    navigation.navigate('StepDetail', { stepNumber });
   };
 
   return (
@@ -62,47 +72,55 @@ export function StepsOverviewScreen({ userId }: StepsOverviewScreenProps): React
           const current = isStepCurrent(step.number);
 
           return (
-            <Card
+            <TouchableOpacity
               key={step.number}
-              style={[
-                styles.card,
-                completed && styles.cardCompleted,
-                current && styles.cardCurrent,
-              ]}
+              onPress={() => handleStepPress(step.number)}
+              activeOpacity={0.7}
+              accessibilityLabel={`Step ${step.number}: ${step.title}`}
+              accessibilityRole="button"
+              accessibilityHint="Tap to view step questions and add your answers"
             >
-              <Card.Content style={styles.cardContent}>
-                <View style={styles.stepHeader}>
-                  <View
-                    style={[
-                      styles.stepNumber,
-                      completed && styles.stepNumberCompleted,
-                      current && styles.stepNumberCurrent,
-                    ]}
-                  >
-                    {completed ? (
-                      <MaterialCommunityIcons name="check" size={24} color="#ffffff" />
-                    ) : (
-                      <Text style={[styles.stepNumberText, current && styles.stepNumberTextCurrent]}>
-                        {step.number}
+              <Card
+                style={[
+                  styles.card,
+                  completed && styles.cardCompleted,
+                  current && styles.cardCurrent,
+                ]}
+              >
+                <Card.Content style={styles.cardContent}>
+                  <View style={styles.stepHeader}>
+                    <View
+                      style={[
+                        styles.stepNumber,
+                        completed && styles.stepNumberCompleted,
+                        current && styles.stepNumberCurrent,
+                      ]}
+                    >
+                      {completed ? (
+                        <MaterialCommunityIcons name="check" size={24} color="#ffffff" />
+                      ) : (
+                        <Text style={[styles.stepNumberText, current && styles.stepNumberTextCurrent]}>
+                          {step.number}
+                        </Text>
+                      )}
+                    </View>
+                    <View style={styles.stepInfo}>
+                      <Text variant="titleMedium" style={styles.stepTitle}>
+                        Step {step.number}: {step.title}
                       </Text>
-                    )}
+                      {current && !completed && (
+                        <Text variant="bodySmall" style={styles.currentLabel}>
+                          Current Step
+                        </Text>
+                      )}
+                    </View>
                   </View>
-                  <View style={styles.stepInfo}>
-                    <Text variant="titleMedium" style={styles.stepTitle}>
-                      Step {step.number}: {step.title}
-                    </Text>
-                    {current && !completed && (
-                      <Text variant="bodySmall" style={styles.currentLabel}>
-                        Current Step
-                      </Text>
-                    )}
-                  </View>
-                </View>
-                <Text variant="bodyMedium" style={styles.stepDescription}>
-                  {step.description}
-                </Text>
-              </Card.Content>
-            </Card>
+                  <Text variant="bodyMedium" style={styles.stepDescription}>
+                    {step.description}
+                  </Text>
+                </Card.Content>
+              </Card>
+            </TouchableOpacity>
           );
         })}
 
