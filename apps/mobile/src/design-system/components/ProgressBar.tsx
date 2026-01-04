@@ -4,7 +4,7 @@
  */
 
 import React, { useEffect, useRef } from 'react';
-import { View, Animated, StyleSheet, ViewStyle } from 'react-native';
+import { View, Animated, StyleSheet, ViewStyle, AccessibilityRole } from 'react-native';
 import { useTheme } from '../hooks/useTheme';
 
 export interface ProgressBarProps {
@@ -36,6 +36,18 @@ export interface ProgressBarProps {
    * Custom container style
    */
   style?: ViewStyle;
+  /**
+   * Accessibility label for screen readers
+   */
+  accessibilityLabel?: string;
+  /**
+   * Accessibility role
+   */
+  accessibilityRole?: AccessibilityRole;
+  /**
+   * Accessibility hint
+   */
+  accessibilityHint?: string;
 }
 
 export function ProgressBar({
@@ -45,6 +57,9 @@ export function ProgressBar({
   backgroundColor,
   animated = true,
   style,
+  accessibilityLabel,
+  accessibilityRole,
+  accessibilityHint,
 }: ProgressBarProps) {
   const theme = useTheme();
   const progressAnim = useRef(new Animated.Value(0)).current;
@@ -84,7 +99,9 @@ export function ProgressBar({
         },
         style,
       ]}
-      accessibilityRole="progressbar"
+      accessibilityRole={accessibilityRole || "progressbar"}
+      accessibilityLabel={accessibilityLabel}
+      accessibilityHint={accessibilityHint}
       accessibilityValue={{
         min: 0,
         max: 100,

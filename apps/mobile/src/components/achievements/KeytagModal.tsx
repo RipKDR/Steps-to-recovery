@@ -16,7 +16,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '../ui';
-import type { KeytagWithStatus } from '../../lib/constants/keytags';
+import type { KeytagWithStatus } from '@recovery/shared';
 
 interface KeytagModalProps {
   keytag: KeytagWithStatus | null;

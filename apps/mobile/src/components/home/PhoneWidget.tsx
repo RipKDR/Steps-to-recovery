@@ -7,8 +7,9 @@ import React, { useEffect } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Card } from '../ui';
-import { usePhoneCalls } from '../../lib/hooks/usePhoneCalls';
-import { useContacts } from '../../lib/hooks/useContacts';
+import { usePhoneCalls } from '../../hooks/usePhoneCalls';
+import { useContacts } from '../../hooks/useContacts';
+import type { PhoneCallLog, RecoveryContact } from '@recovery/shared';
 
 interface PhoneWidgetProps {
   className?: string;
@@ -37,7 +38,7 @@ export function PhoneWidget({ className = '' }: PhoneWidgetProps) {
 
   // Get suggested contacts to call (haven't called today)
   const suggestedContacts = contacts
-    .filter((c) => !todayCalls.some((call) => call.contactId === c.id))
+    .filter((c: RecoveryContact) => !todayCalls.some((call: PhoneCallLog) => call.contactId === c.id))
     .slice(0, 3);
 
   const handleQuickCall = async (contact: typeof contacts[0]) => {
@@ -102,7 +103,7 @@ export function PhoneWidget({ className = '' }: PhoneWidgetProps) {
           <Text className="text-xs font-medium text-surface-500 uppercase mb-2">
             Today
           </Text>
-          {todayCalls.slice(0, 3).map((call) => (
+          {todayCalls.slice(0, 3).map((call: PhoneCallLog) => (
             <View
               key={call.id}
               className="flex-row items-center py-2 border-b border-surface-100 dark:border-surface-800"
@@ -131,7 +132,7 @@ export function PhoneWidget({ className = '' }: PhoneWidgetProps) {
             {todayCalls.length > 0 ? 'Call Next' : 'Suggested'}
           </Text>
           <View className="flex-row gap-2">
-            {suggestedContacts.map((contact) => (
+            {suggestedContacts.map((contact: RecoveryContact) => (
               <TouchableOpacity
                 key={contact.id}
                 onPress={() => handleQuickCall(contact)}
@@ -172,7 +173,7 @@ export function PhoneWidget({ className = '' }: PhoneWidgetProps) {
       )}
 
       {/* Sponsor Quick Call */}
-      {sponsor && !todayCalls.some((c) => c.contactId === sponsor.id) && (
+      {sponsor && !todayCalls.some((c: PhoneCallLog) => c.contactId === sponsor.id) && (
         <TouchableOpacity
           onPress={() => handleQuickCall(sponsor)}
           className="mt-3 flex-row items-center justify-center bg-amber-100 dark:bg-amber-900/30 rounded-lg py-2.5"

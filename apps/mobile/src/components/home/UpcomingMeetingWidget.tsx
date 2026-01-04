@@ -7,7 +7,7 @@ import React, { useEffect } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Card } from '../ui';
-import { useRegularMeetings } from '../../lib/hooks/useRegularMeetings';
+import { useRegularMeetings } from '../../hooks/useRegularMeetings';
 
 interface UpcomingMeetingWidgetProps {
   className?: string;

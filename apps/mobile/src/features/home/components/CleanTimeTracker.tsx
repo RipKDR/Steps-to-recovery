@@ -2,7 +2,7 @@ import React from 'react';
 import { View, StyleSheet, Text, ActivityIndicator } from 'react-native';
 import { Card, ProgressBar } from '../../../design-system/components';
 import { useTheme } from '../../../design-system/hooks/useTheme';
-import type { Milestone } from '@repo/shared/types';
+import type { Milestone } from '@recovery/shared/types';
 
 interface CleanTimeTrackerProps {
   days: number;
@@ -97,7 +97,6 @@ export function CleanTimeTracker({
           </View>
           <ProgressBar
             progress={progress}
-            variant="primary"
             style={styles.progressBar}
             accessibilityLabel={`Progress to ${nextMilestone.title}: ${Math.round(progress * 100)}%`}
             accessibilityRole="progressbar"

@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useDatabase } from '../../../contexts/DatabaseContext';
 import { logger } from '../../../utils/logger';
 import { scheduleAllMilestones, MILESTONE_DAYS } from '../../../services/notificationService';
-import type { UserProfile, Milestone } from '@repo/shared/types';
+import type { UserProfile, Milestone } from '@recovery/shared/types';
 
 /**
  * Milestones configuration
@@ -124,7 +124,7 @@ export function useMilestones(userId: string): {
    * Schedule milestone notifications on mount (only once)
    */
   useEffect(() => {
-    if (hasScheduledNotifications.current) return;
+    if (hasScheduledNotifications.current || !db) return;
 
     const scheduleMilestoneNotifications = async () => {
       try {
@@ -152,6 +152,8 @@ export function useMilestones(userId: string): {
   }, [db, userId]);
 
   const checkForNewMilestones = async (): Promise<Milestone[]> => {
+    if (!db) return [];
+
     try {
       const profile = await db.getFirstAsync<UserProfile>(
         'SELECT * FROM user_profile WHERE id = ?',

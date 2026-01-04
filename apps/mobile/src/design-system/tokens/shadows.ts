@@ -120,6 +120,19 @@ export const shadowLgDark: ShadowStyle = Platform.select({
   default: {},
 }) as ShadowStyle;
 
+export const shadowXlDark: ShadowStyle = Platform.select({
+  ios: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.6,
+    shadowRadius: 16,
+  },
+  android: {
+    elevation: 10,
+  },
+  default: {},
+}) as ShadowStyle;
+
 export const shadows = {
   sm: shadowSm,
   md: shadowMd,
@@ -128,6 +141,7 @@ export const shadows = {
   smDark: shadowSmDark,
   mdDark: shadowMdDark,
   lgDark: shadowLgDark,
+  xlDark: shadowXlDark,
 } as const;
 
 export type ShadowKey = keyof typeof shadows;

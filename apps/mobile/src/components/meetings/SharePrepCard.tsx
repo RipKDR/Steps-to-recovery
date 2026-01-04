@@ -7,7 +7,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Card } from '../ui';
-import { useSharePrepStore } from '../../lib/store/sharePrepStore';
+import { useSharePrepStore } from '@recovery/shared';
 
 interface SharePrepCardProps {
   className?: string;

@@ -13,7 +13,7 @@ import { decryptContent } from '../../../utils/encryption';
 import { logger } from '../../../utils/logger';
 import { useTheme } from '../../../design-system/hooks/useTheme';
 import { Card, EmptyState } from '../../../design-system/components';
-import type { JournalEntryDecrypted } from '@repo/shared/types';
+import type { JournalEntryDecrypted } from '@recovery/shared/types';
 
 type RouteParams = {
   SharedEntries: {

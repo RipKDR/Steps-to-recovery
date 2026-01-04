@@ -6,7 +6,7 @@
 import React, { memo } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { Card } from '../ui';
-import type { Achievement } from '../../lib/types';
+import type { Achievement } from '@recovery/shared';
 
 interface AchievementCardProps {
   achievement: Achievement;

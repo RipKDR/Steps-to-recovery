@@ -3,7 +3,7 @@ import { useDatabase } from '../../../contexts/DatabaseContext';
 import { decryptContent, encryptContent } from '../../../utils/encryption';
 import { logger } from '../../../utils/logger';
 import { addToSyncQueue } from '../../../services/syncService';
-import type { DailyCheckIn, DailyCheckInDecrypted, CheckInType } from '@repo/shared/types';
+import type { DailyCheckIn, DailyCheckInDecrypted, CheckInType } from '@recovery/shared/types';
 
 /**
  * Decrypt a daily check-in from database format to UI format
@@ -85,6 +85,8 @@ export function useCreateCheckIn(userId: string): {
 
   const mutation = useMutation({
     mutationFn: async (data: { type: CheckInType; intention?: string; reflection?: string; mood?: number; craving?: number }) => {
+      if (!db) throw new Error('Database not initialized');
+
       try {
         const id = `checkin_${Date.now()}_${Math.random().toString(36).substring(7)}`;
         const now = new Date().toISOString();
@@ -136,6 +138,8 @@ export function useStreak(userId: string): {
   const { data, isLoading } = useQuery({
     queryKey: ['streak', userId],
     queryFn: async () => {
+      if (!db) return { currentStreak: 0, longestStreak: 0 };
+
       try {
         const result = await db.getAllAsync<{ check_in_date: string }>(
           'SELECT DISTINCT check_in_date FROM daily_checkins WHERE user_id = ? ORDER BY check_in_date DESC',

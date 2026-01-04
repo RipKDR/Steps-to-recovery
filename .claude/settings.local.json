@@ -29,7 +29,12 @@
       "Bash(npx expo start:*)",
       "Bash(if not exist \"C:\\\\Users\\\\laine\\\\.claude\" mkdir \"C:\\\\Users\\\\laine\\\\.claude\")",
       "WebFetch(domain:12-step-companion.vercel.app)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(bash:*)",
+      "Bash(npm run build)",
+      "Bash(npm start -- --version)",
+      "Bash(find:*)",
+      "Bash(ls:*)"
     ]
   },
   "outputStyle": "Explanatory"

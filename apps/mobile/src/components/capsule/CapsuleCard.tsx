@@ -7,7 +7,7 @@
 import React, { memo } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { Card } from '../ui';
-import type { TimeCapsule } from '../../lib/types';
+import type { TimeCapsule } from '@recovery/shared';
 
 interface CapsuleCardProps {
     capsule: TimeCapsule;

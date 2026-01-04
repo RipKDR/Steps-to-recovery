@@ -16,7 +16,9 @@ export const lightColors = {
 
   // Semantic colors
   danger: '#FF3B30',
+  dangerLight: '#FF6961',
   success: '#34C759',
+  successMuted: 'rgba(52, 199, 89, 0.2)',
   warning: '#FF9500',
   info: '#5AC8FA',
 
@@ -28,6 +30,7 @@ export const lightColors = {
   background: '#F2F2F7',      // iOS grouped background
   surface: '#FFFFFF',          // Card background
   surfaceElevated: '#FFFFFF',  // Elevated card
+  surfaceVariant: '#F2F2F7',   // Variant surface color
 
   // Text colors
   text: '#000000',
@@ -58,7 +61,9 @@ export const darkColors = {
 
   // Semantic colors
   danger: '#FF453A',
+  dangerLight: '#FF7A73',
   success: '#30D158',
+  successMuted: 'rgba(48, 209, 88, 0.2)',
   warning: '#FF9F0A',
   info: '#64D2FF',
 
@@ -70,6 +75,7 @@ export const darkColors = {
   background: '#000000',          // iOS dark background
   surface: 'rgba(28, 28, 30, 1)', // Card background
   surfaceElevated: 'rgba(44, 44, 46, 1)', // Elevated card
+  surfaceVariant: 'rgba(28, 28, 30, 1)',  // Variant surface color
 
   // Text colors
   text: '#FFFFFF',
@@ -110,7 +116,9 @@ export type ColorPalette = {
   secondaryLight: string;
   secondaryDark: string;
   danger: string;
+  dangerLight: string;
   success: string;
+  successMuted: string;
   warning: string;
   info: string;
   muted: string;
@@ -118,6 +126,7 @@ export type ColorPalette = {
   background: string;
   surface: string;
   surfaceElevated: string;
+  surfaceVariant: string;
   text: string;
   textSecondary: string;
   textTertiary: string;

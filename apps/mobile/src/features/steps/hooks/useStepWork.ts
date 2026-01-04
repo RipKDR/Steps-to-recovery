@@ -3,7 +3,7 @@ import { useDatabase } from '../../../contexts/DatabaseContext';
 import { decryptContent, encryptContent } from '../../../utils/encryption';
 import { logger } from '../../../utils/logger';
 import { addToSyncQueue } from '../../../services/syncService';
-import type { StepWork, StepWorkDecrypted } from '@repo/shared/types';
+import type { StepWork, StepWorkDecrypted } from '@recovery/shared/types';
 
 /**
  * Decrypt step work from database format to UI format
@@ -82,6 +82,8 @@ export function useSaveStepAnswer(userId: string): {
 
   const mutation = useMutation({
     mutationFn: async ({ stepNumber, questionNumber, answer, isComplete }: { stepNumber: number; questionNumber: number; answer: string; isComplete: boolean }) => {
+      if (!db) throw new Error('Database not initialized');
+
       try {
         const encrypted_answer = await encryptContent(answer);
         const now = new Date().toISOString();
@@ -145,6 +147,8 @@ export function useStepProgress(userId: string): {
   const { data, isLoading } = useQuery({
     queryKey: ['step_progress', userId],
     queryFn: async () => {
+      if (!db) return { stepsProgress: [], overallProgress: 0 };
+
       try {
         const result = await db.getAllAsync<{ step_number: number; total: number; completed: number }>(
           `SELECT

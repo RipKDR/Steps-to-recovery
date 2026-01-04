@@ -40,7 +40,11 @@ export function DatabaseProvider({ children }: DatabaseProviderProps): React.Rea
  */
 function MobileDatabaseProvider({ children }: DatabaseProviderProps): React.ReactElement {
   const [adapter, setAdapter] = useState<StorageAdapter | null>(null);
-  const [SQLiteProviderComponent, setSQLiteProviderComponent] = useState<any>(null);
+  const [SQLiteProviderComponent, setSQLiteProviderComponent] = useState<React.ComponentType<{
+    databaseName: string;
+    onInit: (db: unknown) => Promise<void>;
+    children: ReactNode;
+  }> | null>(null);
 
   useEffect(() => {
     async function loadSQLite() {
@@ -61,7 +65,7 @@ function MobileDatabaseProvider({ children }: DatabaseProviderProps): React.Reac
   return (
     <SQLiteProviderElement
       databaseName="recovery.db"
-      onInit={async (db: any) => {
+      onInit={async (db: unknown) => {
         const storageAdapter = await createStorageAdapter(db);
         await initDatabase(storageAdapter);
         setAdapter(storageAdapter);

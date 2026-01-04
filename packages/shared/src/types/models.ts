@@ -43,7 +43,7 @@ export interface StepWorkDecrypted {
   sync_status: 'pending' | 'synced' | 'error';
 }
 
-export interface Milestone {
+export interface MilestoneDefinition {
   key: string;
   days: number;
   title: string;

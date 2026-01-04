@@ -6,7 +6,7 @@
 import React, { memo } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { Card } from '../ui';
-import type { KeytagWithStatus } from '../../lib/constants/keytags';
+import type { KeytagWithStatus } from '@recovery/shared';
 
 interface KeytagWallProps {
   keytags: KeytagWithStatus[];

@@ -4,8 +4,8 @@
  */
 
 import { useEffect, useMemo } from 'react';
-import { useMeetingStore } from '../store/meetingStore';
-import type { MeetingLog, MeetingType } from '../types';
+import { useMeetingStore } from '@recovery/shared/store/meetingStore';
+import type { MeetingLog, MeetingType } from '@recovery/shared';
 
 export function useMeetings() {
   const {

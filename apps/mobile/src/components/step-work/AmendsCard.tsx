@@ -6,7 +6,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { Card } from '../ui';
-import type { AmendsStatus, AmendsType } from '../../lib/types';
+import type { AmendsStatus, AmendsType } from '@recovery/shared';
 
 const STATUS_CONFIG: Record<AmendsStatus, {
   label: string;

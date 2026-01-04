@@ -5,8 +5,8 @@
 
 import { useCallback, useEffect } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
-import { useAuthStore } from '../store';
-import { useSettingsStore } from '../store';
+import { useAuthStore } from '@recovery/shared';
+import { useSettingsStore } from '@recovery/shared';
 
 export function useAuth() {
   const {

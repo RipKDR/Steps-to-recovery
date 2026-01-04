@@ -18,6 +18,8 @@ export { usePhoneStore } from './phoneStore';
 export { useReadingStore } from './readingStore';
 export { useRegularMeetingStore } from './regularMeetingStore';
 export { useSharePrepStore } from './sharePrepStore';
+export { useLiteratureStore } from './literatureStore';
+export type { Book, Chapter } from './literatureStore';
 
 // Phase 3 Stores
 export { useStepWorkStore } from './stepWorkStore';

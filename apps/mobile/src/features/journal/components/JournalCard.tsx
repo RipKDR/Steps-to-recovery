@@ -1,12 +1,13 @@
 import React from 'react';
 import { StyleSheet, View, TouchableOpacity, Text } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import type { JournalEntryDecrypted } from '@repo/shared/types';
+import type { JournalEntryDecrypted } from '@recovery/shared/types';
 import { useTheme, Card, Badge } from '../../../design-system';
 
 interface JournalCardProps {
   entry: JournalEntryDecrypted;
   onPress: () => void;
+  accessibilityHint?: string;
 }
 
 const MOOD_EMOJI: Record<number, string> = {
@@ -25,7 +26,7 @@ const getCravingColor = (craving: number, theme: ReturnType<typeof useTheme>): s
   return theme.colors.danger;
 };
 
-export function JournalCard({ entry, onPress }: JournalCardProps): React.ReactElement {
+export function JournalCard({ entry, onPress, accessibilityHint }: JournalCardProps): React.ReactElement {
   const theme = useTheme();
 
   const formatDate = (dateString: string): string => {
@@ -46,7 +47,7 @@ export function JournalCard({ entry, onPress }: JournalCardProps): React.ReactEl
   };
 
   return (
-    <Card variant="interactive" onPress={onPress} animate style={styles.cardContainer}>
+    <Card variant="interactive" onPress={onPress} animate style={styles.cardContainer} accessibilityHint={accessibilityHint}>
       <View style={styles.header}>
         <View style={styles.titleContainer}>
           {entry.title && (

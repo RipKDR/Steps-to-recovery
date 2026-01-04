@@ -1,6 +1,10 @@
 // Shared package exports
-export * from './types';
-export * from './constants';
+// Export only non-conflicting types from ./types
+export type { SyncStatus, CheckInType, SyncOperation, SyncQueueItem, DbUserProfile, DbDailyCheckIn, DbStepWork } from './types';
+
+// Main application types (camelCase properties)
+export * from '../types';
+export * from '../constants';
 export * from '../db';
 export * from '../store';
 export * from '../utils';

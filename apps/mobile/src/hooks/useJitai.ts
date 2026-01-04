@@ -7,10 +7,10 @@ import { useEffect, useCallback, useRef } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
 import { useSobriety } from './useSobriety';
 import { useCheckin } from './useCheckin';
-import { useContactStore, useMeetingStore, useRhythmStore, useStepWorkStore } from '../store';
-import { runJitaiEvaluation, resetCooldowns, getCooldownStatus } from '../jitai/engine';
-import type { JitaiContext } from '../jitai/types';
-import type { MeetingLog } from '../types';
+import { useContactStore, useMeetingStore, useRhythmStore, useStepWorkStore } from '@recovery/shared';
+import { runJitaiEvaluation, resetCooldowns, getCooldownStatus } from '@recovery/shared/jitai/engine';
+import type { JitaiContext } from '@recovery/shared/jitai/types';
+import type { MeetingLog } from '@recovery/shared';
 
 // Minimum interval between evaluations (5 minutes)
 const MIN_EVALUATION_INTERVAL_MS = 5 * 60 * 1000;

@@ -10,9 +10,9 @@ jest.mock('react-native', () => {
       alert: jest.fn(),
     },
     StyleSheet: {
-      create: (styles: any) => styles,
-      flatten: (style: any) => style,
-      compose: (...styles: any[]) => Object.assign({}, ...styles),
+      create: <T>(styles: T): T => styles,
+      flatten: <T>(style: T): T => style,
+      compose: (...styles: unknown[]): Record<string, unknown> => Object.assign({}, ...styles),
     },
     View: 'View',
     Text: 'Text',
@@ -35,7 +35,9 @@ jest.mock('react-native', () => {
   // Provide a safe fallback for any missing export by returning its name as a host component.
   return new Proxy(mock, {
     get(target, prop) {
-      if (prop in target) return (target as any)[prop];
+      if (typeof prop === 'string' && prop in target) {
+        return (target as Record<string, unknown>)[prop];
+      }
       if (typeof prop === 'string') return prop;
       return undefined;
     },

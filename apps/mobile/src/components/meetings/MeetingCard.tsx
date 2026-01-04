@@ -8,7 +8,7 @@ import React, { memo, useCallback } from 'react';
 import { View, Text, TouchableOpacity, Switch } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Card } from '../ui';
-import type { RegularMeeting, RegularMeetingType } from '../../lib/types';
+import type { RegularMeeting, RegularMeetingType } from '@recovery/shared';
 
 interface MeetingCardProps {
   meeting: RegularMeeting;

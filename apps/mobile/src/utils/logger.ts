@@ -66,12 +66,12 @@ function sanitizeData(data: unknown, depth: number = 0): unknown {
 
   // Objects
   if (typeof data === 'object') {
-    const sanitized: any = {};
+    const sanitized: Record<string, unknown> = {};
 
     for (const key in data) {
       if (!Object.prototype.hasOwnProperty.call(data, key)) continue;
 
-      const value = (data as any)[key];
+      const value = (data as Record<string, unknown>)[key];
 
       // Check if field name is sensitive
       if (SENSITIVE_FIELDS.has(key.toLowerCase())) {

@@ -1,8 +1,15 @@
 import type { StorageAdapter } from '../adapters/storage';
+import { logger } from './logger';
 
 // Guard against duplicate/concurrent initialization (common in dev StrictMode and fast refresh)
 const initializedAdapters = new WeakSet<object>();
 const initPromises = new WeakMap<object, Promise<void>>();
+
+/**
+ * Current database schema version
+ * Increment this when adding new migrations
+ */
+const CURRENT_SCHEMA_VERSION = 2;
 
 /**
  * Initialize database with schema for offline-first storage
@@ -108,7 +115,12 @@ export async function initDatabase(db: StorageAdapter): Promise<void> {
         created_at TEXT NOT NULL,
         retry_count INTEGER DEFAULT 0,
         last_error TEXT,
+        failed_at TEXT,
         UNIQUE(table_name, record_id, operation)
+      );`,
+      `CREATE TABLE IF NOT EXISTS schema_migrations (
+        version INTEGER PRIMARY KEY,
+        applied_at TEXT NOT NULL
       );`,
       `CREATE INDEX IF NOT EXISTS idx_journal_user ON journal_entries(user_id);`,
       `CREATE INDEX IF NOT EXISTS idx_journal_created ON journal_entries(created_at);`,
@@ -124,24 +136,8 @@ export async function initDatabase(db: StorageAdapter): Promise<void> {
       await db.execAsync(sql);
     }
 
-    // Run migrations for existing databases (add columns that may be missing)
-    // These use try-catch because ALTER TABLE ADD COLUMN fails if column exists
-    const migrations: string[] = [
-      // Add supabase_id to daily_checkins for sync tracking
-      `ALTER TABLE daily_checkins ADD COLUMN supabase_id TEXT;`,
-      // Add updated_at to daily_checkins for conflict resolution
-      `ALTER TABLE daily_checkins ADD COLUMN updated_at TEXT NOT NULL DEFAULT (datetime('now'));`,
-      // Add supabase_id to sync_queue for delete operations (Story 3.1.2)
-      `ALTER TABLE sync_queue ADD COLUMN supabase_id TEXT;`,
-    ];
-
-    for (const migration of migrations) {
-      try {
-        await db.execAsync(migration);
-      } catch {
-        // Column likely already exists, ignore
-      }
-    }
+    // Run versioned migrations
+    await runMigrations(db);
   })();
 
   initPromises.set(key, initPromise);
@@ -151,6 +147,89 @@ export async function initDatabase(db: StorageAdapter): Promise<void> {
   } finally {
     initPromises.delete(key);
   }
+}
+
+/**
+ * Clear all local data (used for logout or account deletion)
+ */
+/**
+ * Get current schema version from database
+ */
+async function getCurrentSchemaVersion(db: StorageAdapter): Promise<number> {
+  try {
+    const result = await db.getFirstAsync<{ version: number }>(
+      'SELECT MAX(version) as version FROM schema_migrations'
+    );
+    return result?.version || 0;
+  } catch {
+    // Table might not exist yet
+    return 0;
+  }
+}
+
+/**
+ * Mark a migration as applied
+ */
+async function recordMigration(db: StorageAdapter, version: number): Promise<void> {
+  await db.runAsync(
+    'INSERT INTO schema_migrations (version, applied_at) VALUES (?, ?)',
+    [version, new Date().toISOString()]
+  );
+}
+
+/**
+ * Run all pending migrations
+ * Migrations are versioned and applied sequentially
+ */
+async function runMigrations(db: StorageAdapter): Promise<void> {
+  const currentVersion = await getCurrentSchemaVersion(db);
+
+  logger.info('Database migration check', {
+    currentVersion,
+    targetVersion: CURRENT_SCHEMA_VERSION,
+  });
+
+  if (currentVersion >= CURRENT_SCHEMA_VERSION) {
+    logger.info('Database schema is up to date');
+    return;
+  }
+
+  // Migration version 1: Initial columns for sync and check-ins
+  if (currentVersion < 1) {
+    logger.info('Running migration v1: Adding sync tracking columns');
+    const v1Migrations = [
+      `ALTER TABLE daily_checkins ADD COLUMN supabase_id TEXT;`,
+      `ALTER TABLE daily_checkins ADD COLUMN updated_at TEXT NOT NULL DEFAULT (datetime('now'));`,
+      `ALTER TABLE sync_queue ADD COLUMN supabase_id TEXT;`,
+    ];
+
+    for (const migration of v1Migrations) {
+      try {
+        await db.execAsync(migration);
+      } catch (error) {
+        // Column may already exist from old migration system
+        logger.warn('Migration v1 step failed (may be already applied)', error);
+      }
+    }
+
+    await recordMigration(db, 1);
+    logger.info('Migration v1 completed');
+  }
+
+  // Migration version 2: Add failed_at for permanent sync failures
+  if (currentVersion < 2) {
+    logger.info('Running migration v2: Adding failed_at to sync_queue');
+    try {
+      await db.execAsync(`ALTER TABLE sync_queue ADD COLUMN failed_at TEXT;`);
+    } catch (error) {
+      logger.warn('Migration v2 failed (may be already applied)', error);
+    }
+
+    await recordMigration(db, 2);
+    logger.info('Migration v2 completed');
+  }
+
+  logger.info('All migrations completed', { newVersion: CURRENT_SCHEMA_VERSION });
 }
 
 /**

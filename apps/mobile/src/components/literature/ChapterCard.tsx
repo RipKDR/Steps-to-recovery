@@ -7,7 +7,7 @@
 import React, { memo } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { Card } from '../ui';
-import type { Chapter } from '../../lib/store/literatureStore';
+import type { Chapter } from '@recovery/shared';
 
 interface ChapterCardProps {
     chapter: Chapter;

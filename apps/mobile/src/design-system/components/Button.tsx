@@ -13,6 +13,7 @@ import {
   TextStyle,
   Animated,
   View,
+  AccessibilityRole,
 } from 'react-native';
 import { useTheme } from '../hooks/useTheme';
 import { usePressAnimation } from '../hooks/useAnimation';
@@ -21,7 +22,8 @@ type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'danger';
 type ButtonSize = 'small' | 'medium' | 'large';
 
 export interface ButtonProps {
-  title: string;
+  title?: string;
+  children?: React.ReactNode;
   onPress: () => void;
   variant?: ButtonVariant;
   size?: ButtonSize;
@@ -32,6 +34,9 @@ export interface ButtonProps {
   style?: ViewStyle;
   textStyle?: TextStyle;
   accessibilityLabel?: string;
+  accessibilityRole?: AccessibilityRole;
+  accessibilityHint?: string;
+  accessibilityState?: { disabled?: boolean };
   testID?: string;
 }
 
@@ -49,6 +54,7 @@ const textSizes = {
 
 export function Button({
   title,
+  children,
   onPress,
   variant = 'primary',
   size = 'medium',
@@ -59,6 +65,9 @@ export function Button({
   style,
   textStyle: customTextStyle,
   accessibilityLabel,
+  accessibilityRole,
+  accessibilityHint,
+  accessibilityState,
   testID,
 }: ButtonProps) {
   const theme = useTheme();
@@ -110,9 +119,10 @@ export function Button({
       onPressOut={() => !isDisabled && animatePress(false)}
       disabled={isDisabled}
       activeOpacity={0.9}
-      accessibilityLabel={accessibilityLabel || title}
-      accessibilityRole="button"
-      accessibilityState={{ disabled: isDisabled, busy: loading }}
+      accessibilityLabel={accessibilityLabel || title || (typeof children === 'string' ? children : undefined)}
+      accessibilityRole={accessibilityRole || "button"}
+      accessibilityHint={accessibilityHint}
+      accessibilityState={{ ...accessibilityState, disabled: isDisabled, busy: loading }}
       testID={testID}
       style={[
         styles.touchable,
@@ -141,18 +151,22 @@ export function Button({
         ) : (
           <View style={styles.content}>
             {icon && <View style={styles.iconContainer}>{icon}</View>}
-            <Text
-              style={[
-                {
-                  fontSize: textSizes[size],
-                  fontWeight: '600',
-                  color: colors.text,
-                },
-                customTextStyle,
-              ]}
-            >
-              {title}
-            </Text>
+            {typeof children === 'string' || title ? (
+              <Text
+                style={[
+                  {
+                    fontSize: textSizes[size],
+                    fontWeight: '600',
+                    color: colors.text,
+                  },
+                  customTextStyle,
+                ]}
+              >
+                {children || title}
+              </Text>
+            ) : (
+              children
+            )}
           </View>
         )}
       </Animated.View>

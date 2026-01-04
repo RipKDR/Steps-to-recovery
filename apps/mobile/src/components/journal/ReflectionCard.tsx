@@ -7,9 +7,9 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Card } from '../ui';
-import { useJournalStore } from '../../lib/store';
-import { decryptContent } from '../../lib/encryption';
-import type { JournalEntry } from '../../lib/types';
+import { useJournalStore } from '@recovery/shared';
+import { decryptContent } from '../../utils/encryption';
+import type { JournalEntry } from '@recovery/shared';
 
 interface ReflectionCardProps {
   daysAgo?: number; // Default 30

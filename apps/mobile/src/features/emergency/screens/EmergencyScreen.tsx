@@ -329,7 +329,7 @@ export function EmergencyScreen({ userId }: EmergencyScreenProps): React.ReactEl
           borderRadius: theme.radius.card,
         }]}>
           <MaterialCommunityIcons
-            name="shield-heart"
+            name="head-heart"
             size={28}
             color={theme.colors.success}
             style={{ marginBottom: theme.spacing.sm }}

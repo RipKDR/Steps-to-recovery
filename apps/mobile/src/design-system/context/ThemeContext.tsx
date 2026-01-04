@@ -10,7 +10,7 @@ import { typography } from '../tokens/typography';
 import { spacing } from '../tokens/spacing';
 import { radius } from '../tokens/radius';
 import { shadows } from '../tokens/shadows';
-import { springConfigs, timingDurations, easingCurves, scales, opacities } from '../tokens/animations';
+import { springConfigs, timingDurations, durations, easingCurves, scales, opacities } from '../tokens/animations';
 
 /**
  * Complete theme object with all design tokens
@@ -25,6 +25,7 @@ export interface Theme {
   animations: {
     spring: typeof springConfigs;
     timing: typeof timingDurations;
+    durations: typeof durations; // Alias for timing
     easing: typeof easingCurves;
     scales: typeof scales;
     opacities: typeof opacities;
@@ -71,6 +72,7 @@ export function ThemeProvider({ children, forcedColorScheme }: ThemeProviderProp
       animations: {
         spring: springConfigs,
         timing: timingDurations,
+        durations, // Alias for backward compatibility
         easing: easingCurves,
         scales,
         opacities,

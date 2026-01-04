@@ -12,6 +12,7 @@ import { logger } from '../../utils/logger';
 const STORAGE_PREFIX = 'secure_';
 const CRYPTO_ALGORITHM = 'AES-GCM';
 const KEY_LENGTH = 256;
+const SALT_STORAGE_KEY = '_master_key_salt';
 
 export class WebSecureStorageAdapter implements SecureStorageAdapter {
   private masterKey: CryptoKey | null = null;
@@ -37,16 +38,49 @@ export class WebSecureStorageAdapter implements SecureStorageAdapter {
 
   /**
    * Clear session and master key (call on logout)
+   * Also clears the stored salt for the user
    */
   clearSession(): void {
+    // Clear stored salt for this user
+    if (this.userId) {
+      const saltKey = `${STORAGE_PREFIX}${this.userId}${SALT_STORAGE_KEY}`;
+      localStorage.removeItem(saltKey);
+    }
+
     this.masterKey = null;
     this.userId = null;
     this.sessionToken = null;
   }
 
   /**
+   * Get or generate a random salt for key derivation
+   * Salt is stored in localStorage and reused for the same user
+   */
+  private async getSalt(): Promise<Uint8Array> {
+    if (!this.userId) {
+      throw new Error('UserId required to get salt');
+    }
+
+    const saltKey = `${STORAGE_PREFIX}${this.userId}${SALT_STORAGE_KEY}`;
+    const storedSalt = localStorage.getItem(saltKey);
+
+    if (storedSalt) {
+      // Reconstruct Uint8Array from stored JSON array
+      return new Uint8Array(JSON.parse(storedSalt));
+    }
+
+    // Generate new random salt (32 bytes)
+    const salt = window.crypto.getRandomValues(new Uint8Array(32));
+
+    // Store as JSON array
+    localStorage.setItem(saltKey, JSON.stringify(Array.from(salt)));
+
+    return salt;
+  }
+
+  /**
    * Derive master encryption key from user's session token
-   * Each user gets a unique key derived from their session
+   * Each user gets a unique key derived from their session + random salt
    */
   private async getMasterKey(): Promise<CryptoKey> {
     if (this.masterKey) return this.masterKey;
@@ -64,11 +98,14 @@ export class WebSecureStorageAdapter implements SecureStorageAdapter {
       ['deriveKey']
     );
 
-    // Use user-specific salt
+    // Use random salt (generated once per user, then stored)
+    const saltArray = await this.getSalt();
+    const salt = saltArray.buffer as ArrayBuffer;
+
     this.masterKey = await window.crypto.subtle.deriveKey(
       {
         name: 'PBKDF2',
-        salt: new TextEncoder().encode(`recovery-app-${this.userId}`),
+        salt,
         iterations: 100000,
         hash: 'SHA-256',
       },
@@ -87,7 +124,7 @@ export class WebSecureStorageAdapter implements SecureStorageAdapter {
 
     try {
       // Parse stored data (iv + ciphertext)
-      const data = JSON.parse(encrypted);
+      const data = JSON.parse(encrypted) as { iv: number[]; ciphertext: number[] };
       const iv = new Uint8Array(data.iv);
       const ciphertext = new Uint8Array(data.ciphertext);
 
@@ -96,7 +133,7 @@ export class WebSecureStorageAdapter implements SecureStorageAdapter {
       const decrypted = await window.crypto.subtle.decrypt(
         { name: CRYPTO_ALGORITHM, iv },
         masterKey,
-        ciphertext
+        ciphertext.buffer as ArrayBuffer
       );
 
       return new TextDecoder().decode(decrypted);

@@ -6,7 +6,7 @@
 
 import React, { useMemo } from 'react';
 import { View, Text, Dimensions } from 'react-native';
-import type { DailyCheckin } from '../../lib/types';
+import type { DailyCheckin } from '@recovery/shared';
 
 interface SimpleTrendChartProps {
   data: DailyCheckin[];

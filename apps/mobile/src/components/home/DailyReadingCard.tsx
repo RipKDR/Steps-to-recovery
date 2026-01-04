@@ -7,7 +7,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Card } from '../ui';
-import { useReading } from '../../lib/hooks/useReading';
+import { useReading } from '../../hooks/useReading';
 
 interface DailyReadingCardProps {
   className?: string;

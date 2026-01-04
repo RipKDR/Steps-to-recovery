@@ -26,7 +26,7 @@ export type ModalVariant = 'center' | 'bottom';
 export interface ModalAction {
   title: string;
   onPress: () => void;
-  variant?: 'primary' | 'secondary' | 'danger';
+  variant?: 'primary' | 'secondary' | 'danger' | 'outline';
   accessibilityLabel?: string;
 }
 

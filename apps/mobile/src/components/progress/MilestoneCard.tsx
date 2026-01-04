@@ -7,7 +7,7 @@
 import React, { memo } from 'react';
 import { View, Text } from 'react-native';
 import { Card } from '../ui';
-import type { TimeMilestone } from '../../lib/constants/milestones';
+import type { TimeMilestone } from '@recovery/shared';
 
 interface MilestoneCardProps {
   milestone: TimeMilestone;

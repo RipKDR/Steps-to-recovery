@@ -12,8 +12,8 @@ import {
   scheduleMilestoneNotification,
   getScheduledNotifications,
   clearBadge,
-} from '../notifications';
-import { useSettingsStore } from '../store';
+} from '@recovery/shared/notifications';
+import { useSettingsStore } from '@recovery/shared';
 
 export function useNotifications() {
   const { settings } = useSettingsStore();

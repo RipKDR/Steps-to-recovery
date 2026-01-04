@@ -3,6 +3,72 @@ import type { StorageAdapter } from '../adapters/storage';
 import { logger } from '../utils/logger';
 
 /**
+ * Mutex to prevent concurrent sync operations
+ * Ensures only one sync runs at a time to avoid race conditions
+ */
+class SyncMutex {
+  private locked: boolean = false;
+  private queue: Array<() => void> = [];
+
+  async acquire(): Promise<void> {
+    if (!this.locked) {
+      this.locked = true;
+      return Promise.resolve();
+    }
+
+    return new Promise<void>((resolve) => {
+      this.queue.push(resolve);
+    });
+  }
+
+  release(): void {
+    const next = this.queue.shift();
+    if (next) {
+      next();
+    } else {
+      this.locked = false;
+    }
+  }
+
+  isLocked(): boolean {
+    return this.locked;
+  }
+}
+
+const syncMutex = new SyncMutex();
+
+/**
+ * Network timeout for Supabase operations (30 seconds)
+ */
+const NETWORK_TIMEOUT_MS = 30000;
+
+/**
+ * Maximum retry attempts before giving up
+ */
+const MAX_RETRY_COUNT = 3;
+
+/**
+ * Base delay for exponential backoff (in milliseconds)
+ */
+const BASE_BACKOFF_MS = 1000;
+
+/**
+ * Wrap a promise with a timeout
+ * Throws an error if the operation takes longer than the specified timeout
+ */
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number, operation: string): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) =>
+      setTimeout(
+        () => reject(new Error(`${operation} timed out after ${timeoutMs}ms`)),
+        timeoutMs
+      )
+    ),
+  ]);
+}
+
+/**
  * Sync result for tracking success/failures
  */
 export interface SyncResult {
@@ -133,12 +199,17 @@ export async function syncJournalEntry(
       updated_at: entry.updated_at,
     };
 
-    // Upsert to Supabase (insert or update)
-    const { error: supabaseError } = await supabase
-      .from('journal_entries')
-      .upsert(supabaseData, {
-        onConflict: 'id',
-      });
+    // Upsert to Supabase (insert or update) with timeout
+    const response = await withTimeout(
+      Promise.resolve(supabase
+        .from('journal_entries')
+        .upsert(supabaseData, {
+          onConflict: 'id',
+        })),
+      NETWORK_TIMEOUT_MS,
+      'Journal entry upsert'
+    );
+    const supabaseError = (response as { error: { message: string } | null }).error;
 
     if (supabaseError) {
       logger.error('Supabase upsert failed for journal entry', supabaseError);
@@ -200,12 +271,17 @@ export async function syncStepWork(
       updated_at: stepWork.updated_at,
     };
 
-    // Upsert to Supabase
-    const { error: supabaseError } = await supabase
-      .from('step_work')
-      .upsert(supabaseData, {
-        onConflict: 'id',
-      });
+    // Upsert to Supabase with timeout
+    const response = await withTimeout(
+      Promise.resolve(supabase
+        .from('step_work')
+        .upsert(supabaseData, {
+          onConflict: 'id',
+        })),
+      NETWORK_TIMEOUT_MS,
+      'Step work upsert'
+    );
+    const supabaseError = (response as { error: { message: string } | null }).error;
 
     if (supabaseError) {
       logger.error('Supabase upsert failed for step work', supabaseError);
@@ -289,12 +365,17 @@ export async function syncDailyCheckIn(
       }
     }
 
-    // Upsert to Supabase (insert or update)
-    const { error: supabaseError } = await supabase
-      .from('daily_checkins')
-      .upsert(supabaseData, {
-        onConflict: 'id',
-      });
+    // Upsert to Supabase (insert or update) with timeout
+    const response = await withTimeout(
+      Promise.resolve(supabase
+        .from('daily_checkins')
+        .upsert(supabaseData, {
+          onConflict: 'id',
+        })),
+      NETWORK_TIMEOUT_MS,
+      'Daily check-in upsert'
+    );
+    const supabaseError = (response as { error: { message: string } | null }).error;
 
     if (supabaseError) {
       logger.error('Supabase upsert failed for daily check-in', supabaseError);
@@ -327,11 +408,16 @@ async function deleteFromSupabase(
   userId: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const { error: supabaseError } = await supabase
-      .from(tableName)
-      .delete()
-      .eq('id', supabaseId)
-      .eq('user_id', userId);
+    const response = await withTimeout(
+      Promise.resolve(supabase
+        .from(tableName)
+        .delete()
+        .eq('id', supabaseId)
+        .eq('user_id', userId)),
+      NETWORK_TIMEOUT_MS,
+      `Delete from ${tableName}`
+    );
+    const supabaseError = (response as { error: { message: string } | null }).error;
 
     if (supabaseError) {
       logger.error('Supabase delete failed', { tableName, supabaseId, error: supabaseError });
@@ -409,32 +495,47 @@ async function handleSyncResult(
   } else {
     // Increment retry count and store error
     const newRetryCount = item.retry_count + 1;
-    await db.runAsync(
-      `UPDATE sync_queue
-       SET retry_count = ?, last_error = ?
-       WHERE id = ?`,
-      [newRetryCount, syncResult.error || 'Unknown error', item.id]
-    );
+
+    // Check if we've exceeded max retries
+    if (newRetryCount >= MAX_RETRY_COUNT) {
+      // Mark as failed permanently after max retries
+      await db.runAsync(
+        `UPDATE sync_queue
+         SET retry_count = ?, last_error = ?, failed_at = ?
+         WHERE id = ?`,
+        [newRetryCount, syncResult.error || 'Unknown error', new Date().toISOString(), item.id]
+      );
+      logger.error('Sync item permanently failed after max retries', {
+        queueItemId: item.id,
+        tableName: item.table_name,
+        recordId: item.record_id,
+        operation: item.operation,
+        retryCount: newRetryCount,
+        error: syncResult.error,
+      });
+    } else {
+      // Still have retries left
+      await db.runAsync(
+        `UPDATE sync_queue
+         SET retry_count = ?, last_error = ?
+         WHERE id = ?`,
+        [newRetryCount, syncResult.error || 'Unknown error', item.id]
+      );
+      logger.warn('Sync failed, will retry', {
+        queueItemId: item.id,
+        tableName: item.table_name,
+        recordId: item.record_id,
+        operation: item.operation,
+        retryCount: newRetryCount,
+        maxRetries: MAX_RETRY_COUNT,
+        error: syncResult.error,
+      });
+    }
+
     result.failed++;
     result.errors.push(
       `[${item.operation}] ${item.table_name}/${item.record_id}: ${syncResult.error || 'Unknown error'}`
     );
-
-    // Log detailed error for debugging
-    logger.error('Sync failed for queue item', {
-      queueItemId: item.id,
-      tableName: item.table_name,
-      recordId: item.record_id,
-      operation: item.operation,
-      retryCount: newRetryCount,
-      error: syncResult.error,
-    });
-  }
-
-  // Exponential backoff delay between items (1s, 2s, 4s)
-  if (item.retry_count > 0) {
-    const delayMs = Math.pow(2, item.retry_count) * 1000;
-    await new Promise((resolve) => setTimeout(resolve, delayMs));
   }
 }
 
@@ -454,6 +555,14 @@ export async function processSyncQueue(
   userId: string,
   maxBatchSize: number = 50
 ): Promise<SyncResult> {
+  // Prevent concurrent sync operations using mutex
+  if (syncMutex.isLocked()) {
+    logger.info('Sync already in progress, skipping duplicate call');
+    return { synced: 0, failed: 0, errors: ['Sync already in progress'] };
+  }
+
+  await syncMutex.acquire();
+
   const result: SyncResult = {
     synced: 0,
     failed: 0,
@@ -463,12 +572,14 @@ export async function processSyncQueue(
   try {
     // Fetch pending sync items, ordered by creation time
     // Limit to maxBatchSize to prevent overwhelming the system
+    // Exclude items that have permanently failed (failed_at IS NOT NULL)
     const queueItems = await db.getAllAsync<SyncQueueItem>(
       `SELECT * FROM sync_queue
-       WHERE retry_count < 3
+       WHERE retry_count < ?
+       AND (failed_at IS NULL OR failed_at = '')
        ORDER BY created_at ASC
        LIMIT ?`,
-      [maxBatchSize]
+      [MAX_RETRY_COUNT, maxBatchSize]
     );
 
     if (queueItems.length === 0) {
@@ -496,10 +607,24 @@ export async function processSyncQueue(
       }
     }
 
-    // Phase 2: Process all insert/update operations
+    // Phase 2: Process all insert/update operations with exponential backoff for retries
     if (upsertItems.length > 0) {
       logger.info('Phase 2: Processing insert/update operations', { count: upsertItems.length });
       for (const item of upsertItems) {
+        // Apply exponential backoff BEFORE retrying (not on first attempt)
+        if (item.retry_count > 0) {
+          const delayMs = Math.min(
+            BASE_BACKOFF_MS * Math.pow(2, item.retry_count - 1),
+            30000 // Cap at 30 seconds
+          );
+          logger.info('Applying exponential backoff before retry', {
+            queueItemId: item.id,
+            retryCount: item.retry_count,
+            delayMs,
+          });
+          await new Promise((resolve) => setTimeout(resolve, delayMs));
+        }
+
         const syncResult = await processSyncItem(db, item, userId);
         await handleSyncResult(db, item, syncResult, result);
       }
@@ -517,6 +642,9 @@ export async function processSyncQueue(
     logger.error('Sync queue processing failed', error);
     result.errors.push(error instanceof Error ? error.message : 'Unknown error');
     return result;
+  } finally {
+    // Always release the mutex, even if sync fails
+    syncMutex.release();
   }
 }
 

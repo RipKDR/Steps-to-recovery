@@ -4,8 +4,8 @@
  */
 
 import { useEffect, useCallback } from 'react';
-import { useJournalStore } from '../store';
-import type { JournalType } from '../types';
+import { useJournalStore } from '@recovery/shared';
+import type { JournalType } from '@recovery/shared';
 
 export function useJournal() {
   const {

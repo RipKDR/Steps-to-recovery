@@ -15,7 +15,7 @@ import {
   Dimensions,
   Animated,
 } from 'react-native';
-import type { Milestone } from '@repo/shared/types';
+import type { Milestone } from '@recovery/shared/types';
 
 interface MilestoneCelebrationModalProps {
   visible: boolean;

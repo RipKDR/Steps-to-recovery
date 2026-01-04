@@ -15,8 +15,8 @@ import {
 } from 'react-native';
 import { useRouter, useSegments } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
-import { useSettingsStore } from '../../lib/store';
-import { getCrisisResources, type CrisisResource } from '../../lib/constants/crisisResources';
+import { useSettingsStore } from '@recovery/shared';
+import { getCrisisResources, type CrisisResource } from '@recovery/shared';
 
 export function CrisisButton() {
   const [showQuickHelp, setShowQuickHelp] = useState(false);
@@ -124,7 +124,7 @@ export function CrisisButton() {
 
             {/* Quick Actions */}
             <View className="gap-3">
-              {quickResources.map((resource) => (
+              {quickResources.map((resource: CrisisResource) => (
                 <TouchableOpacity
                   key={resource.id}
                   onPress={() => handleCallResource(resource)}

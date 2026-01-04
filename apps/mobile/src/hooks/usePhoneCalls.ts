@@ -4,9 +4,9 @@
  */
 
 import { useEffect, useMemo, useCallback } from 'react';
-import { usePhoneStore } from '../store/phoneStore';
-import { useContactStore } from '../store/contactStore';
-import type { PhoneCallLog, RecoveryContact } from '../types';
+import { usePhoneStore } from '@recovery/shared/store/phoneStore';
+import { useContactStore } from '@recovery/shared/store/contactStore';
+import type { PhoneCallLog, RecoveryContact } from '@recovery/shared';
 
 export function usePhoneCalls() {
   const {

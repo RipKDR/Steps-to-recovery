@@ -5,7 +5,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { JournalCard } from '../components/JournalCard';
 import { useJournalEntries } from '../hooks/useJournalEntries';
-import type { JournalEntryDecrypted } from '@repo/shared/types';
+import type { JournalEntryDecrypted } from '@recovery/shared/types';
 import { useTheme, FloatingActionButton, Input, EmptyState } from '../../../design-system';
 
 interface JournalListScreenProps {

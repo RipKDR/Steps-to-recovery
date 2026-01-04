@@ -49,6 +49,9 @@ export const timingDurations = {
   verySlow: 500,
 } as const;
 
+// Alias for backward compatibility
+export const durations = timingDurations;
+
 /**
  * Common easing curves for timing animations
  */

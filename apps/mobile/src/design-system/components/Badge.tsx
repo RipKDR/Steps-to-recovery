@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { View, Text, StyleSheet, ViewStyle, TextStyle } from 'react-native';
+import { View, Text, StyleSheet, ViewStyle, TextStyle, AccessibilityRole } from 'react-native';
 import { useTheme } from '../hooks/useTheme';
 
 export interface BadgeProps {
@@ -14,6 +14,9 @@ export interface BadgeProps {
   size?: 'small' | 'medium' | 'large';
   style?: ViewStyle;
   textStyle?: TextStyle;
+  accessibilityLabel?: string;
+  accessibilityRole?: AccessibilityRole;
+  accessibilityHint?: string;
 }
 
 export function Badge({
@@ -23,6 +26,9 @@ export function Badge({
   size = 'medium',
   style,
   textStyle,
+  accessibilityLabel,
+  accessibilityRole,
+  accessibilityHint,
 }: BadgeProps) {
   const theme = useTheme();
 
@@ -94,6 +100,9 @@ export function Badge({
         sizeStyles.containerStyle,
         style,
       ]}
+      accessibilityLabel={accessibilityLabel}
+      accessibilityRole={accessibilityRole}
+      accessibilityHint={accessibilityHint}
     >
       {typeof children === 'string' ? (
         <Text

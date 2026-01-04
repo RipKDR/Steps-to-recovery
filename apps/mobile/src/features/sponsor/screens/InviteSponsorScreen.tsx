@@ -11,6 +11,7 @@ import { useSponsorships } from '../hooks';
 import { useTheme } from '../../../design-system/hooks/useTheme';
 import { Input, Button, Card, Modal, Toast } from '../../../design-system/components';
 import type { ModalAction } from '../../../design-system/components';
+import type { Theme } from '../../../design-system/context/ThemeContext';
 
 export function InviteSponsorScreen(): React.ReactElement {
   const navigation = useNavigation();
@@ -65,17 +66,17 @@ export function InviteSponsorScreen(): React.ReactElement {
 
   const successActions: ModalAction[] = [
     {
-      label: 'Done',
+      title: 'Done',
       onPress: handleSuccessModalClose,
-      style: 'primary',
+      variant: 'primary',
     },
   ];
 
   const errorActions: ModalAction[] = [
     {
-      label: 'OK',
+      title: 'OK',
       onPress: () => setShowErrorModal(false),
-      style: 'primary',
+      variant: 'primary',
     },
   ];
 
@@ -219,7 +220,7 @@ export function InviteSponsorScreen(): React.ReactElement {
 }
 
 // Info List Item Component
-function InfoItem({ theme, text }: { theme: any; text: string }): React.ReactElement {
+function InfoItem({ theme, text }: { theme: Theme; text: string }): React.ReactElement {
   return (
     <View style={styles.infoItem}>
       <Text

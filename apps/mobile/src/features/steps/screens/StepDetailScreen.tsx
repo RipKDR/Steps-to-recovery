@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRoute, type RouteProp } from '@react-navigation/native';
 import { MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { STEP_PROMPTS } from '@repo/shared/constants';
+import { STEP_PROMPTS, type StepPrompt } from '@recovery/shared/constants';
 import { useStepWork, useSaveStepAnswer } from '../hooks/useStepWork';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useTheme, Card, Button, TextArea, ProgressBar, Badge, Toast, Divider, Text } from '../../../design-system';
@@ -22,7 +22,7 @@ export function StepDetailScreen(): React.ReactElement {
   const userId = user?.id || '';
   const theme = useTheme();
 
-  const stepData = STEP_PROMPTS.find(s => s.step === stepNumber);
+  const stepData = STEP_PROMPTS.find((s: StepPrompt) => s.step === stepNumber);
   const { questions, progress, isLoading } = useStepWork(userId, stepNumber);
   const { saveAnswer, isPending } = useSaveStepAnswer(userId);
 
@@ -188,7 +188,7 @@ export function StepDetailScreen(): React.ReactElement {
             keyboardShouldPersistTaps="handled"
           >
             {/* Questions */}
-            {stepData.prompts.map((prompt, index) => {
+            {stepData.prompts.map((prompt: string, index: number) => {
               const questionNumber = index + 1;
               const isAnswered = questions.find(q => q.question_number === questionNumber && q.is_complete);
               const isSaving = savingQuestion === questionNumber;

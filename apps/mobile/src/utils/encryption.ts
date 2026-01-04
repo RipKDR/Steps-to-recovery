@@ -34,10 +34,12 @@ async function generateUUID(): Promise<string> {
 export async function generateEncryptionKey(): Promise<string> {
   const randomBytes = await getRandomBytes(32);
   const randomString = Array.from(randomBytes).map(b => b.toString(16).padStart(2, '0')).join('');
+  // Generate a unique encryption key using PBKDF2 for key stretching
+  // Note: We use a random salt per key generation, but the derived key itself is stored
   const salt = await generateUUID();
   const derivedKey = CryptoJS.PBKDF2(randomString, salt, { keySize: 256 / 32, iterations: KEY_DERIVATION_ITERATIONS }).toString();
+  // Store only the derived key - salt is not needed for future operations
   await secureStorage.setItemAsync(ENCRYPTION_KEY_NAME, derivedKey);
-  await secureStorage.setItemAsync(`${ENCRYPTION_KEY_NAME}_salt`, salt);
   return derivedKey;
 }
 
@@ -71,7 +73,6 @@ export async function decryptContent(encrypted: string): Promise<string> {
 
 export async function deleteEncryptionKey(): Promise<void> {
   await secureStorage.deleteItemAsync(ENCRYPTION_KEY_NAME);
-  await secureStorage.deleteItemAsync(`${ENCRYPTION_KEY_NAME}_salt`);
 }
 
 export async function hasEncryptionKey(): Promise<boolean> {

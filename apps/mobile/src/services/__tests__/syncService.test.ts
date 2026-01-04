@@ -1,4 +1,4 @@
-import type { SQLiteDatabase } from 'expo-sqlite';
+import type { StorageAdapter } from '../../adapters/storage/types';
 import {
   processSyncQueue,
   syncJournalEntry,
@@ -22,7 +22,7 @@ jest.mock('crypto', () => ({
 
 describe('syncService Integration Tests', () => {
   // Mock database
-  let mockDb: jest.Mocked<SQLiteDatabase>;
+  let mockDb: jest.Mocked<StorageAdapter>;
 
   // Mock Supabase client
   const mockSupabaseFrom = jest.fn();
@@ -39,7 +39,9 @@ describe('syncService Integration Tests', () => {
       getFirstAsync: jest.fn(),
       getAllAsync: jest.fn(),
       runAsync: jest.fn(),
-    } as unknown as jest.Mocked<SQLiteDatabase>;
+      execAsync: jest.fn(),
+      withTransactionAsync: jest.fn(),
+    } as jest.Mocked<StorageAdapter>;
 
     // Setup Supabase mock chain
     mockSupabaseEq.mockReturnThis();

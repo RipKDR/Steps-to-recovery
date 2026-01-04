@@ -3,7 +3,7 @@ import { useDatabase } from '../../../contexts/DatabaseContext';
 import { decryptContent, encryptContent } from '../../../utils/encryption';
 import { logger } from '../../../utils/logger';
 import { addToSyncQueue, addDeleteToSyncQueue } from '../../../services/syncService';
-import type { JournalEntry, JournalEntryDecrypted } from '@repo/shared/types';
+import type { JournalEntry, JournalEntryDecrypted } from '@recovery/shared/types';
 
 /**
  * Decrypt a journal entry from database format to UI format
@@ -94,6 +94,8 @@ export function useCreateJournalEntry(userId: string): {
         const encrypted_craving = entry.craving !== null ? await encryptContent(entry.craving.toString()) : null;
         const encrypted_tags = entry.tags.length > 0 ? await encryptContent(JSON.stringify(entry.tags)) : null;
 
+        if (!db) throw new Error('Database not initialized');
+
         await db.runAsync(
           `INSERT INTO journal_entries (id, user_id, encrypted_title, encrypted_body, encrypted_mood, encrypted_craving, encrypted_tags, created_at, updated_at, sync_status)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -166,6 +168,8 @@ export function useUpdateJournalEntry(userId: string): {
         values.push(id);
         values.push(userId);
 
+        if (!db) throw new Error('Database not initialized');
+
         await db.runAsync(
           `UPDATE journal_entries SET ${updates.join(', ')} WHERE id = ? AND user_id = ?`,
           values
@@ -203,6 +207,8 @@ export function useDeleteJournalEntry(userId: string): {
 
   const mutation = useMutation({
     mutationFn: async (id: string) => {
+      if (!db) throw new Error('Database not initialized');
+
       try {
         // Capture supabase_id and add to sync queue BEFORE deleting
         // This ensures we can delete from Supabase even after local deletion

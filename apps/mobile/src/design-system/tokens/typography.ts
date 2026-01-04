@@ -38,10 +38,65 @@ export const typography = {
     fontWeight: '600',
   } as TextStyle,
 
+  // Title styles - iOS naming convention
+  largeTitle: {
+    fontSize: 34,
+    lineHeight: 41,
+    fontWeight: 'bold',
+  } as TextStyle,
+
+  title1: {
+    fontSize: 28,
+    lineHeight: 34,
+    fontWeight: 'bold',
+  } as TextStyle,
+
+  title2: {
+    fontSize: 22,
+    lineHeight: 28,
+    fontWeight: 'bold',
+  } as TextStyle,
+
+  title3: {
+    fontSize: 20,
+    lineHeight: 28,
+    fontWeight: '600',
+  } as TextStyle,
+
+  headline: {
+    fontSize: 17,
+    lineHeight: 22,
+    fontWeight: '600',
+  } as TextStyle,
+
+  subheadline: {
+    fontSize: 15,
+    lineHeight: 20,
+    fontWeight: 'normal',
+  } as TextStyle,
+
   // Body text - Main content
   body: {
     fontSize: 16,
     lineHeight: 24,
+    fontWeight: 'normal',
+  } as TextStyle,
+
+  bodyLarge: {
+    fontSize: 18,
+    lineHeight: 26,
+    fontWeight: 'normal',
+  } as TextStyle,
+
+  body1: {
+    fontSize: 16,
+    lineHeight: 24,
+    fontWeight: 'normal',
+  } as TextStyle,
+
+  body2: {
+    fontSize: 14,
+    lineHeight: 20,
     fontWeight: 'normal',
   } as TextStyle,
 
@@ -71,10 +126,23 @@ export const typography = {
     fontWeight: 'normal',
   } as TextStyle,
 
+  caption1: {
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: 'normal',
+  } as TextStyle,
+
   captionSmall: {
     fontSize: 10,
     lineHeight: 14,
     fontWeight: '500',
+  } as TextStyle,
+
+  // Callout - Emphasized content
+  callout: {
+    fontSize: 16,
+    lineHeight: 24,
+    fontWeight: '600',
   } as TextStyle,
 
   // Specialized - Numbers, counters

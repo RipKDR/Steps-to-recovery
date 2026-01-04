@@ -12,7 +12,19 @@ export * from './designTokens';
 export * from './dailyReadings';
 export * from './prayers';
 export * from './keytags';
-export * from './achievements';
+
+// Export everything from achievements except getAchievementsByCategory
+export {
+  FELLOWSHIP_ACHIEVEMENTS,
+  STEP_WORK_ACHIEVEMENTS,
+  DAILY_PRACTICE_ACHIEVEMENTS,
+  SERVICE_ACHIEVEMENTS,
+  ALL_ACHIEVEMENTS,
+  getAchievementDefinition,
+  getTotalAchievementsCount,
+} from './achievements';
+export type { AchievementDefinition } from './achievements';
+
 export * from './readings';
 export * from './slogans';
 export * from './promises';

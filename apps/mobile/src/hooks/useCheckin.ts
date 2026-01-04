@@ -4,7 +4,8 @@
  */
 
 import { useEffect, useMemo } from 'react';
-import { useCheckinStore } from '../store';
+import { useCheckinStore } from '@recovery/shared';
+import type { DailyCheckin } from '@recovery/shared';
 
 export function useCheckin() {
   const {
@@ -35,14 +36,14 @@ export function useCheckin() {
   // Get mood trend (positive, negative, neutral)
   const moodTrend = useMemo(() => {
     if (history.length < 7) return 'neutral';
-    
-    const recentWeek = history.slice(0, 7).filter((c) => c.isCheckedIn);
-    const previousWeek = history.slice(7, 14).filter((c) => c.isCheckedIn);
-    
+
+    const recentWeek = history.slice(0, 7).filter((c: DailyCheckin) => c.isCheckedIn);
+    const previousWeek = history.slice(7, 14).filter((c: DailyCheckin) => c.isCheckedIn);
+
     if (recentWeek.length === 0 || previousWeek.length === 0) return 'neutral';
-    
-    const recentAvg = recentWeek.reduce((sum, c) => sum + c.mood, 0) / recentWeek.length;
-    const previousAvg = previousWeek.reduce((sum, c) => sum + c.mood, 0) / previousWeek.length;
+
+    const recentAvg = recentWeek.reduce((sum: number, c: DailyCheckin) => sum + c.mood, 0) / recentWeek.length;
+    const previousAvg = previousWeek.reduce((sum: number, c: DailyCheckin) => sum + c.mood, 0) / previousWeek.length;
     
     if (recentAvg > previousAvg + 0.5) return 'positive';
     if (recentAvg < previousAvg - 0.5) return 'negative';
