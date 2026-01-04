@@ -8,6 +8,7 @@ import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
+import { logger } from '../../utils/logger';
 
 interface Props {
   children: ReactNode;
@@ -37,10 +38,10 @@ export class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
     this.setState({ errorInfo });
-    
+
     // Log error for debugging (in production, send to crash reporting service)
-    console.error('ErrorBoundary caught an error:', error, errorInfo);
-    
+    logger.error('ErrorBoundary caught an error', { error, errorInfo });
+
     // Call optional error handler
     this.props.onError?.(error, errorInfo);
   }

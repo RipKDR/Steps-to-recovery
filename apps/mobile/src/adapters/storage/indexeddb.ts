@@ -49,6 +49,10 @@ export class IndexedDBAdapter implements StorageAdapter {
     this.wasmBaseUrl = base.endsWith('/') ? base : `${base}/`;
   }
 
+  getDatabaseName(): string {
+    return DB_NAME;
+  }
+
   /**
    * Initialize sql.js and load database from IndexedDB
    */

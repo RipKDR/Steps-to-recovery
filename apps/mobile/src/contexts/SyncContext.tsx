@@ -232,10 +232,11 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
     updatePendingCount();
 
     // Set up interval for periodic sync
+    // Use refs to avoid stale closure - interval sees latest state
     syncIntervalRef.current = setInterval(() => {
-      if (state.isOnline && !state.isSyncing) {
+      if (isOnlineRef.current && !isSyncingRef.current) {
         logger.info('Periodic sync triggered');
-        triggerSync();
+        void triggerSyncRef.current();
       }
     }, SYNC_INTERVAL_MS);
 
@@ -245,7 +246,7 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
         syncIntervalRef.current = null;
       }
     };
-  }, [user, db, isReady, state.isOnline, state.isSyncing, triggerSync, updatePendingCount]);
+  }, [user, db, isReady, updatePendingCount]);
 
   /**
    * Set up AppState listener to sync when app comes to foreground

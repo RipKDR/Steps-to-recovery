@@ -5,6 +5,11 @@
 
 export interface StorageAdapter {
   /**
+   * Get database name/identifier for duplicate initialization detection
+   */
+  getDatabaseName(): string;
+
+  /**
    * Execute query and return all matching rows
    * @template T - The type of rows returned. Use explicit type parameter for type safety.
    */

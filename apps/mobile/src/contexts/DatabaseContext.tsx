@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState, ReactNode } from
 import { Platform } from 'react-native';
 import { createStorageAdapter, StorageAdapter } from '../adapters/storage';
 import { initDatabase } from '../utils/database';
+import { logger } from '../utils/logger';
 
 interface DatabaseContextValue {
   db: StorageAdapter | null;
@@ -88,14 +89,14 @@ function WebDatabaseProvider({ children }: DatabaseProviderProps): React.ReactEl
   useEffect(() => {
     async function setupAdapter() {
       try {
-        console.log('[DatabaseContext] Web: Initializing IndexedDB adapter...');
+        logger.info('Web: Initializing IndexedDB adapter');
         const storageAdapter = await createStorageAdapter();
-        console.log('[DatabaseContext] Web: Adapter created, initializing database schema...');
+        logger.info('Web: Adapter created, initializing database schema');
         await initDatabase(storageAdapter);
-        console.log('[DatabaseContext] Web: Database initialized successfully');
+        logger.info('Web: Database initialized successfully');
         setAdapter(storageAdapter);
       } catch (err) {
-        console.error('[DatabaseContext] Web: Failed to initialize database:', err);
+        logger.error('Web: Failed to initialize database', err);
         setError(err as Error);
         // Set a dummy adapter to unblock the app for now
         setAdapter({} as StorageAdapter);
@@ -105,7 +106,7 @@ function WebDatabaseProvider({ children }: DatabaseProviderProps): React.ReactEl
   }, []);
 
   if (error) {
-    console.warn('[DatabaseContext] Web: Running with error, database operations may fail');
+    logger.warn('Web: Running with error, database operations may fail');
   }
 
   return (

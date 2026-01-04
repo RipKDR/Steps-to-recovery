@@ -62,15 +62,11 @@ describe('Encryption Utilities', () => {
 
       await generateEncryptionKey();
 
-      // Verify SecureStore was called to store both key and salt
-      expect(mockSecureStore.setItemAsync).toHaveBeenCalledTimes(2);
+      // Verify SecureStore was called to store the derived key (salt is used during derivation but not stored)
+      expect(mockSecureStore.setItemAsync).toHaveBeenCalledTimes(1);
       expect(mockSecureStore.setItemAsync).toHaveBeenCalledWith(
         'journal_encryption_key',
         expect.any(String)
-      );
-      expect(mockSecureStore.setItemAsync).toHaveBeenCalledWith(
-        'journal_encryption_key_salt',
-        'test-salt-uuid'
       );
     });
 
@@ -411,22 +407,7 @@ With\ttabs\tand\nnewlines\r\n`;
       await deleteEncryptionKey();
 
       expect(mockSecureStore.deleteItemAsync).toHaveBeenCalledWith('journal_encryption_key');
-    });
-
-    it('should delete the salt from SecureStore', async () => {
-      mockSecureStore.deleteItemAsync.mockResolvedValue(undefined);
-
-      await deleteEncryptionKey();
-
-      expect(mockSecureStore.deleteItemAsync).toHaveBeenCalledWith('journal_encryption_key_salt');
-    });
-
-    it('should delete both key and salt', async () => {
-      mockSecureStore.deleteItemAsync.mockResolvedValue(undefined);
-
-      await deleteEncryptionKey();
-
-      expect(mockSecureStore.deleteItemAsync).toHaveBeenCalledTimes(2);
+      expect(mockSecureStore.deleteItemAsync).toHaveBeenCalledTimes(1);
     });
   });
 

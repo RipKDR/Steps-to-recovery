@@ -54,8 +54,10 @@ export const secureStorage = {
   async initializeWithSession(userId: string, sessionToken: string): Promise<void> {
     if (Platform.OS === 'web') {
       const adapter = await getAdapter();
-      // Type assertion safe because we know it's WebSecureStorageAdapter
-      await (adapter as any).initializeWithSession(userId, sessionToken);
+      // Type guard: check if adapter has initializeWithSession method
+      if ('initializeWithSession' in adapter && typeof adapter.initializeWithSession === 'function') {
+        await adapter.initializeWithSession(userId, sessionToken);
+      }
     }
     // Native platforms don't need initialization - they use system keystore
   },
@@ -67,8 +69,10 @@ export const secureStorage = {
   async clearSession(): Promise<void> {
     if (Platform.OS === 'web') {
       const adapter = await getAdapter();
-      // Type assertion safe because we know it's WebSecureStorageAdapter
-      (adapter as any).clearSession();
+      // Type guard: check if adapter has clearSession method
+      if ('clearSession' in adapter && typeof adapter.clearSession === 'function') {
+        adapter.clearSession();
+      }
     }
     // Native platforms handle this automatically
   },

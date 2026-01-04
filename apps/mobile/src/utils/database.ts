@@ -2,8 +2,9 @@ import type { StorageAdapter } from '../adapters/storage';
 import { logger } from './logger';
 
 // Guard against duplicate/concurrent initialization (common in dev StrictMode and fast refresh)
-const initializedAdapters = new WeakSet<object>();
-const initPromises = new WeakMap<object, Promise<void>>();
+// Use database name instead of object identity for more reliable duplicate detection
+const initializedDatabases = new Set<string>();
+const initPromises = new Map<string, Promise<void>>();
 
 /**
  * Current database schema version
@@ -17,13 +18,17 @@ const CURRENT_SCHEMA_VERSION = 2;
  * Works with both SQLite (mobile) and IndexedDB (web) via StorageAdapter
  */
 export async function initDatabase(db: StorageAdapter): Promise<void> {
-  const key = db as unknown as object;
-  if (initializedAdapters.has(key)) return;
+  const dbName = db.getDatabaseName();
+  if (initializedDatabases.has(dbName)) {
+    logger.info('Database already initialized, skipping', { dbName });
+    return;
+  }
 
-  const existing = initPromises.get(key);
+  const existing = initPromises.get(dbName);
   if (existing) return existing;
 
   const initPromise = (async () => {
+    logger.info('Initializing database', { dbName });
     // Some Android sqlite bindings can throw opaque native errors (e.g. NPE) when executing
     // very large multi-statement strings via execAsync. Execute pragmas and schema statements
     // in smaller chunks to be more reliable.
@@ -138,14 +143,15 @@ export async function initDatabase(db: StorageAdapter): Promise<void> {
 
     // Run versioned migrations
     await runMigrations(db);
+    logger.info('Database initialization complete', { dbName });
   })();
 
-  initPromises.set(key, initPromise);
+  initPromises.set(dbName, initPromise);
   try {
     await initPromise;
-    initializedAdapters.add(key);
+    initializedDatabases.add(dbName);
   } finally {
-    initPromises.delete(key);
+    initPromises.delete(dbName);
   }
 }
 
