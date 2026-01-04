@@ -14,17 +14,24 @@ import { logger } from '../utils/logger';
  * - Show notifications when app is in foreground
  * - Play sound and show badge
  * Skip on web - notifications not fully supported
+ * Wrapped in try-catch for Expo Go compatibility (notifications require dev build in SDK 53+)
  */
 if (Platform.OS !== 'web') {
-  Notifications.setNotificationHandler({
-    handleNotification: async () => ({
-      shouldShowAlert: true,
-      shouldShowBanner: true,
-      shouldShowList: true,
-      shouldPlaySound: true,
-      shouldSetBadge: true,
-    }),
-  });
+  try {
+    Notifications.setNotificationHandler({
+      handleNotification: async () => ({
+        shouldShowAlert: true,
+        shouldShowBanner: true,
+        shouldShowList: true,
+        shouldPlaySound: true,
+        shouldSetBadge: true,
+      }),
+    });
+  } catch (error) {
+    // Silently fail in Expo Go - notifications require development build
+    // All other app features (journaling, check-ins, step work) work normally
+    logger.warn('Notification handler setup skipped (Expo Go does not support push notifications in SDK 53+)');
+  }
 }
 
 /**
