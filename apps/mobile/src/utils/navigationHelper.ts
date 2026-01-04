@@ -7,6 +7,8 @@
  * compatibility while we migrate.
  */
 
+import { useNavigationState } from '@react-navigation/native';
+import type { NavigationState, PartialState } from '@react-navigation/native';
 import { navigationRef } from '../navigation/navigationRef';
 import type { MainTabParamList } from '../navigation/types';
 import { logger } from './logger';
@@ -150,9 +152,44 @@ export function useRouterCompat() {
 
 /**
  * Hook that provides expo-router compatible segments
- * Returns empty array for now (can be enhanced later)
+ * Tracks the current navigation route and returns it as path segments
+ *
+ * @returns Array of path segments (e.g., ['home'], ['journal', 'edit'])
+ *
+ * @example
+ * // On Home screen: ['home']
+ * // On Journal List: ['journal']
+ * // On Journal Editor: ['journal', 'editor']
  */
 export function useSegmentsCompat(): string[] {
-  // TODO: Implement actual segment tracking if needed
-  return [];
+  const segments = useNavigationState((state) => {
+    if (!state) return [];
+
+    const routeSegments: string[] = [];
+    let currentState: NavigationState | PartialState<NavigationState> | undefined = state;
+
+    // Traverse the navigation state tree to build segments
+    while (currentState) {
+      const currentIndex = currentState.index ?? 0;
+      const route = currentState.routes[currentIndex];
+
+      if (!route) break;
+
+      // Add route name to segments (convert to lowercase for consistency)
+      const routeName = route.name.toLowerCase();
+
+      // Skip 'MainApp' root navigator, only track tab and screen names
+      if (routeName !== 'mainapp') {
+        routeSegments.push(routeName);
+      }
+
+      // Navigate to nested state if it exists
+      // Routes can have nested state for navigators
+      currentState = 'state' in route ? route.state : undefined;
+    }
+
+    return routeSegments;
+  });
+
+  return segments ?? [];
 }
