@@ -134,8 +134,18 @@ export const logger = {
     } else {
       // Production: log without details (or send to Sentry with sanitization)
       console.error(`[ERROR] ${message}`);
-      // TODO: Integrate Sentry here with sanitized error
-      // Sentry.captureException(new Error(message), { extra: sanitized });
+
+      // Sentry integration (when configured)
+      // To enable:
+      // 1. npm install @sentry/react-native
+      // 2. Configure in App.tsx with your DSN
+      // 3. Uncomment below:
+      // import * as Sentry from '@sentry/react-native';
+      // Sentry.captureException(error instanceof Error ? error : new Error(message), {
+      //   extra: sanitized,
+      //   level: 'error',
+      //   tags: { component: 'logger' }
+      // });
     }
   },
 

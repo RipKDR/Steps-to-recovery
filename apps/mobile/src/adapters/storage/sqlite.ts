@@ -9,6 +9,10 @@ import type { StorageAdapter } from './types';
 export class SQLiteAdapter implements StorageAdapter {
   constructor(private db: SQLiteDatabase) {}
 
+  getDatabaseName(): string {
+    return 'recovery.db';
+  }
+
   async getAllAsync<T = any>(query: string, params?: any[]): Promise<T[]> {
     return params ? this.db.getAllAsync<T>(query, params) : this.db.getAllAsync<T>(query);
   }
