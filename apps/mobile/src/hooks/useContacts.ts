@@ -7,6 +7,7 @@ import { useEffect, useMemo, useCallback } from 'react';
 import { Linking, Alert } from 'react-native';
 import { useContactStore } from '@recovery/shared/store/contactStore';
 import type { RecoveryContact, ContactRole } from '@recovery/shared';
+import { logger } from '../utils/logger';
 
 export function useContacts() {
   const {
@@ -82,7 +83,7 @@ export function useContacts() {
           Alert.alert('Error', 'Unable to make phone calls on this device');
         }
       } catch (error) {
-        console.error('Failed to call contact:', error);
+        logger.error('Failed to call contact', error);
         Alert.alert('Error', 'Failed to initiate call');
       }
     },
@@ -106,7 +107,7 @@ export function useContacts() {
           Alert.alert('Error', 'Unable to send text messages on this device');
         }
       } catch (error) {
-        console.error('Failed to text contact:', error);
+        logger.error('Failed to text contact', error);
         Alert.alert('Error', 'Failed to open messaging');
       }
     },

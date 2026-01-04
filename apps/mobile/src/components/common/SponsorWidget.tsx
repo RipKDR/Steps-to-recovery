@@ -9,6 +9,7 @@ import { Card } from '../ui';
 import { useContacts } from '../../hooks/useContacts';
 import { usePhoneCalls } from '../../hooks/usePhoneCalls';
 import { sendSOSMessage, makePhoneCall, openMessagingApp, SOS_MESSAGE } from '@recovery/shared';
+import { logger } from '../../utils/logger';
 
 interface SponsorWidgetProps {
   className?: string;
@@ -52,7 +53,7 @@ export function SponsorWidget({ className = '', compact = false }: SponsorWidget
         await markContacted(sponsor.id);
       }
     } catch (error) {
-      console.error('Failed to call sponsor:', error);
+      logger.error('Failed to call sponsor', error);
       Alert.alert('Call Failed', 'Unable to make the call. Please try again.');
     }
   };
@@ -66,7 +67,7 @@ export function SponsorWidget({ className = '', compact = false }: SponsorWidget
         await markContacted(sponsor.id);
       }
     } catch (error) {
-      console.error('Failed to open messaging:', error);
+      logger.error('Failed to open messaging', error);
     }
   };
 
@@ -79,7 +80,7 @@ export function SponsorWidget({ className = '', compact = false }: SponsorWidget
         await markContacted(sponsor.id);
       }
     } catch (error) {
-      console.error('Failed to send SOS:', error);
+      logger.error('Failed to send SOS', error);
     }
   };
 

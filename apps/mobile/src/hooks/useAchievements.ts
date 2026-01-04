@@ -7,6 +7,7 @@ import { useEffect, useCallback } from 'react';
 import { useAchievementStore, type AchievementContext } from '@recovery/shared';
 import { useSobriety } from './useSobriety';
 import { useCheckin } from './useCheckin';
+import { logger } from '../utils/logger';
 import { 
   useContactStore, 
   useMeetingStore, 
@@ -93,7 +94,7 @@ export function useAchievements() {
     try {
       readingStreak = await getReadingStreak();
     } catch (error) {
-      console.error('Failed to get reading streak:', error);
+      logger.error('Failed to get reading streak', error);
     }
     
     // Calculate step progress

@@ -11,6 +11,7 @@ import { useContactStore, useMeetingStore, useRhythmStore, useStepWorkStore } fr
 import { runJitaiEvaluation, resetCooldowns, getCooldownStatus } from '@recovery/shared/jitai/engine';
 import type { JitaiContext } from '@recovery/shared/jitai/types';
 import type { MeetingLog } from '@recovery/shared';
+import { logger } from '../utils/logger';
 
 // Minimum interval between evaluations (5 minutes)
 const MIN_EVALUATION_INTERVAL_MS = 5 * 60 * 1000;
@@ -151,7 +152,7 @@ export function useJitai() {
       const context = buildContext();
       await runJitaiEvaluation(context);
     } catch (error) {
-      console.error('JITAI evaluation failed:', error);
+      logger.error('JITAI evaluation failed', error);
     }
   }, [buildContext]);
 

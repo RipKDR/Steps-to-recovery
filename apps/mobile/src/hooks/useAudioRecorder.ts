@@ -16,6 +16,7 @@ import {
 } from 'expo-audio';
 import * as ExpoFileSystem from 'expo-file-system';
 import { v4 as uuid } from 'uuid';
+import { logger } from '../utils/logger';
 
 // Type workaround for expo-file-system directory constants
 const FileSystem = ExpoFileSystem as typeof ExpoFileSystem & {
@@ -149,7 +150,7 @@ export function useVoiceRecorder() {
       // Configure audio mode
       await setAudioModeAsync(RECORDING_AUDIO_MODE);
     } catch (error) {
-      console.error('Failed to initialize audio:', error);
+      logger.error('Failed to initialize audio', error);
     }
   };
 
@@ -189,7 +190,7 @@ export function useVoiceRecorder() {
 
       return true;
     } catch (error) {
-      console.error('Failed to start recording:', error);
+      logger.error('Failed to start recording', error);
       return false;
     }
   }, [permissionGranted, audioRecorder, recorderState.isRecording]);
@@ -201,7 +202,7 @@ export function useVoiceRecorder() {
         await audioRecorder.pause();
         setRecordingState((prev) => ({ ...prev, isPaused: true }));
       } catch (error) {
-        console.error('Failed to pause recording:', error);
+        logger.error('Failed to pause recording', error);
       }
     }
   }, [audioRecorder, recorderState.isRecording]);
@@ -213,7 +214,7 @@ export function useVoiceRecorder() {
         await audioRecorder.record();
         setRecordingState((prev) => ({ ...prev, isPaused: false }));
       } catch (error) {
-        console.error('Failed to resume recording:', error);
+        logger.error('Failed to resume recording', error);
       }
     }
   }, [audioRecorder, recordingState.isPaused]);
@@ -258,7 +259,7 @@ export function useVoiceRecorder() {
 
       return audioFile;
     } catch (error) {
-      console.error('Failed to stop recording:', error);
+      logger.error('Failed to stop recording', error);
       return null;
     }
   }, [audioRecorder, recorderState.isRecording, recorderState.durationMillis]);
@@ -306,7 +307,7 @@ export function useVoiceRecorder() {
       }, 100);
       return true;
     } catch (error) {
-      console.error('Failed to play audio:', error);
+      logger.error('Failed to play audio', error);
       return false;
     }
   }, [audioPlayer, playbackSource]);
@@ -353,7 +354,7 @@ export function useVoiceRecorder() {
       await FileSystem.deleteAsync(uri, { idempotent: true });
       return true;
     } catch (error) {
-      console.error('Failed to delete audio file:', error);
+      logger.error('Failed to delete audio file', error);
       return false;
     }
   }, []);
