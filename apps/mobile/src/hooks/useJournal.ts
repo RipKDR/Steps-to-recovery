@@ -24,6 +24,7 @@ export function useJournal() {
     setFilterType,
     setSearchQuery,
     clearCurrentEntry,
+    searchEntries,
   } = useJournalStore();
 
   // Load entries on mount
@@ -31,8 +32,9 @@ export function useJournal() {
     loadEntries();
   }, [loadEntries]);
 
-  // Filter entries by search query (client-side, on decrypted excerpts)
-  const filteredEntries = entries; // TODO: Implement search when we have decrypted excerpts
+  // Filter entries by search query (searches plaintext metadata: type and emotion tags)
+  // Note: Content is encrypted, so we only search plaintext fields for privacy/performance
+  const filteredEntries = searchQuery.trim() ? searchEntries(searchQuery) : entries;
 
   // Create a new entry
   const createNewEntry = useCallback(
