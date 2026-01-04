@@ -1,0 +1,339 @@
+/**
+ * MeetingFilters Component
+ * Filter UI for day, time of day, and meeting type
+ */
+
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
+import { MaterialIcons } from '@expo/vector-icons';
+import { useTheme } from '../../../design-system/hooks/useTheme';
+import { Button } from '../../../design-system/components/Button';
+import { Badge } from '../../../design-system/components/Badge';
+import type { MeetingFilters as MeetingFiltersType, DayOfWeek, TimeOfDay, MeetingType } from '../types/meeting';
+import { getMeetingTypeLabel } from '../types/meeting';
+
+export interface MeetingFiltersProps {
+  currentFilters: MeetingFiltersType;
+  onApplyFilters: (filters: Partial<MeetingFiltersType>) => void;
+  onClearFilters: () => void;
+}
+
+const DAYS_OF_WEEK: { value: DayOfWeek; label: string }[] = [
+  { value: 0, label: 'Sunday' },
+  { value: 1, label: 'Monday' },
+  { value: 2, label: 'Tuesday' },
+  { value: 3, label: 'Wednesday' },
+  { value: 4, label: 'Thursday' },
+  { value: 5, label: 'Friday' },
+  { value: 6, label: 'Saturday' },
+];
+
+const TIMES_OF_DAY: { value: TimeOfDay; label: string }[] = [
+  { value: 'morning', label: 'Morning (5am-12pm)' },
+  { value: 'afternoon', label: 'Afternoon (12pm-5pm)' },
+  { value: 'evening', label: 'Evening (5pm-10pm)' },
+  { value: 'late_night', label: 'Late Night (10pm-5am)' },
+];
+
+const MEETING_TYPES: MeetingType[] = [
+  'O', // Open
+  'C', // Closed
+  'BB', // Big Book
+  'SP', // Speaker
+  'D', // Discussion
+  'W', // Women
+  'M', // Men
+  'Y', // Young People
+  'LGBTQ',
+  'BE', // Beginners
+];
+
+export function MeetingFilters({
+  currentFilters,
+  onApplyFilters,
+  onClearFilters,
+}: MeetingFiltersProps): React.ReactElement {
+  const theme = useTheme();
+
+  const [selectedDay, setSelectedDay] = useState<DayOfWeek | null>(
+    currentFilters.day_of_week
+  );
+  const [selectedTime, setSelectedTime] = useState<TimeOfDay | null>(
+    currentFilters.time_of_day
+  );
+  const [selectedTypes, setSelectedTypes] = useState<MeetingType[]>(
+    currentFilters.meeting_types
+  );
+
+  const handleApply = (): void => {
+    onApplyFilters({
+      day_of_week: selectedDay,
+      time_of_day: selectedTime,
+      meeting_types: selectedTypes,
+    });
+  };
+
+  const handleClear = (): void => {
+    setSelectedDay(null);
+    setSelectedTime(null);
+    setSelectedTypes([]);
+    onClearFilters();
+  };
+
+  const toggleMeetingType = (type: MeetingType): void => {
+    setSelectedTypes((prev) =>
+      prev.includes(type)
+        ? prev.filter((t) => t !== type)
+        : [...prev, type]
+    );
+  };
+
+  const hasActiveFilters =
+    selectedDay !== null ||
+    selectedTime !== null ||
+    selectedTypes.length > 0;
+
+  return (
+    <View
+      style={[
+        styles.container,
+        { backgroundColor: theme.colors.background },
+      ]}
+    >
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={[theme.typography.h2, { color: theme.colors.text }]}>
+            Filter Meetings
+          </Text>
+          {hasActiveFilters && (
+            <Pressable
+              onPress={handleClear}
+              accessibilityRole="button"
+              accessibilityLabel="Clear all filters"
+              accessibilityHint="Removes all active filters"
+            >
+              <Text
+                style={[
+                  theme.typography.body,
+                  { color: theme.colors.primary },
+                ]}
+              >
+                Clear All
+              </Text>
+            </Pressable>
+          )}
+        </View>
+
+        {/* Day of Week */}
+        <View style={styles.section}>
+          <Text
+            style={[
+              theme.typography.h3,
+              { color: theme.colors.text, marginBottom: 12 },
+            ]}
+          >
+            Day of Week
+          </Text>
+          <View style={styles.chipContainer}>
+            {DAYS_OF_WEEK.map((day) => (
+              <Pressable
+                key={day.value}
+                onPress={() =>
+                  setSelectedDay(selectedDay === day.value ? null : day.value)
+                }
+                style={({ pressed }) => [
+                  styles.chip,
+                  {
+                    backgroundColor:
+                      selectedDay === day.value
+                        ? theme.colors.primary
+                        : theme.colors.surface,
+                    borderColor: theme.colors.border,
+                  },
+                  pressed && { opacity: 0.6 },
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel={`Filter by ${day.label}`}
+                accessibilityState={{ selected: selectedDay === day.value }}
+              >
+                <Text
+                  style={[
+                    theme.typography.body,
+                    {
+                      color:
+                        selectedDay === day.value
+                          ? '#FFFFFF'
+                          : theme.colors.text,
+                    },
+                  ]}
+                >
+                  {day.label}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        </View>
+
+        {/* Time of Day */}
+        <View style={styles.section}>
+          <Text
+            style={[
+              theme.typography.h3,
+              { color: theme.colors.text, marginBottom: 12 },
+            ]}
+          >
+            Time of Day
+          </Text>
+          <View style={styles.chipContainer}>
+            {TIMES_OF_DAY.map((time) => (
+              <Pressable
+                key={time.value}
+                onPress={() =>
+                  setSelectedTime(
+                    selectedTime === time.value ? null : time.value
+                  )
+                }
+                style={({ pressed }) => [
+                  styles.chip,
+                  {
+                    backgroundColor:
+                      selectedTime === time.value
+                        ? theme.colors.primary
+                        : theme.colors.surface,
+                    borderColor: theme.colors.border,
+                  },
+                  pressed && { opacity: 0.6 },
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel={`Filter by ${time.label}`}
+                accessibilityState={{ selected: selectedTime === time.value }}
+              >
+                <Text
+                  style={[
+                    theme.typography.body,
+                    {
+                      color:
+                        selectedTime === time.value
+                          ? '#FFFFFF'
+                          : theme.colors.text,
+                    },
+                  ]}
+                >
+                  {time.label}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        </View>
+
+        {/* Meeting Types */}
+        <View style={styles.section}>
+          <Text
+            style={[
+              theme.typography.h3,
+              { color: theme.colors.text, marginBottom: 12 },
+            ]}
+          >
+            Meeting Type
+          </Text>
+          <View style={styles.chipContainer}>
+            {MEETING_TYPES.map((type) => (
+              <Pressable
+                key={type}
+                onPress={() => toggleMeetingType(type)}
+                style={({ pressed }) => [
+                  styles.chip,
+                  {
+                    backgroundColor: selectedTypes.includes(type)
+                      ? theme.colors.primary
+                      : theme.colors.surface,
+                    borderColor: theme.colors.border,
+                  },
+                  pressed && { opacity: 0.6 },
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel={`Filter by ${getMeetingTypeLabel(type)}`}
+                accessibilityState={{ selected: selectedTypes.includes(type) }}
+              >
+                <Text
+                  style={[
+                    theme.typography.body,
+                    {
+                      color: selectedTypes.includes(type)
+                        ? '#FFFFFF'
+                        : theme.colors.text,
+                    },
+                  ]}
+                >
+                  {getMeetingTypeLabel(type)}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        </View>
+      </ScrollView>
+
+      {/* Apply Button */}
+      <View
+        style={[
+          styles.footer,
+          {
+            backgroundColor: theme.colors.background,
+            borderTopColor: theme.colors.border,
+          },
+        ]}
+      >
+        <Button
+          variant="primary"
+          onPress={handleApply}
+          accessibilityLabel="Apply filters"
+          accessibilityHint="Apply selected filters to meeting search"
+        >
+          Apply Filters
+        </Button>
+      </View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    padding: 16,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  section: {
+    marginBottom: 24,
+  },
+  chipContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  chip: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
+    borderWidth: 1,
+    minHeight: 48, // WCAG minimum touch target
+  },
+  footer: {
+    padding: 16,
+    borderTopWidth: 1,
+  },
+});
