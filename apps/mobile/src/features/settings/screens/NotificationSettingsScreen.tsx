@@ -19,6 +19,7 @@ import {
   Alert,
   Platform,
 } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { useNotifications } from '../../../contexts/NotificationContext';
 import {
   scheduleDailyReminders,
@@ -44,6 +45,9 @@ export function NotificationSettingsScreen() {
 
   const [scheduledCount, setScheduledCount] = useState(0);
   const [isUpdating, setIsUpdating] = useState(false);
+
+  const [showMorningTimePicker, setShowMorningTimePicker] = useState(false);
+  const [showEveningTimePicker, setShowEveningTimePicker] = useState(false);
 
   /**
    * Load current notification count
@@ -150,6 +154,43 @@ export function NotificationSettingsScreen() {
     return `${displayHour}:${displayMinute} ${period}`;
   };
 
+  /**
+   * Create a Date object from hour and minute for DateTimePicker
+   */
+  const createTimeDate = (hour: number, minute: number): Date => {
+    const date = new Date();
+    date.setHours(hour);
+    date.setMinutes(minute);
+    date.setSeconds(0);
+    return date;
+  };
+
+  /**
+   * Handle morning time change
+   */
+  const handleMorningTimeChange = (event: any, selectedDate?: Date): void => {
+    if (Platform.OS === 'android') {
+      setShowMorningTimePicker(false);
+    }
+    if (selectedDate) {
+      setMorningHour(selectedDate.getHours());
+      setMorningMinute(selectedDate.getMinutes());
+    }
+  };
+
+  /**
+   * Handle evening time change
+   */
+  const handleEveningTimeChange = (event: any, selectedDate?: Date): void => {
+    if (Platform.OS === 'android') {
+      setShowEveningTimePicker(false);
+    }
+    if (selectedDate) {
+      setEveningHour(selectedDate.getHours());
+      setEveningMinute(selectedDate.getMinutes());
+    }
+  };
+
   const permissionGranted = permissionStatus === 'granted';
 
   return (
@@ -197,12 +238,40 @@ export function NotificationSettingsScreen() {
               />
             </View>
 
-            {/* TODO: Add time picker UI for customizing morning time */}
             {morningEnabled && (
               <View style={styles.timePicker}>
-                <Text style={styles.pickerNote}>
-                  💡 Time customization coming soon. Default: 9:00 AM
-                </Text>
+                <TouchableOpacity
+                  style={styles.timeButton}
+                  onPress={() => setShowMorningTimePicker(!showMorningTimePicker)}
+                  accessibilityLabel="Change morning reminder time"
+                  accessibilityRole="button"
+                  accessibilityHint="Opens time picker to customize morning check-in reminder"
+                >
+                  <Text style={styles.timeButtonText}>
+                    {showMorningTimePicker ? '✓ Close Time Picker' : '🕐 Change Time'}
+                  </Text>
+                </TouchableOpacity>
+
+                {showMorningTimePicker && (
+                  <DateTimePicker
+                    value={createTimeDate(morningHour, morningMinute)}
+                    mode="time"
+                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                    onChange={handleMorningTimeChange}
+                    testID="morning-time-picker"
+                  />
+                )}
+
+                {Platform.OS === 'ios' && showMorningTimePicker && (
+                  <TouchableOpacity
+                    style={styles.doneButton}
+                    onPress={() => setShowMorningTimePicker(false)}
+                    accessibilityLabel="Done selecting morning time"
+                    accessibilityRole="button"
+                  >
+                    <Text style={styles.doneButtonText}>Done</Text>
+                  </TouchableOpacity>
+                )}
               </View>
             )}
           </View>
@@ -221,12 +290,40 @@ export function NotificationSettingsScreen() {
               />
             </View>
 
-            {/* TODO: Add time picker UI for customizing evening time */}
             {eveningEnabled && (
               <View style={styles.timePicker}>
-                <Text style={styles.pickerNote}>
-                  💡 Time customization coming soon. Default: 9:00 PM
-                </Text>
+                <TouchableOpacity
+                  style={styles.timeButton}
+                  onPress={() => setShowEveningTimePicker(!showEveningTimePicker)}
+                  accessibilityLabel="Change evening reminder time"
+                  accessibilityRole="button"
+                  accessibilityHint="Opens time picker to customize evening check-in reminder"
+                >
+                  <Text style={styles.timeButtonText}>
+                    {showEveningTimePicker ? '✓ Close Time Picker' : '🕐 Change Time'}
+                  </Text>
+                </TouchableOpacity>
+
+                {showEveningTimePicker && (
+                  <DateTimePicker
+                    value={createTimeDate(eveningHour, eveningMinute)}
+                    mode="time"
+                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                    onChange={handleEveningTimeChange}
+                    testID="evening-time-picker"
+                  />
+                )}
+
+                {Platform.OS === 'ios' && showEveningTimePicker && (
+                  <TouchableOpacity
+                    style={styles.doneButton}
+                    onPress={() => setShowEveningTimePicker(false)}
+                    accessibilityLabel="Done selecting evening time"
+                    accessibilityRole="button"
+                  >
+                    <Text style={styles.doneButtonText}>Done</Text>
+                  </TouchableOpacity>
+                )}
               </View>
             )}
           </View>
@@ -340,6 +437,32 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#666',
     fontStyle: 'italic',
+  },
+  timeButton: {
+    backgroundColor: '#4CAF50',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  timeButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  doneButton: {
+    backgroundColor: '#2196F3',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 12,
+  },
+  doneButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
   },
   button: {
     backgroundColor: '#4CAF50',
