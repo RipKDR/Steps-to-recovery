@@ -16,11 +16,17 @@ import { NotificationSettingsScreen } from '../features/settings/screens/Notific
 import { SponsorScreen } from '../features/sponsor/screens/SponsorScreen';
 import { InviteSponsorScreen } from '../features/sponsor/screens/InviteSponsorScreen';
 import { SharedEntriesScreen } from '../features/sponsor/screens/SharedEntriesScreen';
+import {
+  MeetingFinderScreen,
+  MeetingDetailScreen,
+  FavoriteMeetingsScreen,
+} from '../features/meetings/screens';
 
 const Tab = createBottomTabNavigator();
 const HomeStack = createNativeStackNavigator();
 const JournalStack = createNativeStackNavigator();
 const StepsStack = createNativeStackNavigator();
+const MeetingsStack = createNativeStackNavigator();
 const ProfileStack = createNativeStackNavigator();
 
 function HomeStackNavigator(): React.ReactElement {
@@ -103,6 +109,28 @@ function StepsStackNavigator(): React.ReactElement {
   );
 }
 
+function MeetingsStackNavigator(): React.ReactElement {
+  return (
+    <MeetingsStack.Navigator>
+      <MeetingsStack.Screen
+        name="MeetingFinder"
+        component={MeetingFinderScreen}
+        options={{ title: 'Find Meetings' }}
+      />
+      <MeetingsStack.Screen
+        name="MeetingDetail"
+        component={MeetingDetailScreen}
+        options={{ title: 'Meeting Details', headerBackTitle: 'Back' }}
+      />
+      <MeetingsStack.Screen
+        name="FavoriteMeetings"
+        component={FavoriteMeetingsScreen}
+        options={{ title: 'Favorite Meetings', headerBackTitle: 'Back' }}
+      />
+    </MeetingsStack.Navigator>
+  );
+}
+
 function ProfileStackNavigator(): React.ReactElement {
   return (
     <ProfileStack.Navigator>
@@ -168,6 +196,15 @@ export function MainNavigator(): React.ReactElement {
         options={{
           tabBarIcon: ({ color, size }) => (
             <MaterialCommunityIcons name="stairs" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="Meetings"
+        component={MeetingsStackNavigator}
+        options={{
+          tabBarIcon: ({ color, size }) => (
+            <MaterialCommunityIcons name="map-marker-multiple" size={size} color={color} />
           ),
         }}
       />

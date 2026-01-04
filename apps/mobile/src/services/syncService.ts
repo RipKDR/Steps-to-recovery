@@ -142,6 +142,20 @@ interface LocalDailyCheckIn {
 }
 
 /**
+ * Favorite meeting from local SQLite
+ */
+interface LocalFavoriteMeeting {
+  id: string;
+  user_id: string;
+  meeting_id: string;
+  encrypted_notes: string | null;
+  notification_enabled: number;
+  created_at: string;
+  sync_status: string;
+  supabase_id: string | null;
+}
+
+/**
  * Generate a UUID v4
  */
 function generateUUID(): string {
@@ -400,6 +414,74 @@ export async function syncDailyCheckIn(
 }
 
 /**
+ * Sync a single favorite meeting to Supabase
+ * User's favorite meetings are encrypted behavioral data
+ */
+export async function syncFavoriteMeeting(
+  db: StorageAdapter,
+  favoriteId: string,
+  userId: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    // Fetch favorite meeting from local database
+    const favorite = await db.getFirstAsync<LocalFavoriteMeeting>(
+      'SELECT * FROM favorite_meetings WHERE id = ? AND user_id = ?',
+      [favoriteId, userId]
+    );
+
+    if (!favorite) {
+      return { success: false, error: 'Favorite meeting not found' };
+    }
+
+    // Generate UUID for Supabase if not already synced
+    const supabaseId = favorite.supabase_id || generateUUID();
+
+    // Map local schema to Supabase schema
+    const supabaseData = {
+      id: supabaseId,
+      user_id: userId,
+      meeting_id: favorite.meeting_id,
+      notes: favorite.encrypted_notes, // Already encrypted
+      notification_enabled: favorite.notification_enabled === 1,
+      created_at: favorite.created_at,
+      updated_at: new Date().toISOString(),
+    };
+
+    // Upsert to Supabase (insert or update) with timeout
+    const response = await withTimeout(
+      Promise.resolve(supabase
+        .from('favorite_meetings')
+        .upsert(supabaseData, {
+          onConflict: 'id',
+        })),
+      NETWORK_TIMEOUT_MS,
+      'Favorite meeting upsert'
+    );
+    const supabaseError = (response as { error: { message: string } | null }).error;
+
+    if (supabaseError) {
+      logger.error('Supabase upsert failed for favorite meeting', supabaseError);
+      return { success: false, error: supabaseError.message };
+    }
+
+    // Update local record with supabase_id and mark as synced
+    await db.runAsync(
+      `UPDATE favorite_meetings
+       SET supabase_id = ?, sync_status = 'synced'
+       WHERE id = ?`,
+      [supabaseId, favoriteId]
+    );
+
+    logger.info('Favorite meeting synced successfully', { favoriteId, supabaseId });
+    return { success: true };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    logger.error('Failed to sync favorite meeting', { favoriteId, error });
+    return { success: false, error: errorMessage };
+  }
+}
+
+/**
  * Delete a record from Supabase
  */
 async function deleteFromSupabase(
@@ -465,6 +547,8 @@ async function processSyncItem(
       return syncStepWork(db, item.record_id, userId);
     case 'daily_checkins':
       return syncDailyCheckIn(db, item.record_id, userId);
+    case 'favorite_meetings':
+      return syncFavoriteMeeting(db, item.record_id, userId);
     default:
       return {
         success: false,

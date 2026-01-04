@@ -10,7 +10,7 @@ const initPromises = new Map<string, Promise<void>>();
  * Current database schema version
  * Increment this when adding new migrations
  */
-const CURRENT_SCHEMA_VERSION = 2;
+const CURRENT_SCHEMA_VERSION = 3;
 
 /**
  * Initialize database with schema for offline-first storage
@@ -235,6 +235,76 @@ async function runMigrations(db: StorageAdapter): Promise<void> {
     logger.info('Migration v2 completed');
   }
 
+  // Migration version 3: Add meeting finder tables
+  if (currentVersion < 3) {
+    logger.info('Running migration v3: Adding meeting finder tables');
+    const v3Migrations = [
+      // Meeting cache table (public data - no encryption)
+      `CREATE TABLE IF NOT EXISTS cached_meetings (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        location TEXT NOT NULL,
+        address TEXT NOT NULL,
+        city TEXT NOT NULL,
+        state TEXT,
+        postal_code TEXT,
+        country TEXT DEFAULT 'US',
+        latitude REAL NOT NULL,
+        longitude REAL NOT NULL,
+        day_of_week INTEGER,
+        time TEXT,
+        types TEXT,
+        notes TEXT,
+        cached_at TEXT NOT NULL,
+        cache_region TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );`,
+      // User's favorite meetings (encrypted - sensitive behavioral data)
+      `CREATE TABLE IF NOT EXISTS favorite_meetings (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        meeting_id TEXT NOT NULL,
+        encrypted_notes TEXT,
+        notification_enabled INTEGER DEFAULT 0,
+        created_at TEXT NOT NULL,
+        sync_status TEXT DEFAULT 'pending',
+        supabase_id TEXT,
+        UNIQUE(user_id, meeting_id),
+        FOREIGN KEY (user_id) REFERENCES user_profile(id),
+        FOREIGN KEY (meeting_id) REFERENCES cached_meetings(id)
+      );`,
+      // Last search location (for offline fallback)
+      `CREATE TABLE IF NOT EXISTS meeting_search_cache (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        latitude REAL NOT NULL,
+        longitude REAL NOT NULL,
+        radius_miles INTEGER DEFAULT 10,
+        last_updated TEXT NOT NULL,
+        UNIQUE(user_id)
+      );`,
+      // Indexes for performance
+      `CREATE INDEX IF NOT EXISTS idx_cached_meetings_location
+        ON cached_meetings(latitude, longitude);`,
+      `CREATE INDEX IF NOT EXISTS idx_cached_meetings_day
+        ON cached_meetings(day_of_week);`,
+      `CREATE INDEX IF NOT EXISTS idx_favorite_meetings_user
+        ON favorite_meetings(user_id);`,
+    ];
+
+    for (const migration of v3Migrations) {
+      try {
+        await db.execAsync(migration);
+      } catch (error) {
+        logger.warn('Migration v3 step failed (may be already applied)', error);
+      }
+    }
+
+    await recordMigration(db, 3);
+    logger.info('Migration v3 completed');
+  }
+
   logger.info('All migrations completed', { newVersion: CURRENT_SCHEMA_VERSION });
 }
 
@@ -244,6 +314,9 @@ async function runMigrations(db: StorageAdapter): Promise<void> {
 export async function clearDatabase(db: StorageAdapter): Promise<void> {
   await db.execAsync(`
     DELETE FROM sync_queue;
+    DELETE FROM favorite_meetings;
+    DELETE FROM meeting_search_cache;
+    DELETE FROM cached_meetings;
     DELETE FROM achievements;
     DELETE FROM step_work;
     DELETE FROM daily_checkins;
