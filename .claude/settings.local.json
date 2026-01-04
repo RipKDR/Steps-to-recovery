@@ -34,7 +34,11 @@
       "Bash(npm run build)",
       "Bash(npm start -- --version)",
       "Bash(find:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(npm view:*)",
+      "Bash(eas build:*)",
+      "Skill(bmad:bmm:workflows:create-prd)",
+      "mcp__filesystem__read_text_file"
     ]
   },
   "outputStyle": "Explanatory"

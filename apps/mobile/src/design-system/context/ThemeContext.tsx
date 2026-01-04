@@ -55,9 +55,9 @@ interface ThemeProviderProps {
  * Wraps the app and provides theme tokens via context
  */
 export function ThemeProvider({ children, forcedColorScheme }: ThemeProviderProps) {
-  // Detect device color scheme
+  // Detect device color scheme - default to dark for reference app design
   const deviceColorScheme = useColorScheme();
-  const colorScheme = forcedColorScheme || deviceColorScheme || 'light';
+  const colorScheme = forcedColorScheme || deviceColorScheme || 'dark';
   const isDark = colorScheme === 'dark';
 
   // Memoize theme object to prevent unnecessary re-renders

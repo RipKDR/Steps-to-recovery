@@ -36,8 +36,14 @@ export function HomeScreen({ userId }: HomeScreenProps): React.ReactElement {
           accessibilityLabel="Home screen content"
         >
           <View style={styles.header}>
-            <Text style={[theme.typography.h1, { color: theme.colors.text }]}>
-              Welcome Back
+            <View style={styles.headerTitle}>
+              <Text style={{ fontSize: 20, marginRight: 8 }}>✨</Text>
+              <Text style={[theme.typography.h1, { color: theme.colors.text, fontSize: 24 }]}>
+                Welcome back
+              </Text>
+            </View>
+            <Text style={[styles.headerSubtitle, { color: theme.colors.textSecondary }]}>
+              This space keeps the next right move visible, not overwhelming.
             </Text>
           </View>
 
@@ -87,5 +93,14 @@ const styles = StyleSheet.create({
   header: {
     padding: 20,
     paddingTop: 10,
+  },
+  headerTitle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  headerSubtitle: {
+    fontSize: 14,
+    lineHeight: 20,
   },
 });
