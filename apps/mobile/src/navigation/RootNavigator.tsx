@@ -9,6 +9,7 @@ import { OnboardingScreen } from '../features/auth/screens/OnboardingScreen';
 import { supabase } from '../lib/supabase';
 import { navigationRef } from './navigationRef';
 import type { RootStackParamList } from './types';
+import { logger } from '../utils/logger';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -40,7 +41,7 @@ export function RootNavigator() {
       }
     } catch (error) {
       // On error, assume needs onboarding
-      console.error('Error checking profile:', error);
+      logger.error('Error checking profile', error);
       setNeedsOnboarding(true);
     } finally {
       setCheckingProfile(false);

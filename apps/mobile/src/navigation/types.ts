@@ -45,11 +45,19 @@ export type ProfileStackParamList = {
     NotificationSettings: undefined;
 };
 
+// Meetings Stack
+export type MeetingsStackParamList = {
+    MeetingFinder: undefined;
+    MeetingDetail: { meetingId: string };
+    FavoriteMeetings: undefined;
+};
+
 // Main Tab Navigator
 export type MainTabParamList = {
     Home: NavigatorScreenParams<HomeStackParamList>;
     Journal: NavigatorScreenParams<JournalStackParamList>;
     Steps: NavigatorScreenParams<StepsStackParamList>;
+    Meetings: NavigatorScreenParams<MeetingsStackParamList>;
     Profile: NavigatorScreenParams<ProfileStackParamList>;
 };
 
@@ -90,6 +98,12 @@ export type StepsStackScreenProps<T extends keyof StepsStackParamList> =
 export type ProfileStackScreenProps<T extends keyof ProfileStackParamList> =
     CompositeScreenProps<
         NativeStackScreenProps<ProfileStackParamList, T>,
+        MainTabScreenProps<keyof MainTabParamList>
+    >;
+
+export type MeetingsStackScreenProps<T extends keyof MeetingsStackParamList> =
+    CompositeScreenProps<
+        NativeStackScreenProps<MeetingsStackParamList, T>,
         MainTabScreenProps<keyof MainTabParamList>
     >;
 

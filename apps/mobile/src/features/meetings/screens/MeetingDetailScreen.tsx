@@ -28,11 +28,9 @@ import {
   formatDayOfWeek,
   getMeetingTypeLabel,
 } from '../types/meeting';
+import type { MeetingsStackScreenProps } from '../../../navigation/types';
 
-type MeetingDetailScreenProps = NativeStackScreenProps<
-  any,
-  'MeetingDetail'
->;
+type MeetingDetailScreenProps = MeetingsStackScreenProps<'MeetingDetail'>;
 
 export function MeetingDetailScreen({
   route,
@@ -40,7 +38,7 @@ export function MeetingDetailScreen({
 }: MeetingDetailScreenProps): React.ReactElement {
   const theme = useTheme();
   const { db } = useDatabase();
-  const { meetingId } = route.params as { meetingId: string };
+  const { meetingId } = route.params;
 
   const {
     isFavorite,
