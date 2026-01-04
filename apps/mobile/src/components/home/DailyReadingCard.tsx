@@ -5,7 +5,7 @@
 
 import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouterCompat } from '../../utils/navigationHelper';
 import { Card } from '../ui';
 import { useReading } from '../../hooks/useReading';
 
@@ -14,7 +14,7 @@ interface DailyReadingCardProps {
 }
 
 export function DailyReadingCard({ className = '' }: DailyReadingCardProps) {
-  const router = useRouter();
+  const router = useRouterCompat();
   const {
     todayReading,
     hasReflectedToday,

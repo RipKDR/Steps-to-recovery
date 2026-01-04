@@ -5,7 +5,7 @@
 
 import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouterCompat } from '../../utils/navigationHelper';
 import { Card } from '../ui';
 
 interface StatItemProps {
@@ -64,7 +64,7 @@ export function StatsRow({
   averageMood,
   className = '',
 }: StatsRowProps) {
-  const router = useRouter();
+  const router = useRouterCompat();
 
   return (
     <View className={`flex-row gap-3 ${className}`}>

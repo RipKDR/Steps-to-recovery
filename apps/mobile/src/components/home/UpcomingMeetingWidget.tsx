@@ -5,7 +5,7 @@
 
 import React, { useEffect } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouterCompat } from '../../utils/navigationHelper';
 import { Card } from '../ui';
 import { useRegularMeetings } from '../../hooks/useRegularMeetings';
 
@@ -24,7 +24,7 @@ function formatTime(time: string): string {
 }
 
 export function UpcomingMeetingWidget({ className = '' }: UpcomingMeetingWidgetProps) {
-  const router = useRouter();
+  const router = useRouterCompat();
   const {
     nextMeeting,
     todayMeetings,

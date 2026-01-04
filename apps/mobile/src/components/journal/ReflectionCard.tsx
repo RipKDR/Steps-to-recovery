@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouterCompat } from '../../utils/navigationHelper';
 import { Card } from '../ui';
 import { useJournalStore } from '@recovery/shared';
 import { decryptContent } from '../../utils/encryption';
@@ -17,7 +17,7 @@ interface ReflectionCardProps {
 }
 
 export function ReflectionCard({ daysAgo = 30, className = '' }: ReflectionCardProps) {
-  const router = useRouter();
+  const router = useRouterCompat();
   const { entries } = useJournalStore();
   const [pastEntry, setPastEntry] = useState<JournalEntry | null>(null);
   const [excerpt, setExcerpt] = useState<string>('');

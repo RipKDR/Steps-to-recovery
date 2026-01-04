@@ -45,13 +45,27 @@ const config = {
     '!**/node_modules/**',
   ],
   
-  // Coverage thresholds (lowered to match current test coverage)
+  // Coverage thresholds - Gradually increase as test coverage improves
+  // For critical utils (encryption, database, sync), aim for 80%+
   coverageThreshold: {
     global: {
-      statements: 0,
-      branches: 0,
-      functions: 0,
-      lines: 0,
+      statements: 40,
+      branches: 30,
+      functions: 30,
+      lines: 40,
+    },
+    // Critical security modules require higher coverage
+    './src/utils/encryption.ts': {
+      statements: 90,
+      branches: 85,
+      functions: 90,
+      lines: 90,
+    },
+    './src/services/syncService.ts': {
+      statements: 70,
+      branches: 60,
+      functions: 70,
+      lines: 70,
     },
   },
   

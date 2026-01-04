@@ -1,0 +1,158 @@
+/**
+ * Navigation Helper
+ * Bridges expo-router-style paths to React Navigation screen names
+ *
+ * CONTEXT: Components were initially written with expo-router syntax,
+ * but the app uses React Navigation. This helper provides backward
+ * compatibility while we migrate.
+ */
+
+import { navigationRef } from '../navigation/navigationRef';
+import type { MainTabParamList } from '../navigation/types';
+import { logger } from './logger';
+
+/**
+ * Navigate using expo-router-style paths
+ * Maps paths to React Navigation screens
+ *
+ * @param path - expo-router style path (e.g., '/journal', '/(tabs)/emergency')
+ * @param params - Optional navigation parameters
+ */
+export function navigateToPath(path: string, params?: Record<string, unknown>): void {
+  if (!navigationRef.isReady()) {
+    logger.warn('Navigation not ready, cannot navigate', { path });
+    return;
+  }
+
+  // Remove leading slash and tabs group
+  const cleanPath = path.replace(/^\/(tabs\/)?/, '').replace(/^\(tabs\)\//, '');
+
+  try {
+    // Map expo-router paths to React Navigation screens
+    switch (cleanPath) {
+      // Home tab screens
+      case 'emergency':
+        navigationRef.navigate('MainApp', {
+          screen: 'Home',
+          params: {
+            screen: 'Emergency',
+          },
+        });
+        break;
+
+      case 'checkin':
+      case 'reading':
+      case 'contacts':
+      case 'meetings':
+      case 'my-meetings':
+      case 'report':
+        // These screens don't exist yet in navigation types
+        // Navigate to Home tab for now
+        navigationRef.navigate('MainApp', {
+          screen: 'Home',
+          params: {
+            screen: 'HomeMain',
+          },
+        });
+        logger.info('Screen not yet implemented, navigating to Home', { requestedPath: path });
+        break;
+
+      // Journal screens
+      case 'journal':
+        navigationRef.navigate('MainApp', {
+          screen: 'Journal',
+          params: {
+            screen: 'JournalList',
+          },
+        });
+        break;
+
+      // Steps screens
+      case 'steps':
+        navigationRef.navigate('MainApp', {
+          screen: 'Steps',
+          params: {
+            screen: 'StepsOverview',
+          },
+        });
+        break;
+
+      // Profile screens
+      case 'profile':
+      case 'sponsor':
+        navigationRef.navigate('MainApp', {
+          screen: 'Profile',
+          params: {
+            screen: 'ProfileHome',
+          },
+        });
+        break;
+
+      default:
+        // Handle dynamic routes (e.g., /journal/123, /meetings/456)
+        if (cleanPath.startsWith('journal/')) {
+          const entryId = cleanPath.replace('journal/', '');
+          navigationRef.navigate('MainApp', {
+            screen: 'Journal',
+            params: {
+              screen: 'JournalEditor',
+              params: { mode: 'edit', entryId },
+            },
+          });
+        } else if (cleanPath.startsWith('my-meetings/') || cleanPath.startsWith('meetings/')) {
+          // Meetings feature not yet implemented
+          navigationRef.navigate('MainApp', {
+            screen: 'Home',
+            params: {
+              screen: 'HomeMain',
+            },
+          });
+          logger.info('Meetings feature not yet implemented', { requestedPath: path });
+        } else {
+          // Unknown path, navigate to Home
+          navigationRef.navigate('MainApp', {
+            screen: 'Home',
+            params: {
+              screen: 'HomeMain',
+            },
+          });
+          logger.warn('Unknown navigation path', { path });
+        }
+    }
+  } catch (error) {
+    logger.error('Navigation error', { error, path });
+    // Fallback to Home on error
+    navigationRef.navigate('MainApp', {
+      screen: 'Home',
+      params: {
+        screen: 'HomeMain',
+      },
+    });
+  }
+}
+
+/**
+ * Hook that provides expo-router compatible navigation
+ * Use this instead of expo-router's useRouter()
+ */
+export function useRouterCompat() {
+  return {
+    push: (path: string, params?: Record<string, unknown>) => navigateToPath(path, params),
+    replace: (path: string, params?: Record<string, unknown>) => navigateToPath(path, params),
+    back: () => {
+      if (navigationRef.canGoBack()) {
+        navigationRef.goBack();
+      }
+    },
+    canGoBack: () => navigationRef.canGoBack(),
+  };
+}
+
+/**
+ * Hook that provides expo-router compatible segments
+ * Returns empty array for now (can be enhanced later)
+ */
+export function useSegmentsCompat(): string[] {
+  // TODO: Implement actual segment tracking if needed
+  return [];
+}
