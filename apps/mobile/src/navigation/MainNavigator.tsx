@@ -21,13 +21,21 @@ import {
   MeetingDetailScreen,
   FavoriteMeetingsScreen,
 } from '../features/meetings/screens';
+import type {
+  MainTabParamList,
+  HomeStackParamList,
+  JournalStackParamList,
+  StepsStackParamList,
+  MeetingsStackParamList,
+  ProfileStackParamList,
+} from './types';
 
-const Tab = createBottomTabNavigator();
-const HomeStack = createNativeStackNavigator();
-const JournalStack = createNativeStackNavigator();
-const StepsStack = createNativeStackNavigator();
-const MeetingsStack = createNativeStackNavigator();
-const ProfileStack = createNativeStackNavigator();
+const Tab = createBottomTabNavigator<MainTabParamList>();
+const HomeStack = createNativeStackNavigator<HomeStackParamList>();
+const JournalStack = createNativeStackNavigator<JournalStackParamList>();
+const StepsStack = createNativeStackNavigator<StepsStackParamList>();
+const MeetingsStack = createNativeStackNavigator<MeetingsStackParamList>();
+const ProfileStack = createNativeStackNavigator<ProfileStackParamList>();
 
 function HomeStackNavigator(): React.ReactElement {
   const { user } = useAuth();

@@ -92,48 +92,34 @@ export interface MeetingSearchCache {
 /**
  * Meeting type codes (AA/NA standard)
  */
-export enum MeetingType {
-  OPEN = 'O', // Open (anyone can attend)
-  CLOSED = 'C', // Closed (alcoholics/addicts only)
-  BIG_BOOK = 'BB', // Big Book study
-  TWELVE_AND_TWELVE = '12x12', // 12 Steps and 12 Traditions
-  SPEAKER = 'SP', // Speaker meeting
-  DISCUSSION = 'D', // Discussion
-  WOMEN = 'W', // Women only
-  MEN = 'M', // Men only
-  YOUNG_PEOPLE = 'Y', // Young people
-  LGBTQ = 'LGBTQ', // LGBTQ
-  BEGINNERS = 'BE', // Beginners
-  STEP_MEETING = 'ST', // Step meeting
-  LITERATURE = 'LIT', // Literature study
-  MEDITATION = 'MED', // Meditation
-  WHEELCHAIR = 'X', // Wheelchair accessible
-  ASL = 'ASL', // American Sign Language
-  SPANISH = 'S', // Spanish language
-}
+export type MeetingType =
+  | 'O' // Open (anyone can attend)
+  | 'C' // Closed (alcoholics/addicts only)
+  | 'BB' // Big Book study
+  | '12x12' // 12 Steps and 12 Traditions
+  | 'SP' // Speaker meeting
+  | 'D' // Discussion
+  | 'W' // Women only
+  | 'M' // Men only
+  | 'Y' // Young people
+  | 'LGBTQ' // LGBTQ
+  | 'BE' // Beginners
+  | 'ST' // Step meeting
+  | 'LIT' // Literature study
+  | 'MED' // Meditation
+  | 'X' // Wheelchair accessible
+  | 'ASL' // American Sign Language
+  | 'S'; // Spanish language
 
 /**
  * Day of week for filtering
  */
-export enum DayOfWeek {
-  SUNDAY = 0,
-  MONDAY = 1,
-  TUESDAY = 2,
-  WEDNESDAY = 3,
-  THURSDAY = 4,
-  FRIDAY = 5,
-  SATURDAY = 6,
-}
+export type DayOfWeek = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 
 /**
  * Time of day for filtering
  */
-export enum TimeOfDay {
-  MORNING = 'morning', // 5am - 12pm
-  AFTERNOON = 'afternoon', // 12pm - 5pm
-  EVENING = 'evening', // 5pm - 10pm
-  LATE_NIGHT = 'late_night', // 10pm - 5am
-}
+export type TimeOfDay = 'morning' | 'afternoon' | 'evening' | 'late_night';
 
 /**
  * Meeting search filters
