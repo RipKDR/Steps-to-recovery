@@ -5,7 +5,7 @@
 
 import React, { useEffect } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouterCompat } from '../../utils/navigationHelper';
 import { Card } from '../ui';
 import { usePhoneCalls } from '../../hooks/usePhoneCalls';
 import { useContacts } from '../../hooks/useContacts';
@@ -16,7 +16,7 @@ interface PhoneWidgetProps {
 }
 
 export function PhoneWidget({ className = '' }: PhoneWidgetProps) {
-  const router = useRouter();
+  const router = useRouterCompat();
   const {
     todayCalls,
     stats,

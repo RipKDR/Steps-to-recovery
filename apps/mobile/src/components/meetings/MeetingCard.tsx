@@ -6,7 +6,7 @@
 
 import React, { memo, useCallback } from 'react';
 import { View, Text, TouchableOpacity, Switch } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouterCompat } from '../../utils/navigationHelper';
 import { Card } from '../ui';
 import type { RegularMeeting, RegularMeetingType } from '@recovery/shared';
 
@@ -63,7 +63,7 @@ function MeetingCardComponent({
   compact = false,
   className = '',
 }: MeetingCardProps) {
-  const router = useRouter();
+  const router = useRouterCompat();
 
   const handlePress = useCallback(() => {
     router.push(`/my-meetings/${meeting.id}`);

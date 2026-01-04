@@ -5,7 +5,7 @@
 
 import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouterCompat } from '../../utils/navigationHelper';
 import { Card } from '../ui';
 import { useSharePrepStore } from '@recovery/shared';
 
@@ -15,7 +15,7 @@ interface SharePrepCardProps {
 }
 
 export function SharePrepCard({ className = '', compact = false }: SharePrepCardProps) {
-  const router = useRouter();
+  const router = useRouterCompat();
   const { hasContent, notes } = useSharePrepStore();
 
   const handlePress = () => {

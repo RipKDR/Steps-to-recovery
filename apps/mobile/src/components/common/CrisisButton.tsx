@@ -5,23 +5,23 @@
  */
 
 import React, { useState } from 'react';
-import { 
-  View, 
-  Text, 
-  TouchableOpacity, 
-  Linking, 
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  Linking,
   Modal,
   Pressable,
 } from 'react-native';
-import { useRouter, useSegments } from 'expo-router';
+import { useRouterCompat, useSegmentsCompat } from '../../utils/navigationHelper';
 import { Feather } from '@expo/vector-icons';
 import { useSettingsStore } from '@recovery/shared';
 import { getCrisisResources, type CrisisResource } from '@recovery/shared';
 
 export function CrisisButton() {
   const [showQuickHelp, setShowQuickHelp] = useState(false);
-  const router = useRouter();
-  const segments = useSegments();
+  const router = useRouterCompat();
+  const segments = useSegmentsCompat();
   const { settings } = useSettingsStore();
 
   // Get region-specific quick resources
