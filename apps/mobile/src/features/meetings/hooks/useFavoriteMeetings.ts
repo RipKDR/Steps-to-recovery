@@ -10,7 +10,7 @@ import { useDatabase } from '../../../contexts/DatabaseContext';
 import { useAuth } from '../../../contexts/AuthContext';
 import { logger } from '../../../utils/logger';
 import { encryptContent, decryptContent } from '../../../utils/encryption';
-import { addToSyncQueue } from '../../../services/syncService';
+import { addToSyncQueue, addDeleteToSyncQueue } from '../../../services/syncService';
 import type { FavoriteMeeting, MeetingWithDetails } from '../types/meeting';
 
 /**
@@ -141,29 +141,14 @@ export function useFavoriteMeetings(): UseFavoriteMeetingsReturn {
         throw new Error('Meeting not in favorites');
       }
 
+      // CRITICAL: Add to sync queue BEFORE deleting (so we can capture supabase_id)
+      await addDeleteToSyncQueue(db, 'favorite_meetings', favorite.id, user.id);
+
       // Delete from local database
       await db.runAsync(
         'DELETE FROM favorite_meetings WHERE user_id = ? AND meeting_id = ?',
         [user.id, meetingId]
       );
-
-      // Add delete to sync queue (if it was synced to Supabase)
-      if (favorite.supabase_id) {
-        await db.runAsync(
-          `INSERT INTO sync_queue (id, table_name, record_id, operation, supabase_id, created_at, retry_count)
-           VALUES (?, ?, ?, ?, ?, ?, ?)
-           ON CONFLICT (table_name, record_id, operation) DO UPDATE SET supabase_id = excluded.supabase_id`,
-          [
-            generateUUID(),
-            'favorite_meetings',
-            favorite.id,
-            'delete',
-            favorite.supabase_id,
-            new Date().toISOString(),
-            0,
-          ]
-        );
-      }
 
       logger.info('Favorite meeting removed', { meetingId });
     },

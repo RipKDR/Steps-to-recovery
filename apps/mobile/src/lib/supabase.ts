@@ -2,21 +2,28 @@ import 'react-native-url-polyfill/auto';
 import { createClient } from '@supabase/supabase-js';
 import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { webAuthStorage } from './supabaseAuthStorage';
 
-// Custom storage implementation using SecureStore for auth tokens on mobile
-// Falls back to AsyncStorage on web (SecureStore doesn't work on web)
-// This ensures tokens are encrypted and stored securely on device
-const ExpoSecureStoreAdapter = Platform.OS === 'web' 
+// Custom storage implementation for Supabase auth tokens
+// Mobile: Uses expo-secure-store (device Keychain/Keystore - hardware encrypted)
+// Web: Uses IndexedDB (better XSS isolation than localStorage)
+//
+// NOTE: Auth tokens don't need additional encryption because:
+// 1. They're time-limited and automatically expire
+// 2. Validated by Supabase RLS on every request
+// 3. Already hashed/signed by Supabase
+//
+// BUT we use IndexedDB on web instead of localStorage for better security isolation
+const ExpoSecureStoreAdapter = Platform.OS === 'web'
   ? {
       getItem: async (key: string) => {
-        return await AsyncStorage.getItem(key);
+        return await webAuthStorage.getItem(key);
       },
       setItem: async (key: string, value: string) => {
-        await AsyncStorage.setItem(key, value);
+        await webAuthStorage.setItem(key, value);
       },
       removeItem: async (key: string) => {
-        await AsyncStorage.removeItem(key);
+        await webAuthStorage.removeItem(key);
       },
     }
   : {
