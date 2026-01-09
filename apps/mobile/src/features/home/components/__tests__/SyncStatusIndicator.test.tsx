@@ -2,7 +2,6 @@ import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
 import { SyncStatusIndicator } from '../SyncStatusIndicator';
 import { useSync } from '../../../../contexts/SyncContext';
-import { lightColors } from '../../../../design-system/tokens/colors';
 
 // Mock the useSync hook
 jest.mock('../../../../contexts/SyncContext', () => ({
@@ -14,10 +13,18 @@ jest.mock('@expo/vector-icons', () => ({
   MaterialCommunityIcons: 'MaterialCommunityIcons',
 }));
 
-// Mock useTheme hook
+// Mock useTheme hook - inline mock colors to avoid scope issues
 jest.mock('../../../../design-system/hooks/useTheme', () => ({
   useTheme: () => ({
-    colors: lightColors,
+    colors: {
+      surface: '#FFFFFF',
+      primary: '#007AFF',
+      danger: '#FF3B30',
+      warning: '#FF9500',
+      success: '#34C759',
+      muted: '#8E8E93',
+      textSecondary: '#3C3C43',
+    },
     typography: {
       subheadline: { fontSize: 15, lineHeight: 20 },
       caption1: { fontSize: 12, lineHeight: 16 },
@@ -26,6 +33,17 @@ jest.mock('../../../../design-system/hooks/useTheme', () => ({
 }));
 
 const mockUseSync = useSync as jest.MockedFunction<typeof useSync>;
+
+// Mock colors for test assertions
+const mockColors = {
+  surface: '#FFFFFF',
+  primary: '#007AFF',
+  danger: '#FF3B30',
+  warning: '#FF9500',
+  success: '#34C759',
+  muted: '#8E8E93',
+  textSecondary: '#3C3C43',
+};
 
 describe('SyncStatusIndicator', () => {
   const mockTriggerSync = jest.fn();
@@ -57,7 +75,7 @@ describe('SyncStatusIndicator', () => {
         // Verify icon props
         const icon = UNSAFE_getByType('MaterialCommunityIcons' as any);
         expect(icon.props.name).toBe('cloud-off-outline');
-        expect(icon.props.color).toBe(lightColors.muted); // Gray
+        expect(icon.props.color).toBe(mockColors.muted); // Gray
       });
 
       it('should display correct label with gray color', () => {
@@ -66,7 +84,7 @@ describe('SyncStatusIndicator', () => {
         const label = getByText('Offline');
         expect(label.props.style).toEqual(
           expect.arrayContaining([
-            expect.objectContaining({ color: lightColors.muted }),
+            expect.objectContaining({ color: mockColors.muted }),
           ])
         );
       });
@@ -99,7 +117,7 @@ describe('SyncStatusIndicator', () => {
         // Verify ActivityIndicator is rendered
         const spinner = UNSAFE_getByType('ActivityIndicator' as any);
         expect(spinner.props.size).toBe(20);
-        expect(spinner.props.color).toBe(lightColors.primary); // Blue
+        expect(spinner.props.color).toBe(mockColors.primary); // Blue
       });
 
       it('should display correct label with blue color', () => {
@@ -108,7 +126,7 @@ describe('SyncStatusIndicator', () => {
         const label = getByText('Syncing...');
         expect(label.props.style).toEqual(
           expect.arrayContaining([
-            expect.objectContaining({ color: lightColors.primary }),
+            expect.objectContaining({ color: mockColors.primary }),
           ])
         );
       });
@@ -156,7 +174,7 @@ describe('SyncStatusIndicator', () => {
         // Verify icon props
         const icon = UNSAFE_getByType('MaterialCommunityIcons' as any);
         expect(icon.props.name).toBe('cloud-alert');
-        expect(icon.props.color).toBe(lightColors.danger); // Red
+        expect(icon.props.color).toBe(mockColors.danger); // Red
       });
 
       it('should display correct label with red color', () => {
@@ -165,7 +183,7 @@ describe('SyncStatusIndicator', () => {
         const label = getByText('Sync Error');
         expect(label.props.style).toEqual(
           expect.arrayContaining([
-            expect.objectContaining({ color: lightColors.danger }),
+            expect.objectContaining({ color: mockColors.danger }),
           ])
         );
       });
@@ -198,7 +216,7 @@ describe('SyncStatusIndicator', () => {
         // Verify icon props
         const icon = UNSAFE_getByType('MaterialCommunityIcons' as any);
         expect(icon.props.name).toBe('cloud-upload-outline');
-        expect(icon.props.color).toBe(lightColors.warning); // Orange
+        expect(icon.props.color).toBe(mockColors.warning); // Orange
       });
 
       it('should display correct label with orange color', () => {
@@ -207,7 +225,7 @@ describe('SyncStatusIndicator', () => {
         const label = getByText('5 Pending');
         expect(label.props.style).toEqual(
           expect.arrayContaining([
-            expect.objectContaining({ color: lightColors.warning }),
+            expect.objectContaining({ color: mockColors.warning }),
           ])
         );
       });
@@ -254,7 +272,7 @@ describe('SyncStatusIndicator', () => {
         // Verify icon props
         const icon = UNSAFE_getByType('MaterialCommunityIcons' as any);
         expect(icon.props.name).toBe('cloud-check');
-        expect(icon.props.color).toBe(lightColors.success); // Green
+        expect(icon.props.color).toBe(mockColors.success); // Green
       });
 
       it('should display correct label with green color', () => {
@@ -263,7 +281,7 @@ describe('SyncStatusIndicator', () => {
         const label = getByText('Synced');
         expect(label.props.style).toEqual(
           expect.arrayContaining([
-            expect.objectContaining({ color: lightColors.success }),
+            expect.objectContaining({ color: mockColors.success }),
           ])
         );
       });
@@ -641,7 +659,7 @@ describe('SyncStatusIndicator', () => {
 
       const icon = UNSAFE_getByType('MaterialCommunityIcons' as any);
       expect(icon.props.name).toBe('cloud-off-outline');
-      expect(icon.props.color).toBe(lightColors.muted);
+      expect(icon.props.color).toBe(mockColors.muted);
     });
 
     it('should update when isSyncing changes', () => {

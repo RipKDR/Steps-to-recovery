@@ -1,6 +1,7 @@
 import * as Crypto from 'expo-crypto';
 import * as SecureStore from 'expo-secure-store';
 import CryptoJS from 'crypto-js';
+import { Platform } from 'react-native';
 import {
   generateEncryptionKey,
   getEncryptionKey,
@@ -10,7 +11,15 @@ import {
   hasEncryptionKey,
 } from '../encryption';
 
-// Mock expo-crypto
+// Mock Platform.OS to use 'web' path to avoid dynamic imports
+jest.mock('react-native', () => ({
+  Platform: {
+    OS: 'web',
+    select: (obj: any) => obj.web,
+  },
+}));
+
+// Mock expo-crypto (for completeness, though web path won't use it)
 jest.mock('expo-crypto', () => ({
   getRandomBytesAsync: jest.fn(),
   randomUUID: jest.fn(),
@@ -23,15 +32,43 @@ jest.mock('expo-secure-store', () => ({
   deleteItemAsync: jest.fn(),
 }));
 
+// Mock secureStorage adapter
+jest.mock('../../adapters/secureStorage', () => ({
+  secureStorage: {
+    setItemAsync: jest.fn(),
+    getItemAsync: jest.fn(),
+    deleteItemAsync: jest.fn(),
+  },
+}));
+
+// Mock crypto.randomUUID and crypto.getRandomValues for web path
+global.crypto = {
+  ...global.crypto,
+  randomUUID: jest.fn(() => 'test-uuid-' + Math.random().toString(36).substr(2, 9)),
+  getRandomValues: jest.fn((array: Uint8Array) => {
+    for (let i = 0; i < array.length; i++) {
+      array[i] = Math.floor(Math.random() * 256);
+    }
+    return array;
+  }),
+} as any;
+
 // Mock crypto-js is not needed as it's a pure JS library
 // We'll use it as-is for real encryption/decryption
 
+// Import the mocked secureStorage
+import { secureStorage } from '../../adapters/secureStorage';
+
 describe('Encryption Utilities', () => {
   const mockCrypto = Crypto as jest.Mocked<typeof Crypto>;
-  const mockSecureStore = SecureStore as jest.Mocked<typeof SecureStore>;
+  const mockSecureStorage = secureStorage as jest.Mocked<typeof secureStorage>;
 
   beforeEach(() => {
     jest.clearAllMocks();
+    // Setup default mocks for secureStorage
+    mockSecureStorage.setItemAsync.mockResolvedValue(undefined);
+    mockSecureStorage.getItemAsync.mockResolvedValue(null);
+    mockSecureStorage.deleteItemAsync.mockResolvedValue(undefined);
   });
 
   describe('generateEncryptionKey()', () => {
@@ -43,7 +80,7 @@ describe('Encryption Utilities', () => {
       }
       mockCrypto.getRandomBytesAsync.mockResolvedValue(mockRandomBytes);
       mockCrypto.randomUUID.mockReturnValue('test-salt-uuid');
-      mockSecureStore.setItemAsync.mockResolvedValue(undefined);
+      mockSecureStorage.setItemAsync.mockResolvedValue(undefined);
 
       // Execute
       const key = await generateEncryptionKey();
@@ -58,13 +95,13 @@ describe('Encryption Utilities', () => {
       const mockRandomBytes = new Uint8Array(32).fill(1);
       mockCrypto.getRandomBytesAsync.mockResolvedValue(mockRandomBytes);
       mockCrypto.randomUUID.mockReturnValue('test-salt-uuid');
-      mockSecureStore.setItemAsync.mockResolvedValue(undefined);
+      mockSecureStorage.setItemAsync.mockResolvedValue(undefined);
 
       await generateEncryptionKey();
 
       // Verify SecureStore was called to store the derived key (salt is used during derivation but not stored)
-      expect(mockSecureStore.setItemAsync).toHaveBeenCalledTimes(1);
-      expect(mockSecureStore.setItemAsync).toHaveBeenCalledWith(
+      expect(mockSecureStorage.setItemAsync).toHaveBeenCalledTimes(1);
+      expect(mockSecureStorage.setItemAsync).toHaveBeenCalledWith(
         'journal_encryption_key',
         expect.any(String)
       );
@@ -74,7 +111,7 @@ describe('Encryption Utilities', () => {
       const mockRandomBytes = new Uint8Array(32).fill(255);
       mockCrypto.getRandomBytesAsync.mockResolvedValue(mockRandomBytes);
       mockCrypto.randomUUID.mockReturnValue('test-salt');
-      mockSecureStore.setItemAsync.mockResolvedValue(undefined);
+      mockSecureStorage.setItemAsync.mockResolvedValue(undefined);
 
       const key = await generateEncryptionKey();
 
@@ -88,7 +125,7 @@ describe('Encryption Utilities', () => {
       const mockRandomBytes = new Uint8Array(32).fill(42);
       mockCrypto.getRandomBytesAsync.mockResolvedValue(mockRandomBytes);
       mockCrypto.randomUUID.mockReturnValue('salt-123');
-      mockSecureStore.setItemAsync.mockResolvedValue(undefined);
+      mockSecureStorage.setItemAsync.mockResolvedValue(undefined);
 
       const key = await generateEncryptionKey();
 
@@ -104,7 +141,7 @@ describe('Encryption Utilities', () => {
       const mockRandomBytes = new Uint8Array(32).fill(99);
       mockCrypto.getRandomBytesAsync.mockResolvedValue(mockRandomBytes);
       mockCrypto.randomUUID.mockReturnValue('uuid-salt');
-      mockSecureStore.setItemAsync.mockResolvedValue(undefined);
+      mockSecureStorage.setItemAsync.mockResolvedValue(undefined);
 
       await generateEncryptionKey();
 
@@ -115,7 +152,7 @@ describe('Encryption Utilities', () => {
       const mockRandomBytes = new Uint8Array(32).fill(77);
       mockCrypto.getRandomBytesAsync.mockResolvedValue(mockRandomBytes);
       mockCrypto.randomUUID.mockReturnValue('unique-uuid-salt');
-      mockSecureStore.setItemAsync.mockResolvedValue(undefined);
+      mockSecureStorage.setItemAsync.mockResolvedValue(undefined);
 
       await generateEncryptionKey();
 
@@ -126,16 +163,16 @@ describe('Encryption Utilities', () => {
   describe('getEncryptionKey()', () => {
     it('should retrieve the stored encryption key', async () => {
       const mockKey = '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
-      mockSecureStore.getItemAsync.mockResolvedValue(mockKey);
+      mockSecureStorage.getItemAsync.mockResolvedValue(mockKey);
 
       const key = await getEncryptionKey();
 
       expect(key).toBe(mockKey);
-      expect(mockSecureStore.getItemAsync).toHaveBeenCalledWith('journal_encryption_key');
+      expect(mockSecureStorage.getItemAsync).toHaveBeenCalledWith('journal_encryption_key');
     });
 
     it('should return null if no key exists', async () => {
-      mockSecureStore.getItemAsync.mockResolvedValue(null);
+      mockSecureStorage.getItemAsync.mockResolvedValue(null);
 
       const key = await getEncryptionKey();
 
@@ -147,7 +184,7 @@ describe('Encryption Utilities', () => {
     const mockKey = 'a'.repeat(64); // 64 hex chars = 256 bits
 
     beforeEach(() => {
-      mockSecureStore.getItemAsync.mockResolvedValue(mockKey);
+      mockSecureStorage.getItemAsync.mockResolvedValue(mockKey);
     });
 
     it('should encrypt plaintext successfully', async () => {
@@ -230,7 +267,7 @@ describe('Encryption Utilities', () => {
     });
 
     it('should throw error if no encryption key exists', async () => {
-      mockSecureStore.getItemAsync.mockResolvedValue(null);
+      mockSecureStorage.getItemAsync.mockResolvedValue(null);
 
       await expect(encryptContent('test')).rejects.toThrow('Encryption key not found');
     });
@@ -249,7 +286,7 @@ describe('Encryption Utilities', () => {
     const mockKey = 'a'.repeat(64);
 
     beforeEach(() => {
-      mockSecureStore.getItemAsync.mockResolvedValue(mockKey);
+      mockSecureStorage.getItemAsync.mockResolvedValue(mockKey);
     });
 
     it('should decrypt ciphertext to original plaintext', async () => {
@@ -288,7 +325,7 @@ describe('Encryption Utilities', () => {
     });
 
     it('should throw error if no encryption key exists', async () => {
-      mockSecureStore.getItemAsync.mockResolvedValue(null);
+      mockSecureStorage.getItemAsync.mockResolvedValue(null);
 
       const validIV = '0'.repeat(32);
       await expect(decryptContent(`${validIV}:data`)).rejects.toThrow('Encryption key not found');
@@ -309,7 +346,7 @@ describe('Encryption Utilities', () => {
     const mockKey = 'b'.repeat(64);
 
     beforeEach(() => {
-      mockSecureStore.getItemAsync.mockResolvedValue(mockKey);
+      mockSecureStorage.getItemAsync.mockResolvedValue(mockKey);
     });
 
     it('should encrypt and decrypt to return original text', async () => {
@@ -402,18 +439,18 @@ With\ttabs\tand\nnewlines\r\n`;
 
   describe('deleteEncryptionKey()', () => {
     it('should delete the encryption key from SecureStore', async () => {
-      mockSecureStore.deleteItemAsync.mockResolvedValue(undefined);
+      mockSecureStorage.deleteItemAsync.mockResolvedValue(undefined);
 
       await deleteEncryptionKey();
 
-      expect(mockSecureStore.deleteItemAsync).toHaveBeenCalledWith('journal_encryption_key');
-      expect(mockSecureStore.deleteItemAsync).toHaveBeenCalledTimes(1);
+      expect(mockSecureStorage.deleteItemAsync).toHaveBeenCalledWith('journal_encryption_key');
+      expect(mockSecureStorage.deleteItemAsync).toHaveBeenCalledTimes(1);
     });
   });
 
   describe('hasEncryptionKey()', () => {
     it('should return true when key exists', async () => {
-      mockSecureStore.getItemAsync.mockResolvedValue('some-key-value');
+      mockSecureStorage.getItemAsync.mockResolvedValue('some-key-value');
 
       const result = await hasEncryptionKey();
 
@@ -421,7 +458,7 @@ With\ttabs\tand\nnewlines\r\n`;
     });
 
     it('should return false when key is null', async () => {
-      mockSecureStore.getItemAsync.mockResolvedValue(null);
+      mockSecureStorage.getItemAsync.mockResolvedValue(null);
 
       const result = await hasEncryptionKey();
 
@@ -429,7 +466,7 @@ With\ttabs\tand\nnewlines\r\n`;
     });
 
     it('should return false when key is empty string', async () => {
-      mockSecureStore.getItemAsync.mockResolvedValue('');
+      mockSecureStorage.getItemAsync.mockResolvedValue('');
 
       const result = await hasEncryptionKey();
 
@@ -437,7 +474,7 @@ With\ttabs\tand\nnewlines\r\n`;
     });
 
     it('should return true for non-empty key strings', async () => {
-      mockSecureStore.getItemAsync.mockResolvedValue('x');
+      mockSecureStorage.getItemAsync.mockResolvedValue('x');
 
       const result = await hasEncryptionKey();
 
@@ -448,45 +485,45 @@ With\ttabs\tand\nnewlines\r\n`;
   describe('Key Management Integration', () => {
     it('should reflect correct state after key generation', async () => {
       // Initially no key
-      mockSecureStore.getItemAsync.mockResolvedValue(null);
+      mockSecureStorage.getItemAsync.mockResolvedValue(null);
       expect(await hasEncryptionKey()).toBe(false);
 
       // Generate key
       const mockRandomBytes = new Uint8Array(32).fill(1);
       mockCrypto.getRandomBytesAsync.mockResolvedValue(mockRandomBytes);
       mockCrypto.randomUUID.mockReturnValue('test-salt');
-      mockSecureStore.setItemAsync.mockResolvedValue(undefined);
+      mockSecureStorage.setItemAsync.mockResolvedValue(undefined);
 
       const key = await generateEncryptionKey();
 
       // Now mock that the key exists
-      mockSecureStore.getItemAsync.mockResolvedValue(key);
+      mockSecureStorage.getItemAsync.mockResolvedValue(key);
       expect(await hasEncryptionKey()).toBe(true);
     });
 
     it('should reflect correct state after key deletion', async () => {
       // Start with a key
       const mockKey = 'existing-key';
-      mockSecureStore.getItemAsync.mockResolvedValue(mockKey);
+      mockSecureStorage.getItemAsync.mockResolvedValue(mockKey);
       expect(await hasEncryptionKey()).toBe(true);
 
       // Delete the key
-      mockSecureStore.deleteItemAsync.mockResolvedValue(undefined);
+      mockSecureStorage.deleteItemAsync.mockResolvedValue(undefined);
       await deleteEncryptionKey();
 
       // Now key should not exist
-      mockSecureStore.getItemAsync.mockResolvedValue(null);
+      mockSecureStorage.getItemAsync.mockResolvedValue(null);
       expect(await hasEncryptionKey()).toBe(false);
     });
 
     it('should not allow encryption without a key', async () => {
-      mockSecureStore.getItemAsync.mockResolvedValue(null);
+      mockSecureStorage.getItemAsync.mockResolvedValue(null);
 
       await expect(encryptContent('data')).rejects.toThrow('Encryption key not found');
     });
 
     it('should not allow decryption without a key', async () => {
-      mockSecureStore.getItemAsync.mockResolvedValue(null);
+      mockSecureStorage.getItemAsync.mockResolvedValue(null);
 
       await expect(decryptContent('00:data')).rejects.toThrow('Encryption key not found');
     });
@@ -496,7 +533,7 @@ With\ttabs\tand\nnewlines\r\n`;
     const mockKey = 'c'.repeat(64);
 
     beforeEach(() => {
-      mockSecureStore.getItemAsync.mockResolvedValue(mockKey);
+      mockSecureStorage.getItemAsync.mockResolvedValue(mockKey);
     });
 
     it('should use random IV for each encryption', async () => {
@@ -564,7 +601,7 @@ With\ttabs\tand\nnewlines\r\n`;
 
       mockCrypto.getRandomBytesAsync.mockResolvedValue(mockRandomBytes);
       mockCrypto.randomUUID.mockReturnValue('consistent-salt');
-      mockSecureStore.setItemAsync.mockResolvedValue(undefined);
+      mockSecureStorage.setItemAsync.mockResolvedValue(undefined);
 
       const key1 = await generateEncryptionKey();
       const key2 = await generateEncryptionKey();
@@ -576,7 +613,7 @@ With\ttabs\tand\nnewlines\r\n`;
     it('should verify different salts produce different keys', async () => {
       const mockRandomBytes = new Uint8Array(32).fill(42);
       mockCrypto.getRandomBytesAsync.mockResolvedValue(mockRandomBytes);
-      mockSecureStore.setItemAsync.mockResolvedValue(undefined);
+      mockSecureStorage.setItemAsync.mockResolvedValue(undefined);
 
       mockCrypto.randomUUID.mockReturnValue('salt-1');
       const key1 = await generateEncryptionKey();
@@ -594,38 +631,38 @@ With\ttabs\tand\nnewlines\r\n`;
       const mockRandomBytes = new Uint8Array(32).fill(1);
       mockCrypto.getRandomBytesAsync.mockResolvedValue(mockRandomBytes);
       mockCrypto.randomUUID.mockReturnValue('salt');
-      mockSecureStore.setItemAsync.mockRejectedValue(new Error('Storage error'));
+      mockSecureStorage.setItemAsync.mockRejectedValue(new Error('Storage error'));
 
       await expect(generateEncryptionKey()).rejects.toThrow('Storage error');
     });
 
     it('should handle SecureStore errors during key retrieval', async () => {
-      mockSecureStore.getItemAsync.mockRejectedValue(new Error('Retrieval error'));
+      mockSecureStorage.getItemAsync.mockRejectedValue(new Error('Retrieval error'));
 
       await expect(getEncryptionKey()).rejects.toThrow('Retrieval error');
     });
 
     it('should handle SecureStore errors during key deletion', async () => {
-      mockSecureStore.deleteItemAsync.mockRejectedValue(new Error('Deletion error'));
+      mockSecureStorage.deleteItemAsync.mockRejectedValue(new Error('Deletion error'));
 
       await expect(deleteEncryptionKey()).rejects.toThrow('Deletion error');
     });
 
     it('should handle Crypto errors during IV generation', async () => {
-      mockSecureStore.getItemAsync.mockResolvedValue('key');
+      mockSecureStorage.getItemAsync.mockResolvedValue('key');
       mockCrypto.getRandomBytesAsync.mockRejectedValue(new Error('Crypto error'));
 
       await expect(encryptContent('test')).rejects.toThrow('Crypto error');
     });
 
     it('should handle invalid encrypted data format', async () => {
-      mockSecureStore.getItemAsync.mockResolvedValue('key');
+      mockSecureStorage.getItemAsync.mockResolvedValue('key');
 
       await expect(decryptContent('no-colon-separator')).rejects.toThrow('Invalid format');
     });
 
     it('should handle multiple colons in encrypted data', async () => {
-      mockSecureStore.getItemAsync.mockResolvedValue('a'.repeat(64));
+      mockSecureStorage.getItemAsync.mockResolvedValue('a'.repeat(64));
 
       // The split will only split on first colon, so this should work if IV is valid
       const validIV = '0'.repeat(32);
@@ -640,7 +677,7 @@ With\ttabs\tand\nnewlines\r\n`;
     const mockKey = 'd'.repeat(64);
 
     beforeEach(() => {
-      mockSecureStore.getItemAsync.mockResolvedValue(mockKey);
+      mockSecureStorage.getItemAsync.mockResolvedValue(mockKey);
     });
 
     it('should handle very long content (100KB)', async () => {
