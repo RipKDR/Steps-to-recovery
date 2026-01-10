@@ -33,6 +33,7 @@ When you receive a task, immediately assess:
 - Database changes → Always include Database Architect for schema validation
 - API modifications → Always include API Designer for contract validation
 - Cross-cutting concerns → Include Architecture Reviewer for system coherence
+- Large tasks (8+ files) → Consider invoking token-optimization-specialist FIRST to plan efficient approach
 
 **Selection Criteria**:
 - Choose the minimal set of sub-agents that can comprehensively address the task

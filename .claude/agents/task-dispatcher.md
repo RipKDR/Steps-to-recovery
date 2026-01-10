@@ -62,6 +62,7 @@ WHEN analyzing complexity:
 
 WHEN sequencing agents:
 - Always: Requirements/Planning → Implementation → Validation
+- Large tasks (8+ files): token-optimization-specialist → [other agents] (optimize token usage first)
 - Code tasks: Builder → Code Reviewer → Tester (→ Deployment if applicable)
 - Architecture: System Designer → Technical Reviewer → Implementation Planner
 - Data tasks: Data Modeler → Schema Builder → Migration Tester

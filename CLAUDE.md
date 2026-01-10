@@ -14,6 +14,43 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Supabase Project**: `tbiunmmvfbakwlzykpwq`
 
+---
+
+## Quick Reference
+
+### Critical Commands
+| Command | Purpose |
+|---------|---------|
+| `npm run mobile` | Start Expo dev server |
+| `npm test` | Run all tests |
+| `cd apps/mobile && npm run test:encryption` | Run encryption tests (**CRITICAL**) |
+| `npx tsc --noEmit` | Type check without building |
+
+### Security Checklist (Before Every PR)
+- [ ] All sensitive data encrypted with `encryptContent()`
+- [ ] Keys stored in SecureStore only (never AsyncStorage)
+- [ ] RLS policies verified on new tables
+- [ ] No console.log with sensitive data
+- [ ] Sync operations preserve encryption end-to-end
+
+### Custom Agents Available
+| Agent | When to Use |
+|-------|-------------|
+| `security-auditor` | After modifying encryption, auth, or sync code |
+| `testing-specialist` | When writing/reviewing tests |
+| `performance-optimizer` | For cold start or rendering issues |
+| `accessibility-validator` | Before UI PRs |
+| `architecture-decision-authority` | Before new features |
+| `token-optimization-specialist` | For 8+ file tasks or approaching token limit (>150k) |
+
+### MCP Servers (run `/mcp` to check status)
+- **Supabase**: Database queries, RLS testing (requires OAuth)
+- **Memory**: Persist architectural decisions across sessions
+- **Filesystem**: Advanced file operations
+- **Git**: Advanced git operations (if installed)
+
+---
+
 ## Common Development Commands
 
 ### Development
@@ -90,6 +127,237 @@ EXPO_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 # MCP URL: https://mcp.supabase.com/mcp?project_ref=tbiunmmvfbakwlzykpwq
 # See .bmad/supabase-setup.md for authentication instructions
 ```
+
+---
+
+## Enhanced Development Workflow (Complex Tasks)
+
+**When to Use**: Multi-file changes (8+ files), security-critical code, new features, architectural changes
+
+**Skip for**: Single-file edits, typo fixes, simple bug fixes, documentation updates
+
+### Pre-Implementation Phase
+
+#### 1. Intelligent Approach Determination
+- Analyze task requirements thoroughly
+- Identify 2-3 possible implementation approaches
+- Evaluate trade-offs (complexity, security, performance, maintainability)
+- Select optimal approach with clear justification
+- Document decision rationale
+
+#### 2. Challenge Your Reasoning (Pre-Plan)
+
+Ask yourself:
+- What could go wrong with this approach?
+- Edge cases not considered?
+- Does this violate project patterns (CLAUDE.md)?
+- Security implications (encryption, RLS, key storage)?
+- Performance implications (sub-2s cold start requirement)?
+- Accessibility implications (WCAG AAA compliance)?
+
+**If issues found**: Revise plan before proceeding
+**If no issues**: Continue to standards verification
+
+#### 3. Verify Current Standards (Web Search Required)
+
+**Priority Documentation Sources**:
+1. **React Native/Expo**: reactnative.dev, docs.expo.dev (for SDK 54 patterns)
+2. **Supabase**: supabase.com/docs (for auth, RLS, real-time)
+3. **Security**: OWASP, encryption best practices, privacy standards
+4. **Recovery UX**: 12-step program guidelines, crisis intervention patterns
+
+**Search Pattern**:
+```
+"[Technology] [Feature] best practices 2026"
+"Expo SDK 54 [Feature] implementation"
+"Supabase RLS [Pattern] current standard"
+"Recovery app [Feature] UX standards"
+```
+
+**If current standard differs from plan**:
+- Auto-update to current standard
+- Document reason: "Updated to [Standard] per [Source]"
+
+### Implementation Phase
+
+Follow all patterns in CLAUDE.md:
+- Encryption-first for sensitive data (`encryptContent()` before storage)
+- Offline-first with SQLite/IndexedDB as source of truth
+- TypeScript strict mode (no `any`)
+- Accessibility props on all interactive elements
+
+**Token Optimization** (for large tasks):
+- Use parallel tool calls for independent files
+- Grep before Read for files >100 lines
+- Delegate to specialized agents when appropriate
+- Use tables/checklists instead of prose explanations
+
+### Post-Implementation Phase
+
+#### 4. Challenge Your Implementation (Post-Code Review)
+
+Critically review the implementation:
+- Does code solve the original problem?
+- Security vulnerabilities introduced (encryption, keys, RLS)?
+- Edge cases handled correctly?
+- Accessibility requirements met (WCAG AAA)?
+- TypeScript types correct (no `any`)?
+- Error handling comprehensive?
+
+**If issues found**: Fix immediately before testing
+**If no issues**: Proceed to testing
+
+#### 5. Testing & Validation (Required)
+
+**Security-Critical Code** (encryption, auth, sync, RLS):
+```bash
+# Run encryption tests
+cd apps/mobile && npm run test:encryption
+
+# Invoke security-auditor agent for comprehensive audit
+# Then manually test encrypt → decrypt roundtrip
+# Verify keys stored in SecureStore (not AsyncStorage)
+```
+
+**Sync Code**:
+- Test offline mode (airplane mode, network disconnected)
+- Verify sync queue order (deletes processed before inserts/updates)
+- Test retry logic (simulate network interruption)
+- Verify RLS policies (no cross-user data access)
+
+**UI Code**:
+```bash
+# Invoke accessibility-validator agent for WCAG AAA compliance
+# Test with screen reader (VoiceOver on iOS, TalkBack on Android)
+# Test with 200% font scaling
+# Verify touch targets ≥48x48dp
+# Check color contrast ≥7:1 (AAA standard)
+```
+
+**All Code**:
+```bash
+# Run related tests
+npm test -- --findRelatedTests
+
+# Type check (no errors allowed)
+npx tsc --noEmit
+
+# Manual smoke test in Expo Go
+npm run mobile
+```
+
+### Workflow Decision Tree
+
+```
+Is task complex? (8+ files, security-critical, new feature, architectural change)
+├─ YES → Use Enhanced Workflow
+│   ├─ 1. Determine best approach (2-3 options evaluated)
+│   ├─ 2. Challenge reasoning (pre-plan validation)
+│   ├─ 3. Verify current standards (web search required)
+│   ├─ 4. Implement with token optimization
+│   ├─ 5. Challenge implementation (post-code review)
+│   └─ 6. Test & validate (comprehensive, required)
+│
+└─ NO → Use Standard Workflow
+    ├─ Implement directly
+    ├─ Basic testing (related tests)
+    └─ Type check
+```
+
+---
+
+## Token Optimization Patterns
+
+**When to Optimize**: Multi-file tasks (8+ files), approaching token limit (>150k used), repetitive patterns
+
+### High-Impact Techniques
+
+| Technique | When to Use | Token Savings | Example |
+|-----------|-------------|---------------|---------|
+| **Parallel Reads** | 3+ independent files | ~2,000 per batch | `Read(file1) + Read(file2) + Read(file3)` in single message |
+| **Grep-First Strategy** | Files >100 lines | ~2,500 per 500-line file | `Grep(pattern) → Read(targeted lines)` instead of full file |
+| **Agent Delegation** | Complex specialized tasks | 50-60% reduction | Use `security-auditor` vs manual audit (70% savings) |
+| **Compressed Output** | Explanatory responses | 60% on prose | Tables/checklists vs paragraph explanations |
+| **Pattern Extraction** | CLAUDE.md references | ~500 per reference | Quote directly (max 10 lines) vs "see CLAUDE.md" |
+
+### Common Query Library
+
+**Encryption Usage**:
+```bash
+Grep: "encryptContent|decryptContent"
+  --glob="**/*.{ts,tsx}"
+  --output_mode="files_with_matches"
+```
+
+**Sync Queue Operations**:
+```bash
+Grep: "addToSyncQueue|addDeleteToSyncQueue"
+  --glob="**/features/**/*.ts"
+  --output_mode="content"
+  -A=5 -B=5
+```
+
+**React Query Hooks**:
+```bash
+Grep: "useQuery|useMutation"
+  --glob="**/hooks/*.{ts,tsx}"
+  --output_mode="files_with_matches"
+```
+
+**Security-Critical Files**:
+```bash
+Grep: "SecureStore|encryption|decrypt"
+  --glob="**/utils/*.ts"
+  --output_mode="content"
+```
+
+**Database Operations**:
+```bash
+Grep: "db\\.runAsync|db\\.getAllAsync"
+  --glob="**/contexts/*.tsx"
+  --output_mode="content"
+  -C=3
+```
+
+### Agent Delegation Decision Matrix
+
+| Task Type | Token Cost (Manual) | Recommended Agent | Token Savings |
+|-----------|---------------------|-------------------|---------------|
+| Security audit | ~10,000 | security-auditor | ~7,000 (70%) |
+| Encryption testing | ~8,000 | testing-specialist | ~5,500 (69%) |
+| Performance analysis | ~6,000 | performance-optimizer | ~3,500 (58%) |
+| Accessibility review | ~5,000 | accessibility-validator | ~3,000 (60%) |
+| Complex feature planning | ~12,000 | architecture-decision-authority | ~7,000 (58%) |
+| Multi-agent coordination | ~15,000 | project-orchestrator | ~8,000 (53%) |
+
+**Delegation Threshold**: If manual work >5,000 tokens, strongly consider agent delegation.
+
+### When to Use Token-Optimization-Specialist Agent
+
+**High-Priority Scenarios**:
+- Starting task with 8+ files to modify
+- Current conversation >150,000 tokens used
+- Repetitive pattern emerges (same query 3+ times)
+- Agent-optimizer identifies token inefficiency
+
+**Low-Priority Scenarios** (skip):
+- Simple 1-3 file edits (overhead not worth it)
+- Abundant token budget (<50,000 used)
+- Urgent bug fixes (speed > efficiency)
+- Exploratory research (breadth over precision)
+
+### Token Budget Examples
+
+| Scenario | Before Optimization | After Optimization | Savings |
+|----------|--------------------|--------------------|---------|
+| Multi-file encryption audit (10 files) | 15,000 tokens | 6,000 tokens | 60% |
+| Sync service debugging | 12,000 tokens | 5,000 tokens | 58% |
+| New feature implementation (8 files) | 20,000 tokens | 11,000 tokens | 45% |
+| Security audit (manual) | 10,000 tokens | 3,000 tokens (agent) | 70% |
+
+**Overall Expected Reduction**: 40-60% on complex tasks through systematic optimization.
+
+---
 
 ## Architecture Overview
 
