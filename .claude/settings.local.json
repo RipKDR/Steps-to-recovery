@@ -27,7 +27,7 @@
       "Bash(npx expo prebuild:*)",
       "Bash(npx expo run:android:*)",
       "Bash(npx expo start:*)",
-      "Bash(if not exist \"C:\\\\Users\\\\laine\\\\.claude\" mkdir \"C:\\\\Users\\\\laine\\\\.claude\")",
+      "Bash(if not exist \"C:\\\\Users\\\\H\\\\.claude\" mkdir \"C:\\\\Users\\\\H\\\\.claude\")",
       "WebFetch(domain:12-step-companion.vercel.app)",
       "Bash(git commit:*)",
       "Bash(bash:*)",
@@ -38,7 +38,11 @@
       "Bash(npm view:*)",
       "Bash(eas build:*)",
       "Skill(bmad:bmm:workflows:create-prd)",
-      "mcp__filesystem__read_text_file"
+      "mcp__filesystem__read_text_file",
+      "Bash(powershell:*)",
+      "Bash(pwsh -Command:*)",
+      "Bash(Get-Content \"C:\\\\Users\\\\H\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-H-Steps-to-recovery\\\\tasks\\\\a522300.output\" -Tail 20)",
+      "Bash(python3:*)"
     ]
   },
   "outputStyle": "Explanatory"

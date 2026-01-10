@@ -95,7 +95,7 @@ claude mcp add --transport stdio postgres \
 **Why:** Advanced file operations (search, watch, bulk operations)
 ```bash
 claude mcp add --transport stdio filesystem \
-  -- npx -y @modelcontextprotocol/server-filesystem C:/Users/laine/Steps-to-recovery
+  -- npx -y @modelcontextprotocol/server-filesystem C:/Users/H/Steps-to-recovery
 ```
 
 **Benefits:**
@@ -500,7 +500,7 @@ BRAVE_API_KEY=BSA...
 3. **Install Filesystem MCP** for advanced file operations
    ```bash
    claude mcp add --transport stdio filesystem \
-     -- npx -y @modelcontextprotocol/server-filesystem C:/Users/laine/Steps-to-recovery
+     -- npx -y @modelcontextprotocol/server-filesystem C:/Users/H/Steps-to-recovery
    ```
 
 4. **Try your first workflow skill**
