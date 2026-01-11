@@ -7,7 +7,7 @@
 import React, { memo, useCallback } from 'react';
 import { View, Text, TouchableOpacity, Switch } from 'react-native';
 import { useRouterCompat } from '../../utils/navigationHelper';
-import { Card } from '../ui';
+import { LegacyCard as Card } from '../ui';
 import type { RegularMeeting, RegularMeetingType } from '@recovery/shared';
 
 interface MeetingCardProps {

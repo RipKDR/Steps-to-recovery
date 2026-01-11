@@ -11,8 +11,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useDatabase } from '../../../contexts/DatabaseContext';
 import { useAuth } from '../../../contexts/AuthContext';
-import { Button } from '../../../components/Button';
-import { theme } from '../../../utils/theme';
+import { Button, useTheme } from '../../../design-system';
 import { generateEncryptionKey } from '../../../utils/encryption';
 import { formatDate, calculateDaysSober } from '../../../utils/validation';
 import { supabase } from '../../../lib/supabase';
@@ -24,6 +23,7 @@ export function OnboardingScreen() {
 
   const { user } = useAuth();
   const { db, isReady } = useDatabase();
+  const theme = useTheme();
 
   const daysSober = calculateDaysSober(sobrietyDate);
 
@@ -84,23 +84,23 @@ export function OnboardingScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.background }]} edges={['top', 'bottom']}>
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
           <Text style={styles.welcomeEmoji}>🌱</Text>
-          <Text style={styles.title}>Welcome to Your{'\n'}Recovery Journey</Text>
-          <Text style={styles.subtitle}>
+          <Text style={[styles.title, { color: theme.colors.text }]}>Welcome to Your{'\n'}Recovery Journey</Text>
+          <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>
             This app is your private, secure companion for recovery. All your
             data is encrypted and stays on your device unless you choose to share.
           </Text>
         </View>
 
         <View style={styles.dateSection}>
-          <Text style={styles.sectionTitle}>When did your sobriety begin?</Text>
-          <Text style={styles.sectionHint}>
+          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>When did your sobriety begin?</Text>
+          <Text style={[styles.sectionHint, { color: theme.colors.textSecondary }]}>
             This helps us celebrate your milestones with you
           </Text>
 
@@ -112,7 +112,7 @@ export function OnboardingScreen() {
           />
 
           {daysSober > 0 && (
-            <View style={styles.streakCard}>
+            <View style={[styles.streakCard, { backgroundColor: theme.colors.primary }]}>
               <Text style={styles.streakNumber}>{daysSober}</Text>
               <Text style={styles.streakLabel}>
                 {daysSober === 1 ? 'day' : 'days'} of recovery
@@ -155,27 +155,31 @@ export function OnboardingScreen() {
           />
         )}
 
-        <View style={styles.features}>
-          <Text style={styles.featuresTitle}>What you can do:</Text>
+        <View style={[styles.features, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
+          <Text style={[styles.featuresTitle, { color: theme.colors.text }]}>What you can do:</Text>
           <FeatureItem
             emoji="📓"
             title="Private Journaling"
             description="Write encrypted entries only you can read"
+            theme={theme}
           />
           <FeatureItem
             emoji="📋"
             title="Step Work"
             description="Track your progress through the 12 steps"
+            theme={theme}
           />
           <FeatureItem
             emoji="🤝"
             title="Sponsor Connection"
             description="Securely share selected entries with your sponsor"
+            theme={theme}
           />
           <FeatureItem
             emoji="🔔"
             title="Reminders"
             description="Get gentle nudges to check in and reflect"
+            theme={theme}
           />
         </View>
 
@@ -197,15 +201,16 @@ interface FeatureItemProps {
   emoji: string;
   title: string;
   description: string;
+  theme: ReturnType<typeof useTheme>;
 }
 
-function FeatureItem({ emoji, title, description }: FeatureItemProps) {
+function FeatureItem({ emoji, title, description, theme }: FeatureItemProps) {
   return (
     <View style={styles.featureItem}>
       <Text style={styles.featureEmoji}>{emoji}</Text>
       <View style={styles.featureText}>
-        <Text style={styles.featureTitle}>{title}</Text>
-        <Text style={styles.featureDescription}>{description}</Text>
+        <Text style={[styles.featureTitle, { color: theme.colors.text }]}>{title}</Text>
+        <Text style={[styles.featureDescription, { color: theme.colors.textSecondary }]}>{description}</Text>
       </View>
     </View>
   );
@@ -214,52 +219,48 @@ function FeatureItem({ emoji, title, description }: FeatureItemProps) {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: theme.colors.background,
   },
   scrollContent: {
     flexGrow: 1,
-    padding: theme.spacing.lg,
+    padding: 16,
   },
   header: {
     alignItems: 'center',
-    marginBottom: theme.spacing.xl,
+    marginBottom: 24,
   },
   welcomeEmoji: {
     fontSize: 48,
-    marginBottom: theme.spacing.md,
+    marginBottom: 12,
   },
   title: {
-    ...theme.typography.h1,
-    color: theme.colors.text,
+    fontSize: 28,
+    fontWeight: 'bold',
     textAlign: 'center',
-    marginBottom: theme.spacing.md,
+    marginBottom: 12,
   },
   subtitle: {
-    ...theme.typography.body,
-    color: theme.colors.textSecondary,
+    fontSize: 16,
     textAlign: 'center',
     lineHeight: 24,
-    paddingHorizontal: theme.spacing.md,
+    paddingHorizontal: 12,
   },
   dateSection: {
-    marginBottom: theme.spacing.xl,
+    marginBottom: 24,
   },
   sectionTitle: {
-    ...theme.typography.h3,
-    color: theme.colors.text,
-    marginBottom: theme.spacing.xs,
+    fontSize: 20,
+    fontWeight: '600',
+    marginBottom: 4,
   },
   sectionHint: {
-    ...theme.typography.caption,
-    color: theme.colors.textSecondary,
-    marginBottom: theme.spacing.md,
+    fontSize: 14,
+    marginBottom: 12,
   },
   streakCard: {
-    backgroundColor: theme.colors.primary,
-    borderRadius: theme.borderRadius.lg,
-    padding: theme.spacing.lg,
+    borderRadius: 12,
+    padding: 16,
     alignItems: 'center',
-    marginTop: theme.spacing.md,
+    marginTop: 12,
   },
   streakNumber: {
     fontSize: 48,
@@ -272,49 +273,45 @@ const styles = StyleSheet.create({
     opacity: 0.9,
   },
   streakMessage: {
-    ...theme.typography.caption,
+    fontSize: 14,
     color: '#FFFFFF',
     opacity: 0.8,
-    marginTop: theme.spacing.sm,
+    marginTop: 8,
     textAlign: 'center',
   },
   features: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.lg,
-    padding: theme.spacing.lg,
-    marginBottom: theme.spacing.xl,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 24,
     borderWidth: 1,
-    borderColor: theme.colors.border,
   },
   featuresTitle: {
-    ...theme.typography.h3,
-    color: theme.colors.text,
-    marginBottom: theme.spacing.md,
+    fontSize: 20,
+    fontWeight: '600',
+    marginBottom: 12,
   },
   featureItem: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    marginBottom: theme.spacing.md,
+    marginBottom: 12,
   },
   featureEmoji: {
     fontSize: 24,
-    marginRight: theme.spacing.md,
+    marginRight: 12,
   },
   featureText: {
     flex: 1,
   },
   featureTitle: {
-    ...theme.typography.body,
+    fontSize: 16,
     fontWeight: '600',
-    color: theme.colors.text,
   },
   featureDescription: {
-    ...theme.typography.caption,
-    color: theme.colors.textSecondary,
+    fontSize: 14,
     marginTop: 2,
   },
   footer: {
     marginTop: 'auto',
-    paddingTop: theme.spacing.md,
+    paddingTop: 12,
   },
 });

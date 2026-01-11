@@ -5,7 +5,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, Alert } from 'react-native';
-import { Card } from '../ui';
+import { LegacyCard as Card } from '../ui';
 import { useContacts } from '../../hooks/useContacts';
 import { usePhoneCalls } from '../../hooks/usePhoneCalls';
 import { sendSOSMessage, makePhoneCall, openMessagingApp, SOS_MESSAGE } from '@recovery/shared';

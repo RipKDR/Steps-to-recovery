@@ -71,7 +71,10 @@
       "WebFetch(domain:gluestack.io)",
       "WebFetch(domain:reactnativereusables.com)",
       "WebFetch(domain:rnr-docs.vercel.app)",
-      "Bash(npx @react-native-reusables/cli@latest add:*)"
+      "Bash(npx @react-native-reusables/cli@latest add:*)",
+      "Bash(while read file)",
+      "Bash(do sed -i \"s/import { Card } from ''..\\\\/ui'';/import { LegacyCard as Card } from ''..\\\\/ui'';/g\" \"$file\")",
+      "Bash(echo:*)"
     ]
   },
   "outputStyle": "Explanatory"

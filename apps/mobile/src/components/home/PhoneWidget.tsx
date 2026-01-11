@@ -6,7 +6,7 @@
 import React, { useEffect } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { useRouterCompat } from '../../utils/navigationHelper';
-import { Card } from '../ui';
+import { LegacyCard as Card } from '../ui';
 import { usePhoneCalls } from '../../hooks/usePhoneCalls';
 import { useContacts } from '../../hooks/useContacts';
 import type { PhoneCallLog, RecoveryContact } from '@recovery/shared';

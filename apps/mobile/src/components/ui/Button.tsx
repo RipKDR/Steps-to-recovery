@@ -1,285 +1,127 @@
-/**
- * Button Component
- * Dark navy themed buttons with blue accent
- * Matches reference site design
- * BMAD Upgrade: Added Haptics, Reanimated scaling, gradients, ripple, icon animations
- */
+import { TextClassContext } from '@/components/ui/text';
+import { cn } from '@/lib/utils';
+import { cva, type VariantProps } from 'class-variance-authority';
+import { Platform, Pressable } from 'react-native';
 
-import React, { memo } from 'react';
-import { TouchableOpacity, Text, ActivityIndicator, View, AccessibilityRole } from 'react-native';
-import { Feather } from '@expo/vector-icons';
-import * as Haptics from 'expo-haptics';
-import Animated, { 
-  useAnimatedStyle, 
-  useSharedValue, 
-  withSpring, 
-  withTiming,
-  withSequence,
-} from 'react-native-reanimated';
-import { LinearGradient } from 'expo-linear-gradient';
+const buttonVariants = cva(
+  cn(
+    'group shrink-0 flex-row items-center justify-center gap-2 rounded-md shadow-none',
+    Platform.select({
+      web: "focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive whitespace-nowrap outline-none transition-all focus-visible:ring-[3px] disabled:pointer-events-none [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0",
+    })
+  ),
+  {
+    variants: {
+      variant: {
+        default: cn(
+          'bg-primary active:bg-primary/90 shadow-sm shadow-black/5',
+          Platform.select({ web: 'hover:bg-primary/90' })
+        ),
+        destructive: cn(
+          'bg-destructive active:bg-destructive/90 dark:bg-destructive/60 shadow-sm shadow-black/5',
+          Platform.select({
+            web: 'hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40',
+          })
+        ),
+        outline: cn(
+          'border-border bg-background active:bg-accent dark:bg-input/30 dark:border-input dark:active:bg-input/50 border shadow-sm shadow-black/5',
+          Platform.select({
+            web: 'hover:bg-accent dark:hover:bg-input/50',
+          })
+        ),
+        secondary: cn(
+          'bg-secondary active:bg-secondary/80 shadow-sm shadow-black/5',
+          Platform.select({ web: 'hover:bg-secondary/80' })
+        ),
+        ghost: cn(
+          'active:bg-accent dark:active:bg-accent/50',
+          Platform.select({ web: 'hover:bg-accent dark:hover:bg-accent/50' })
+        ),
+        link: '',
+      },
+      size: {
+        default: cn('h-10 px-4 py-2 sm:h-9', Platform.select({ web: 'has-[>svg]:px-3' })),
+        sm: cn('h-9 gap-1.5 rounded-md px-3 sm:h-8', Platform.select({ web: 'has-[>svg]:px-2.5' })),
+        lg: cn('h-11 rounded-md px-6 sm:h-10', Platform.select({ web: 'has-[>svg]:px-4' })),
+        icon: 'h-10 w-10 sm:h-9 sm:w-9',
+      },
+    },
+    defaultVariants: {
+      variant: 'default',
+      size: 'default',
+    },
+  }
+);
 
-type FeatherIconName = React.ComponentProps<typeof Feather>['name'];
+const buttonTextVariants = cva(
+  cn(
+    'text-foreground text-sm font-medium',
+    Platform.select({ web: 'pointer-events-none transition-colors' })
+  ),
+  {
+    variants: {
+      variant: {
+        default: 'text-primary-foreground',
+        destructive: 'text-white',
+        outline: cn(
+          'group-active:text-accent-foreground',
+          Platform.select({ web: 'group-hover:text-accent-foreground' })
+        ),
+        secondary: 'text-secondary-foreground',
+        ghost: 'group-active:text-accent-foreground',
+        link: cn(
+          'text-primary group-active:underline',
+          Platform.select({ web: 'underline-offset-4 hover:underline group-hover:underline' })
+        ),
+      },
+      size: {
+        default: '',
+        sm: '',
+        lg: '',
+        icon: '',
+      },
+    },
+    defaultVariants: {
+      variant: 'default',
+      size: 'default',
+    },
+  }
+);
 
-interface ButtonProps {
-  title: string;
-  onPress: () => void;
-  variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger' | 'success';
-  size?: 'sm' | 'md' | 'lg';
-  disabled?: boolean;
-  loading?: boolean;
-  icon?: FeatherIconName;
-  iconPosition?: 'left' | 'right';
-  className?: string;
-  accessibilityLabel?: string;
-  accessibilityHint?: string;
-  accessibilityRole?: AccessibilityRole;
-}
-
-const AnimatedTouchableOpacity = Animated.createAnimatedComponent(TouchableOpacity);
-
-export const Button = memo(function Button({
-  title,
-  onPress,
-  variant = 'primary',
-  size = 'md',
-  disabled = false,
-  loading = false,
-  icon,
-  iconPosition = 'left',
-  className = '',
-  accessibilityLabel,
-  accessibilityHint,
-  accessibilityRole = 'button',
-}: ButtonProps) {
-  const scale = useSharedValue(1);
-  const iconScale = useSharedValue(1);
-  const iconRotation = useSharedValue(0);
-  const rippleScale = useSharedValue(0);
-  const rippleOpacity = useSharedValue(0);
-  const loadingOpacity = useSharedValue(loading ? 1 : 0);
-  const contentOpacity = useSharedValue(loading ? 0 : 1);
-
-  // Update loading opacity when loading state changes
-  React.useEffect(() => {
-    if (loading) {
-      loadingOpacity.value = withTiming(1, { duration: 200 });
-      contentOpacity.value = withTiming(0, { duration: 200 });
-    } else {
-      loadingOpacity.value = withTiming(0, { duration: 200 });
-      contentOpacity.value = withTiming(1, { duration: 200 });
-    }
-  }, [loading]);
-
-  const baseStyles = 'flex-row items-center justify-center rounded-xl overflow-hidden';
-
-  // Gradient colors for primary and secondary variants
-  const gradientColors = {
-    primary: ['#3b82f6', '#2563eb', '#1d4ed8'], // blue-500 to blue-700
-    secondary: ['#14b8a6', '#0d9488', '#0f766e'], // teal-500 to teal-700
+type ButtonProps = React.ComponentProps<typeof Pressable> &
+  React.RefAttributes<typeof Pressable> &
+  VariantProps<typeof buttonVariants> & {
+    /** @deprecated Use children instead */
+    title?: string;
   };
 
-  // Dark navy theme button variants (for non-gradient variants)
-  const variantStyles = {
-    primary: '', // Will use gradient instead
-    secondary: '', // Will use gradient instead
-    outline: 'border-2 border-primary-500 bg-transparent',
-    ghost: 'bg-transparent',
-    danger: 'bg-danger-500',
-    success: 'bg-success-500',
-  };
+// Map legacy variant names to new ones
+const variantMap: Record<string, 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link'> = {
+  primary: 'default',
+  danger: 'destructive',
+};
 
-  const textVariantStyles = {
-    primary: 'text-white',
-    secondary: 'text-white',
-    outline: 'text-primary-400',
-    ghost: 'text-primary-400',
-    danger: 'text-white',
-    success: 'text-white',
-  };
+function Button({ className, variant, size, title, children, ...props }: ButtonProps) {
+  // Map legacy variant names
+  const mappedVariant = variant
+    ? (variantMap[variant as string] || variant)
+    : 'default';
 
-  const iconColors = {
-    primary: '#ffffff',
-    secondary: '#ffffff',
-    outline: '#60a5fa',
-    ghost: '#60a5fa',
-    danger: '#ffffff',
-    success: '#ffffff',
-  };
-
-  const sizeStyles = {
-    sm: 'py-2 px-4',
-    md: 'py-3 px-6',
-    lg: 'py-4 px-8',
-  };
-
-  const textSizeStyles = {
-    sm: 'text-sm',
-    md: 'text-base',
-    lg: 'text-lg',
-  };
-
-  const iconSizes = {
-    sm: 16,
-    md: 18,
-    lg: 20,
-  };
-
-  const disabledStyles = disabled ? 'opacity-50' : '';
-
-  const animatedStyle = useAnimatedStyle(() => {
-    return {
-      transform: [{ scale: scale.value }],
-    };
-  });
-
-  const iconAnimatedStyle = useAnimatedStyle(() => {
-    return {
-      transform: [
-        { scale: iconScale.value },
-        { rotate: `${iconRotation.value}deg` },
-      ],
-    };
-  });
-
-  const rippleStyle = useAnimatedStyle(() => {
-    return {
-      transform: [{ scale: rippleScale.value }],
-      opacity: rippleOpacity.value,
-    };
-  });
-
-  const loadingStyle = useAnimatedStyle(() => {
-    return {
-      opacity: loadingOpacity.value,
-    };
-  });
-
-  const contentStyle = useAnimatedStyle(() => {
-    return {
-      opacity: contentOpacity.value,
-    };
-  });
-
-  const handlePressIn = () => {
-    if (!disabled && !loading) {
-      scale.value = withSpring(0.95, { damping: 15, stiffness: 300 });
-      iconScale.value = withSpring(0.9, { damping: 15, stiffness: 300 });
-      iconRotation.value = withSpring(iconPosition === 'right' ? -10 : 10, { damping: 15 });
-      
-      // Ripple effect
-      rippleScale.value = 0;
-      rippleOpacity.value = 0.3;
-      rippleScale.value = withSpring(4, { damping: 10 });
-      rippleOpacity.value = withTiming(0, { duration: 400 });
-    }
-  };
-
-  const handlePressOut = () => {
-    if (!disabled && !loading) {
-      scale.value = withSpring(1, { damping: 15, stiffness: 300 });
-      iconScale.value = withSpring(1, { damping: 15, stiffness: 300 });
-      iconRotation.value = withSpring(0, { damping: 15 });
-    }
-  };
-
-  const handlePress = () => {
-    if (!disabled && !loading) {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      onPress();
-    }
-  };
-
-  const computedAccessibilityLabel = accessibilityLabel || title;
-  const computedAccessibilityHint = accessibilityHint || (loading ? 'Loading, please wait' : undefined);
-
-  const renderIcon = () => {
-    if (!icon) return null;
-    return (
-      <Animated.View style={iconAnimatedStyle}>
-        <Feather
-          name={icon}
-          size={iconSizes[size]}
-          color={iconColors[variant]}
-        />
-      </Animated.View>
-    );
-  };
-
-  const useGradient = variant === 'primary' || variant === 'secondary';
-  const gradientColorsArray: [string, string, string] = variant === 'primary' 
-    ? (gradientColors.primary as [string, string, string])
-    : (gradientColors.secondary as [string, string, string]);
-
-  const ButtonContent = () => (
-    <>
-      {/* Ripple effect overlay */}
-      <Animated.View
-        style={[
-          rippleStyle,
-          {
-            position: 'absolute',
-            width: '100%',
-            height: '100%',
-            borderRadius: 12,
-            backgroundColor: 'rgba(255, 255, 255, 0.2)',
-          },
-        ]}
-        pointerEvents="none"
-      />
-
-      {/* Loading indicator */}
-      <Animated.View style={[loadingStyle, { position: 'absolute' }]}>
-        <ActivityIndicator
-          color={iconColors[variant]}
-          size="small"
-          accessibilityLabel="Loading"
-        />
-      </Animated.View>
-
-      {/* Content */}
-      <Animated.View style={[contentStyle, { flexDirection: 'row', alignItems: 'center', gap: 8 }]}>
-        {icon && iconPosition === 'left' && renderIcon()}
-        <Text
-          className={`font-semibold ${textVariantStyles[variant]} ${textSizeStyles[size]}`}
-          accessibilityElementsHidden
-        >
-          {title}
-        </Text>
-        {icon && iconPosition === 'right' && renderIcon()}
-      </Animated.View>
-    </>
-  );
+  // Support both title prop (legacy) and children (new)
+  const content = title || children;
 
   return (
-    <AnimatedTouchableOpacity
-      onPress={handlePress}
-      onPressIn={handlePressIn}
-      onPressOut={handlePressOut}
-      disabled={disabled || loading}
-      className={`${baseStyles} ${!useGradient ? variantStyles[variant] : ''} ${sizeStyles[size]} ${disabledStyles} ${className}`}
-      activeOpacity={1}
-      style={[animatedStyle]}
-      accessibilityRole={accessibilityRole}
-      accessibilityLabel={computedAccessibilityLabel}
-      accessibilityHint={computedAccessibilityHint}
-      accessibilityState={{
-        disabled: disabled || loading,
-        busy: loading,
-      }}
-    >
-      {useGradient ? (
-        <LinearGradient
-          colors={gradientColorsArray}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          className="flex-1 flex-row items-center justify-center rounded-xl"
-          style={{ paddingVertical: size === 'sm' ? 8 : size === 'md' ? 12 : 16 }}
-        >
-          <ButtonContent />
-        </LinearGradient>
-      ) : (
-        <ButtonContent />
-      )}
-    </AnimatedTouchableOpacity>
+    <TextClassContext.Provider value={buttonTextVariants({ variant: mappedVariant as typeof variant, size })}>
+      <Pressable
+        className={cn(props.disabled && 'opacity-50', buttonVariants({ variant: mappedVariant as typeof variant, size }), className)}
+        role="button"
+        {...props}
+      >
+        {content}
+      </Pressable>
+    </TextClassContext.Provider>
   );
-});
+}
+
+export { Button, buttonTextVariants, buttonVariants };
+export type { ButtonProps };

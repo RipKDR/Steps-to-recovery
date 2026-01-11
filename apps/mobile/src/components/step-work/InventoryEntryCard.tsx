@@ -5,7 +5,7 @@
 
 import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
-import { Card } from '../ui';
+import { LegacyCard as Card } from '../ui';
 import type { FourthStepType } from '@recovery/shared';
 
 const TYPE_COLORS: Record<FourthStepType, { bg: string; text: string }> = {

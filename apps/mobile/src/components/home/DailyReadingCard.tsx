@@ -6,7 +6,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { useRouterCompat } from '../../utils/navigationHelper';
-import { Card } from '../ui';
+import { LegacyCard as Card } from '../ui';
 import { useReading } from '../../hooks/useReading';
 
 interface DailyReadingCardProps {

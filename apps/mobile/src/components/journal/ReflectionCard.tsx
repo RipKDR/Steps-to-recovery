@@ -6,7 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { useRouterCompat } from '../../utils/navigationHelper';
-import { Card } from '../ui';
+import { LegacyCard as Card } from '../ui';
 import { useJournalStore } from '@recovery/shared';
 import { decryptContent } from '../../utils/encryption';
 import type { JournalEntry } from '@recovery/shared';

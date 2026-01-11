@@ -6,7 +6,7 @@
 
 import React, { memo, useCallback } from 'react';
 import { View, Text, TouchableOpacity, Alert, AlertButton } from 'react-native';
-import { Card } from '../ui';
+import { LegacyCard as Card } from '../ui';
 import { QuickCall } from './QuickCall';
 import type { RecoveryContact, ContactRole } from '@recovery/shared';
 

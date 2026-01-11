@@ -182,7 +182,7 @@ export const KeytagModal = memo(function KeytagModal({
                       />
                       <Button
                         title="Save"
-                        variant="primary"
+                        variant="default"
                         onPress={handleSaveReflection}
                         disabled={!reflection.trim()}
                         className="flex-1"
@@ -243,7 +243,7 @@ export const UnlockCelebrationModal = memo(function UnlockCelebrationModal({
           {/* Close button */}
           <Button
             title="Awesome!"
-            variant="primary"
+            variant="default"
             onPress={onClose}
             className="w-full"
           />
