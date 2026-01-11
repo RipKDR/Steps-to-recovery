@@ -74,7 +74,9 @@
       "Bash(npx @react-native-reusables/cli@latest add:*)",
       "Bash(while read file)",
       "Bash(do sed -i \"s/import { Card } from ''..\\\\/ui'';/import { LegacyCard as Card } from ''..\\\\/ui'';/g\" \"$file\")",
-      "Bash(echo:*)"
+      "Bash(echo:*)",
+      "Bash(npm ls:*)",
+      "Bash(npm explain:*)"
     ]
   },
   "outputStyle": "Explanatory"
