@@ -36,6 +36,7 @@ describe('syncService Integration Tests', () => {
 
     // Setup mock database
     mockDb = {
+      getDatabaseName: jest.fn().mockReturnValue('test.db'),
       getFirstAsync: jest.fn(),
       getAllAsync: jest.fn(),
       runAsync: jest.fn(),

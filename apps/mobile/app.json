@@ -39,7 +39,9 @@
         "ACCESS_BACKGROUND_LOCATION",
         "POST_NOTIFICATIONS",
         "RECEIVE_BOOT_COMPLETED",
-        "SCHEDULE_EXACT_ALARM"
+        "SCHEDULE_EXACT_ALARM",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
       ],
       "edgeToEdgeEnabled": false,
       "predictiveBackGestureEnabled": false
@@ -54,11 +56,6 @@
             "sql.js",
             "idb"
           ]
-        }
-      },
-      "config": {
-        "firebase": {
-          "measurementId": ""
         }
       },
       "meta": {
@@ -110,6 +107,7 @@
       "eas": {
         "projectId": "cc789e98-8c7f-4bf1-9125-23e0b83b8f00"
       }
-    }
+    },
+    "owner": "ripkdr"
   }
 }

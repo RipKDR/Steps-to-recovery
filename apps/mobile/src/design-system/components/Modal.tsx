@@ -199,10 +199,10 @@ export function Modal({
                       size="medium"
                       fullWidth={actions.length !== 2}
                       style={[
-                        actions.length === 2 && { flex: 1 },
-                        index > 0 && actions.length === 2 && { marginLeft: theme.spacing.sm },
-                        index > 0 && actions.length !== 2 && { marginTop: theme.spacing.sm },
-                      ]}
+                        actions.length === 2 ? { flex: 1 } : undefined,
+                        index > 0 && actions.length === 2 ? { marginLeft: theme.spacing.sm } : undefined,
+                        index > 0 && actions.length !== 2 ? { marginTop: theme.spacing.sm } : undefined,
+                      ].filter(Boolean)}
                       accessibilityLabel={action.accessibilityLabel || action.title}
                     />
                   ))}

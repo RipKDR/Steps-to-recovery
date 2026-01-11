@@ -34,6 +34,16 @@ export interface ToggleProps {
    * Custom container style
    */
   style?: ViewStyle;
+
+  /**
+   * Accessibility label for the switch (defaults to `label`)
+   */
+  accessibilityLabel?: string;
+
+  /**
+   * Accessibility hint for the switch
+   */
+  accessibilityHint?: string;
 }
 
 export function Toggle({
@@ -43,6 +53,8 @@ export function Toggle({
   disabled = false,
   trackColor,
   style,
+  accessibilityLabel,
+  accessibilityHint,
 }: ToggleProps) {
   const theme = useTheme();
 
@@ -80,7 +92,8 @@ export function Toggle({
         ios_backgroundColor={inactiveTrackColor}
         accessibilityRole="switch"
         accessibilityState={{ checked: value, disabled }}
-        accessibilityLabel={label}
+        accessibilityLabel={accessibilityLabel ?? label}
+        accessibilityHint={accessibilityHint}
       />
     </View>
   );

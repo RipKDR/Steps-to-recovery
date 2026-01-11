@@ -4,14 +4,15 @@
  */
 
 import React from 'react';
-import { Text as RNText, type TextProps as RNTextProps, StyleSheet } from 'react-native';
+import { Text as RNText, type TextProps as RNTextProps, type TextStyle } from 'react-native';
 import { useTheme } from '../hooks/useTheme';
+import type { TypographyStyle } from '../tokens/typography';
 
 export interface TextProps extends RNTextProps {
   /**
    * Typography variant to use
    */
-  variant?: 'h1' | 'h2' | 'h3' | 'body' | 'bodyLarge' | 'caption' | 'label';
+  variant?: TypographyStyle;
   /**
    * Text color from theme
    */
@@ -40,18 +41,17 @@ export function Text({
   const typographyStyle = theme.typography[variant];
   const textColor = theme.colors[color];
 
-  const weightStyle = weight
-    ? {
-        fontWeight:
-          weight === 'normal'
-            ? '400'
-            : weight === 'medium'
-            ? '500'
-            : weight === 'semibold'
-            ? '600'
-            : '700',
-      }
+  const fontWeight: TextStyle['fontWeight'] | undefined = weight
+    ? weight === 'normal'
+      ? '400'
+      : weight === 'medium'
+      ? '500'
+      : weight === 'semibold'
+      ? '600'
+      : '700'
     : undefined;
+
+  const weightStyle: TextStyle | undefined = fontWeight ? { fontWeight } : undefined;
 
   const alignStyle = align ? { textAlign: align } : undefined;
 

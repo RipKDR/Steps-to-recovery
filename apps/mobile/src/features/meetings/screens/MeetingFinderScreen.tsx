@@ -11,11 +11,11 @@ import {
   StyleSheet,
   RefreshControl,
   ActivityIndicator,
+  Pressable,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useTheme } from '../../../design-system/hooks/useTheme';
-import { Button } from '../../../design-system/components/Button';
 import { EmptyState } from '../../../design-system/components/EmptyState';
 import { FloatingActionButton } from '../../../design-system/components/FloatingActionButton';
 import { MeetingCard } from '../components/MeetingCard';
@@ -89,17 +89,21 @@ export function MeetingFinderScreen({
     return (
       <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
         <View style={styles.filterHeader}>
-          <Button
-            variant="text"
+          <Pressable
             onPress={() => setShowFilters(false)}
+            accessibilityRole="button"
             accessibilityLabel="Close filters"
+            hitSlop={12}
+            style={({ pressed }) => [
+              styles.iconButton,
+              {
+                backgroundColor: theme.colors.surface,
+                opacity: pressed ? 0.6 : 1,
+              },
+            ]}
           >
-            <MaterialIcons
-              name="close"
-              size={24}
-              color={theme.colors.text}
-            />
-          </Button>
+            <MaterialIcons name="close" size={24} color={theme.colors.text} />
+          </Pressable>
         </View>
         <MeetingFilters
           currentFilters={currentFilters}
@@ -126,12 +130,9 @@ export function MeetingFinderScreen({
         <EmptyState
           icon="error-outline"
           title="Unable to find meetings"
-          message={error}
-          action={
-            <Button variant="primary" onPress={handleSearch}>
-              Try Again
-            </Button>
-          }
+          description={error}
+          actionLabel="Try Again"
+          onAction={handleSearch}
         />
       </View>
     );
@@ -144,12 +145,9 @@ export function MeetingFinderScreen({
         <EmptyState
           icon="location-off"
           title="Location Access Needed"
-          message={locationError}
-          action={
-            <Button variant="primary" onPress={requestLocationPermission}>
-              Enable Location
-            </Button>
-          }
+          description={locationError}
+          actionLabel="Enable Location"
+          onAction={requestLocationPermission}
         />
       </View>
     );
@@ -167,25 +165,16 @@ export function MeetingFinderScreen({
         <EmptyState
           icon="search-off"
           title="No meetings found"
-          message={
+          description={
             hasFilters
               ? 'Try adjusting your filters or search radius.'
               : 'No meetings found in your area. Try expanding your search radius.'
           }
-          action={
-            hasFilters ? (
-              <Button variant="primary" onPress={clearFilters}>
-                Clear Filters
-              </Button>
-            ) : (
-              <Button variant="primary" onPress={handleSearch}>
-                Search Again
-              </Button>
-            )
-          }
+          actionLabel={hasFilters ? 'Clear Filters' : 'Search Again'}
+          onAction={hasFilters ? clearFilters : handleSearch}
         />
         <FloatingActionButton
-          icon="filter-list"
+          icon={<MaterialIcons name="filter-list" size={24} color="#FFFFFF" />}
           onPress={handleFilterPress}
           accessibilityLabel="Filter meetings"
         />
@@ -216,18 +205,22 @@ export function MeetingFinderScreen({
         }
         ListHeaderComponent={
           <View style={styles.listHeader}>
-            <Button
-              variant="text"
+            <Pressable
               onPress={handleFilterPress}
+              accessibilityRole="button"
               accessibilityLabel="Filter meetings"
               accessibilityHint="Open filter options"
+              hitSlop={12}
+              style={({ pressed }) => [
+                styles.iconButton,
+                {
+                  backgroundColor: theme.colors.surface,
+                  opacity: pressed ? 0.6 : 1,
+                },
+              ]}
             >
-              <MaterialIcons
-                name="filter-list"
-                size={24}
-                color={theme.colors.primary}
-              />
-            </Button>
+              <MaterialIcons name="filter-list" size={24} color={theme.colors.primary} />
+            </Pressable>
           </View>
         }
       />
@@ -252,6 +245,13 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
     paddingHorizontal: 16,
     marginBottom: 8,
+  },
+  iconButton: {
+    minWidth: 44,
+    minHeight: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   filterHeader: {
     flexDirection: 'row',

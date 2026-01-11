@@ -5,6 +5,11 @@
     "moduleResolution": "bundler",
     "baseUrl": ".",
     "paths": {
+      "@/*": ["./src/*"],
+      "@/components/*": ["./src/components/*"],
+      "@/lib/*": ["./src/lib/*"],
+      "@/design-system": ["./src/design-system/index.ts"],
+      "@/design-system/*": ["./src/design-system/*"],
       "@recovery/shared/*": ["../../packages/shared/src/*"],
       "@recovery/shared": ["../../packages/shared/src/index.ts"]
     }

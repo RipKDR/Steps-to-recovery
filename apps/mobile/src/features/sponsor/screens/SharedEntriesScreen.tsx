@@ -64,13 +64,16 @@ export function SharedEntriesScreen(): React.ReactElement {
 
             return {
               id: entry.id,
-              userId: entry.user_id,
+              user_id: entry.user_id,
               title: decryptedTitle,
               body: decryptedBody,
-              mood: decryptedMood,
+              mood: decryptedMood ? parseInt(decryptedMood, 10) : null,
+              craving: null, // Not available in shared entries
               tags: entry.tags || [],
-              createdAt: entry.created_at,
-              updatedAt: entry.updated_at,
+              created_at: entry.created_at,
+              updated_at: entry.updated_at,
+              sync_status: 'synced',
+              supabase_id: entry.id,
             } as JournalEntryDecrypted;
           } catch (decryptError) {
             logger.error('Failed to decrypt shared entry', { entryId: entry.id, error: decryptError });

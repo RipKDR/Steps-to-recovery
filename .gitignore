@@ -57,3 +57,7 @@ apps/mobile/bugreport-*.zip
 
 # Root-level Android directory (should not exist in Expo projects)
 /android/
+
+
+#Ignore vscode AI rules
+.github\instructions\codacy.instructions.md

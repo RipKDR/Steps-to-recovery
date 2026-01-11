@@ -107,14 +107,18 @@ describe('ErrorBoundary', () => {
     expect(queryByText('Something went wrong')).toBeNull();
   });
 
-  it('should display error message in dev mode', () => {
+  it('should display error type in dev mode but hide sensitive details', () => {
     // __DEV__ is true in test environment
-    const { getByText } = render(
+    // Error messages are hidden for security - only error type is shown
+    const { getByText, queryByText } = render(
       <ErrorBoundary>
         <ThrowingChild shouldThrow={true} />
       </ErrorBoundary>
     );
 
-    expect(getByText('Test error')).toBeTruthy();
+    // Should show generic security message, not actual error details
+    expect(getByText(/message hidden for security/)).toBeTruthy();
+    // Actual error message "Test error" should NOT be visible
+    expect(queryByText('Test error')).toBeNull();
   });
 });

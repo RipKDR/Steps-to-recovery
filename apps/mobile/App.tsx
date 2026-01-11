@@ -13,6 +13,7 @@ import { SyncProvider } from './src/contexts/SyncContext';
 import { NotificationProvider } from './src/contexts/NotificationContext';
 import { RootNavigator } from './src/navigation/RootNavigator';
 import { ErrorBoundary } from './src/components/ErrorBoundary';
+import { PortalHost } from '@rn-primitives/portal';
 
 function createQueryClient(): QueryClient {
   return new QueryClient({
@@ -57,6 +58,7 @@ export default function App(): React.ReactElement {
                     <NotificationProvider>
                       <RootNavigator />
                       <StatusBar style="auto" />
+                      <PortalHost />
                     </NotificationProvider>
                   </SyncProvider>
                 </AuthProvider>

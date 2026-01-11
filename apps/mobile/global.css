@@ -3,26 +3,44 @@
 @tailwind utilities;
 
 /* Dark Navy Theme as Default - Enhanced UI/UX Palette */
+/* shadcn uses HSL values without hsl() wrapper for Tailwind opacity support */
 :root {
-  /* Base colors */
-  --background: #0a0f1c;
-  --foreground: #f1f5f9;
-  --card: rgba(30, 41, 59, 0.3);
-  --card-border: rgba(255, 255, 255, 0.1);
+  /* shadcn semantic colors (HSL format for Tailwind) */
+  --background: 222 47% 8%;
+  --foreground: 210 40% 96%;
 
-  /* Primary colors */
-  --primary: #3b82f6;
-  --primary-foreground: #ffffff;
-  --secondary: #14b8a6;
+  --card: 222 47% 11%;
+  --card-foreground: 210 40% 96%;
+
+  --popover: 222 47% 11%;
+  --popover-foreground: 210 40% 96%;
+
+  --primary: 217 91% 60%;
+  --primary-foreground: 222 47% 100%;
+
+  --secondary: 174 58% 40%;
+  --secondary-foreground: 210 40% 98%;
+
+  --muted: 217 33% 25%;
+  --muted-foreground: 215 20% 65%;
+
+  --accent: 25 95% 53%;
+  --accent-foreground: 210 40% 98%;
+
+  --destructive: 350 89% 60%;
+  --destructive-foreground: 210 40% 98%;
+
+  --border: 217 33% 25%;
+  --input: 217 33% 25%;
+  --ring: 217 91% 60%;
+
+  --radius: 0.75rem;
+
+  /* Recovery app emotional colors (hex for direct use) */
   --success: #22c55e;
-  --muted: #64748b;
-  --accent: #f97316;
-  --danger: #f43f5e; /* Softer rose tone */
-
-  /* New emotional colors */
-  --hope: #f59e0b; /* Warm amber for celebrations */
-  --calm: #a855f7; /* Soft lavender for mindfulness */
-  --glow: #0ea5e9; /* Sky blue for achievements */
+  --hope: #f59e0b;
+  --calm: #a855f7;
+  --glow: #0ea5e9;
 
   /* Typography */
   --font-display: 'Outfit_600SemiBold', sans-serif;

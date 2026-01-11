@@ -4,8 +4,9 @@ import type { SliderProps } from '@react-native-community/slider';
 
 /**
  * Wrapper for @react-native-community/slider to ensure proper prop types
+ * Omits ref to avoid type incompatibility issues
  */
-export function Slider(props: SliderProps): React.ReactElement {
+export function Slider({ ref: _ref, ...props }: SliderProps): React.ReactElement {
   return (
     <RNSlider
       {...props}

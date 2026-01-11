@@ -31,6 +31,9 @@ export async function cacheMeetings(
   meetings: CachedMeeting[],
   cacheRegion: string
 ): Promise<void> {
+  // Limit meetings to cache before transaction (for logging after)
+  const meetingsToCache = meetings.slice(0, MAX_CACHED_MEETINGS_PER_REGION);
+
   try {
     logger.info('Caching meetings', {
       count: meetings.length,
@@ -43,9 +46,7 @@ export async function cacheMeetings(
         cacheRegion,
       ]);
 
-      // Insert new meetings (limit to MAX_CACHED_MEETINGS_PER_REGION)
-      const meetingsToCache = meetings.slice(0, MAX_CACHED_MEETINGS_PER_REGION);
-
+      // Insert new meetings
       for (const meeting of meetingsToCache) {
         await db.runAsync(
           `INSERT OR REPLACE INTO cached_meetings (

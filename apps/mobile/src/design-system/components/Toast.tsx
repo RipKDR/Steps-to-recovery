@@ -137,7 +137,7 @@ export function Toast({
         containerStyle,
       ]}
       accessibilityRole="alert"
-      accessibilityLive="polite"
+      accessible={true}
     >
       <MaterialIcons name={config.icon as any} size={20} color={config.iconColor} />
       <Text style={[styles.message, theme.typography.body, { color: '#ffffff' }]}>

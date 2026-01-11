@@ -175,10 +175,10 @@ export function meetingMatchesFilters(
   if (filters.time_of_day !== null && meeting.time) {
     const hour = parseInt(meeting.time.split(':')[0], 10);
     const matchesTime =
-      (filters.time_of_day === TimeOfDay.MORNING && hour >= 5 && hour < 12) ||
-      (filters.time_of_day === TimeOfDay.AFTERNOON && hour >= 12 && hour < 17) ||
-      (filters.time_of_day === TimeOfDay.EVENING && hour >= 17 && hour < 22) ||
-      (filters.time_of_day === TimeOfDay.LATE_NIGHT && (hour >= 22 || hour < 5));
+      (filters.time_of_day === 'morning' && hour >= 5 && hour < 12) ||
+      (filters.time_of_day === 'afternoon' && hour >= 12 && hour < 17) ||
+      (filters.time_of_day === 'evening' && hour >= 17 && hour < 22) ||
+      (filters.time_of_day === 'late_night' && (hour >= 22 || hour < 5));
 
     if (!matchesTime) {
       return false;

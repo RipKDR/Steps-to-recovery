@@ -8,7 +8,7 @@
  */
 
 import { useNavigationState } from '@react-navigation/native';
-import type { NavigationState, PartialState } from '@react-navigation/native';
+import type { NavigationState, PartialState, Route } from '@react-navigation/native';
 import { navigationRef } from '../navigation/navigationRef';
 import type { MainTabParamList } from '../navigation/types';
 import { logger } from './logger';
@@ -170,8 +170,8 @@ export function useSegmentsCompat(): string[] {
 
     // Traverse the navigation state tree to build segments
     while (currentState) {
-      const currentIndex = currentState.index ?? 0;
-      const route = currentState.routes[currentIndex];
+      const idx: number = currentState.index ?? 0;
+      const route: Route<string> | undefined = currentState.routes[idx] as Route<string> | undefined;
 
       if (!route) break;
 
@@ -185,7 +185,8 @@ export function useSegmentsCompat(): string[] {
 
       // Navigate to nested state if it exists
       // Routes can have nested state for navigators
-      currentState = 'state' in route ? route.state : undefined;
+      const routeWithState = route as { state?: NavigationState | PartialState<NavigationState> };
+      currentState = routeWithState.state;
     }
 
     return routeSegments;

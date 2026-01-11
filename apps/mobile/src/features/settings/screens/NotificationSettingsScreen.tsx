@@ -8,40 +8,52 @@
  * - View scheduled notifications
  */
 
-import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  Switch,
-  TouchableOpacity,
-  Alert,
-  Platform,
-} from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import React, { useEffect, useState } from 'react';
+import { Platform, ScrollView, StyleSheet, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { useNotifications } from '../../../contexts/NotificationContext';
 import {
-  scheduleDailyReminders,
   cancelDailyReminders,
-  sendTestNotification,
-  getScheduledNotifications,
   DEFAULT_REMINDERS,
+  getScheduledNotifications,
+  scheduleDailyReminders,
+  sendTestNotification,
   type DailyReminderConfig,
 } from '../../../services/notificationService';
 import { logger } from '../../../utils/logger';
+import {
+  Button,
+  Card,
+  Text,
+  Toast,
+  type ToastVariant,
+  Toggle,
+  useTheme,
+} from '../../../design-system';
 
-export function NotificationSettingsScreen() {
+export function NotificationSettingsScreen(): React.ReactElement {
+  const theme = useTheme();
   const { permissionStatus, requestPermissions, notificationsEnabled, setNotificationsEnabled } =
     useNotifications();
 
-  const [morningEnabled, setMorningEnabled] = useState(true);
-  const [morningHour, setMorningHour] = useState(DEFAULT_REMINDERS.morning.hour);
-  const [morningMinute, setMorningMinute] = useState(DEFAULT_REMINDERS.morning.minute);
+  const [toastVisible, setToastVisible] = useState<boolean>(false);
+  const [toastMessage, setToastMessage] = useState<string>('');
+  const [toastVariant, setToastVariant] = useState<ToastVariant>('info');
 
-  const [eveningEnabled, setEveningEnabled] = useState(true);
-  const [eveningHour, setEveningHour] = useState(DEFAULT_REMINDERS.evening.hour);
-  const [eveningMinute, setEveningMinute] = useState(DEFAULT_REMINDERS.evening.minute);
+  const showToast = (message: string, variant: ToastVariant): void => {
+    setToastMessage(message);
+    setToastVariant(variant);
+    setToastVisible(true);
+  };
+
+  const [morningEnabled, setMorningEnabled] = useState<boolean>(true);
+  const [morningHour, setMorningHour] = useState<number>(DEFAULT_REMINDERS.morning.hour);
+  const [morningMinute, setMorningMinute] = useState<number>(DEFAULT_REMINDERS.morning.minute);
+
+  const [eveningEnabled, setEveningEnabled] = useState<boolean>(true);
+  const [eveningHour, setEveningHour] = useState<number>(DEFAULT_REMINDERS.evening.hour);
+  const [eveningMinute, setEveningMinute] = useState<number>(DEFAULT_REMINDERS.evening.minute);
 
   const [scheduledCount, setScheduledCount] = useState(0);
   const [isUpdating, setIsUpdating] = useState(false);
@@ -59,23 +71,25 @@ export function NotificationSettingsScreen() {
   /**
    * Get scheduled notification count
    */
-  const loadScheduledNotifications = async () => {
-    const scheduled = await getScheduledNotifications();
-    setScheduledCount(scheduled.length);
+  const loadScheduledNotifications = async (): Promise<void> => {
+    try {
+      const scheduled = await getScheduledNotifications();
+      setScheduledCount(scheduled.length);
+    } catch (error) {
+      logger.error('Failed to load scheduled notifications', error);
+      setScheduledCount(0);
+    }
   };
 
   /**
    * Toggle master notification switch
    */
-  const handleToggleNotifications = async (enabled: boolean) => {
+  const handleToggleNotifications = async (enabled: boolean): Promise<void> => {
     if (enabled && permissionStatus !== 'granted') {
       // Need to request permissions first
       const granted = await requestPermissions();
       if (!granted) {
-        Alert.alert(
-          'Permission Required',
-          'Please enable notifications in your device settings to receive reminders.'
-        );
+        showToast('Enable notifications in device settings to receive reminders.', 'warning');
         return;
       }
     }
@@ -84,7 +98,7 @@ export function NotificationSettingsScreen() {
 
     if (enabled) {
       // Re-schedule daily reminders
-      await applyReminderSettings();
+      await applyReminderSettings(true);
     } else {
       // Cancel all reminders
       await cancelDailyReminders();
@@ -95,8 +109,9 @@ export function NotificationSettingsScreen() {
   /**
    * Apply current reminder settings
    */
-  const applyReminderSettings = async () => {
-    if (!notificationsEnabled) return;
+  const applyReminderSettings = async (enabledOverride?: boolean): Promise<void> => {
+    const shouldApply = enabledOverride ?? notificationsEnabled;
+    if (!shouldApply) return;
 
     setIsUpdating(true);
     try {
@@ -115,10 +130,10 @@ export function NotificationSettingsScreen() {
       await scheduleDailyReminders(morning, evening);
       await loadScheduledNotifications();
 
-      Alert.alert('Success', 'Notification reminders updated!');
+      showToast('Notification reminders updated.', 'success');
     } catch (error) {
-      logger.error('Error updating reminders', { error });
-      Alert.alert('Error', 'Failed to update notification reminders. Please try again.');
+      logger.error('Error updating reminders', error);
+      showToast('Failed to update reminders. Please try again.', 'error');
     } finally {
       setIsUpdating(false);
     }
@@ -127,21 +142,22 @@ export function NotificationSettingsScreen() {
   /**
    * Send test notification
    */
-  const handleSendTest = async () => {
+  const handleSendTest = async (): Promise<void> => {
     if (permissionStatus !== 'granted') {
-      Alert.alert(
-        'Permission Required',
-        'Please enable notifications first to receive test notifications.'
-      );
+      showToast('Enable notifications to send a test notification.', 'warning');
       return;
     }
 
-    await sendTestNotification(
-      '🔔 Test Notification',
-      'This is how your check-in reminders will look!'
-    );
-
-    Alert.alert('Test Sent', 'You should receive a test notification in a moment.');
+    try {
+      await sendTestNotification(
+        '🔔 Test Notification',
+        'This is how your check-in reminders will look!'
+      );
+      showToast('Test notification sent.', 'success');
+    } catch (error) {
+      logger.error('Error sending test notification', error);
+      showToast('Failed to send test notification.', 'error');
+    }
   };
 
   /**
@@ -168,10 +184,13 @@ export function NotificationSettingsScreen() {
   /**
    * Handle morning time change
    */
-  const handleMorningTimeChange = (event: any, selectedDate?: Date): void => {
+  const handleMorningTimeChange = (event: DateTimePickerEvent, selectedDate?: Date): void => {
     if (Platform.OS === 'android') {
       setShowMorningTimePicker(false);
     }
+
+    if (event.type === 'dismissed') return;
+
     if (selectedDate) {
       setMorningHour(selectedDate.getHours());
       setMorningMinute(selectedDate.getMinutes());
@@ -181,10 +200,13 @@ export function NotificationSettingsScreen() {
   /**
    * Handle evening time change
    */
-  const handleEveningTimeChange = (event: any, selectedDate?: Date): void => {
+  const handleEveningTimeChange = (event: DateTimePickerEvent, selectedDate?: Date): void => {
     if (Platform.OS === 'android') {
       setShowEveningTimePicker(false);
     }
+
+    if (event.type === 'dismissed') return;
+
     if (selectedDate) {
       setEveningHour(selectedDate.getHours());
       setEveningMinute(selectedDate.getMinutes());
@@ -194,182 +216,297 @@ export function NotificationSettingsScreen() {
   const permissionGranted = permissionStatus === 'granted';
 
   return (
-    <ScrollView style={styles.container}>
-      {/* Permission Status Banner */}
-      {permissionStatus === 'denied' && (
-        <View style={styles.banner}>
-          <Text style={styles.bannerText}>
-            ⚠️ Notifications are disabled in your device settings. Please enable them to receive
-            reminders.
-          </Text>
-        </View>
-      )}
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: theme.colors.background }]}
+      edges={['bottom']}
+    >
+      <Toast
+        visible={toastVisible}
+        message={toastMessage}
+        variant={toastVariant}
+        onDismiss={() => setToastVisible(false)}
+      />
 
-      {/* Master Toggle */}
-      <View style={styles.section}>
-        <View style={styles.row}>
-          <View style={styles.labelContainer}>
-            <Text style={styles.sectionTitle}>Enable Notifications</Text>
-            <Text style={styles.description}>
-              Receive daily reminders for check-ins and milestone celebrations
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={[
+          styles.content,
+          {
+            paddingHorizontal: theme.spacing.md,
+            paddingBottom: theme.spacing.xl,
+          },
+        ]}
+        showsVerticalScrollIndicator={false}
+        accessibilityRole="scrollbar"
+        accessibilityLabel="Notification settings"
+      >
+        <Text variant="title2" style={{ marginTop: theme.spacing.sm, marginBottom: theme.spacing.md }}>
+          Notifications
+        </Text>
+
+        {permissionStatus === 'denied' && (
+          <Card
+            variant="outlined"
+            style={{
+              borderColor: theme.colors.warning,
+              backgroundColor: `${theme.colors.warning}15`,
+              marginBottom: theme.spacing.md,
+            }}
+            accessibilityRole="alert"
+            accessibilityLabel="Notifications disabled in device settings"
+          >
+            <Text variant="body" color="text">
+              Notifications are disabled in your device settings.
             </Text>
-          </View>
-          <Switch
+            <Text
+              variant="bodySmall"
+              color="textSecondary"
+              style={{ marginTop: theme.spacing.xs }}
+            >
+              Enable them to receive check-in reminders and milestone celebrations.
+            </Text>
+          </Card>
+        )}
+
+        <Card variant="elevated" style={{ marginBottom: theme.spacing.md }}>
+          <Toggle
             value={notificationsEnabled}
             onValueChange={handleToggleNotifications}
-            trackColor={{ false: '#ccc', true: '#4CAF50' }}
-          />
-        </View>
-      </View>
-
-      {/* Morning Reminder */}
-      {notificationsEnabled && permissionGranted && (
-        <>
-          <View style={styles.section}>
-            <View style={styles.row}>
-              <View style={styles.labelContainer}>
-                <Text style={styles.label}>🌅 Morning Check-In</Text>
-                <Text style={styles.timeDisplay}>{formatTime(morningHour, morningMinute)}</Text>
-              </View>
-              <Switch
-                value={morningEnabled}
-                onValueChange={setMorningEnabled}
-                trackColor={{ false: '#ccc', true: '#4CAF50' }}
-              />
-            </View>
-
-            {morningEnabled && (
-              <View style={styles.timePicker}>
-                <TouchableOpacity
-                  style={styles.timeButton}
-                  onPress={() => setShowMorningTimePicker(!showMorningTimePicker)}
-                  accessibilityLabel="Change morning reminder time"
-                  accessibilityRole="button"
-                  accessibilityHint="Opens time picker to customize morning check-in reminder"
-                >
-                  <Text style={styles.timeButtonText}>
-                    {showMorningTimePicker ? '✓ Close Time Picker' : '🕐 Change Time'}
-                  </Text>
-                </TouchableOpacity>
-
-                {showMorningTimePicker && (
-                  <DateTimePicker
-                    value={createTimeDate(morningHour, morningMinute)}
-                    mode="time"
-                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                    onChange={handleMorningTimeChange}
-                    testID="morning-time-picker"
-                  />
-                )}
-
-                {Platform.OS === 'ios' && showMorningTimePicker && (
-                  <TouchableOpacity
-                    style={styles.doneButton}
-                    onPress={() => setShowMorningTimePicker(false)}
-                    accessibilityLabel="Done selecting morning time"
-                    accessibilityRole="button"
-                  >
-                    <Text style={styles.doneButtonText}>Done</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-            )}
-          </View>
-
-          {/* Evening Reminder */}
-          <View style={styles.section}>
-            <View style={styles.row}>
-              <View style={styles.labelContainer}>
-                <Text style={styles.label}>🌙 Evening Check-In</Text>
-                <Text style={styles.timeDisplay}>{formatTime(eveningHour, eveningMinute)}</Text>
-              </View>
-              <Switch
-                value={eveningEnabled}
-                onValueChange={setEveningEnabled}
-                trackColor={{ false: '#ccc', true: '#4CAF50' }}
-              />
-            </View>
-
-            {eveningEnabled && (
-              <View style={styles.timePicker}>
-                <TouchableOpacity
-                  style={styles.timeButton}
-                  onPress={() => setShowEveningTimePicker(!showEveningTimePicker)}
-                  accessibilityLabel="Change evening reminder time"
-                  accessibilityRole="button"
-                  accessibilityHint="Opens time picker to customize evening check-in reminder"
-                >
-                  <Text style={styles.timeButtonText}>
-                    {showEveningTimePicker ? '✓ Close Time Picker' : '🕐 Change Time'}
-                  </Text>
-                </TouchableOpacity>
-
-                {showEveningTimePicker && (
-                  <DateTimePicker
-                    value={createTimeDate(eveningHour, eveningMinute)}
-                    mode="time"
-                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                    onChange={handleEveningTimeChange}
-                    testID="evening-time-picker"
-                  />
-                )}
-
-                {Platform.OS === 'ios' && showEveningTimePicker && (
-                  <TouchableOpacity
-                    style={styles.doneButton}
-                    onPress={() => setShowEveningTimePicker(false)}
-                    accessibilityLabel="Done selecting evening time"
-                    accessibilityRole="button"
-                  >
-                    <Text style={styles.doneButtonText}>Done</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-            )}
-          </View>
-
-          {/* Apply Button */}
-          <TouchableOpacity
-            style={[styles.button, isUpdating && styles.buttonDisabled]}
-            onPress={applyReminderSettings}
+            label="Enable notifications"
             disabled={isUpdating}
+            style={{ marginBottom: theme.spacing.xs }}
+          />
+          <Text variant="bodySmall" color="textSecondary">
+            Receive daily reminders for check-ins and milestone celebrations.
+          </Text>
+        </Card>
+
+        {notificationsEnabled && permissionGranted && (
+          <>
+            <Text
+              variant="h3"
+              style={{ marginTop: theme.spacing.sm, marginBottom: theme.spacing.sm }}
+              accessibilityRole="header"
+            >
+              Daily reminders
+            </Text>
+
+            <Card variant="elevated" style={{ marginBottom: theme.spacing.md }}>
+              <View style={styles.row}>
+                <View style={styles.grow}>
+                  <Text variant="labelLarge">Morning check-in</Text>
+                  <Text
+                    variant="caption"
+                    color="primary"
+                    style={{ marginTop: theme.spacing.xs }}
+                  >
+                    {formatTime(morningHour, morningMinute)}
+                  </Text>
+                </View>
+                <Toggle
+                  value={morningEnabled}
+                  onValueChange={setMorningEnabled}
+                  disabled={isUpdating}
+                  accessibilityLabel="Morning check-in reminder"
+                  accessibilityHint="Toggles the morning reminder on or off"
+                  style={{ width: 56 }}
+                />
+              </View>
+
+              {morningEnabled && (
+                <View style={{ marginTop: theme.spacing.md }}>
+                  <Button
+                    title={showMorningTimePicker ? 'Close time picker' : 'Change time'}
+                    variant="outline"
+                    size="small"
+                    onPress={() => setShowMorningTimePicker(!showMorningTimePicker)}
+                    accessibilityLabel="Change morning reminder time"
+                    accessibilityHint="Opens time picker to customize morning check-in reminder"
+                  />
+
+                  {showMorningTimePicker && (
+                    <View style={{ marginTop: theme.spacing.sm }}>
+                      <DateTimePicker
+                        value={createTimeDate(morningHour, morningMinute)}
+                        mode="time"
+                        display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                        onChange={handleMorningTimeChange}
+                        testID="morning-time-picker"
+                      />
+                    </View>
+                  )}
+
+                  {Platform.OS === 'ios' && showMorningTimePicker && (
+                    <View style={{ marginTop: theme.spacing.sm }}>
+                      <Button
+                        title="Done"
+                        variant="primary"
+                        size="small"
+                        onPress={() => setShowMorningTimePicker(false)}
+                        accessibilityLabel="Done selecting morning time"
+                      />
+                    </View>
+                  )}
+                </View>
+              )}
+            </Card>
+
+            <Card variant="elevated" style={{ marginBottom: theme.spacing.md }}>
+              <View style={styles.row}>
+                <View style={styles.grow}>
+                  <Text variant="labelLarge">Evening check-in</Text>
+                  <Text
+                    variant="caption"
+                    color="primary"
+                    style={{ marginTop: theme.spacing.xs }}
+                  >
+                    {formatTime(eveningHour, eveningMinute)}
+                  </Text>
+                </View>
+                <Toggle
+                  value={eveningEnabled}
+                  onValueChange={setEveningEnabled}
+                  disabled={isUpdating}
+                  accessibilityLabel="Evening check-in reminder"
+                  accessibilityHint="Toggles the evening reminder on or off"
+                  style={{ width: 56 }}
+                />
+              </View>
+
+              {eveningEnabled && (
+                <View style={{ marginTop: theme.spacing.md }}>
+                  <Button
+                    title={showEveningTimePicker ? 'Close time picker' : 'Change time'}
+                    variant="outline"
+                    size="small"
+                    onPress={() => setShowEveningTimePicker(!showEveningTimePicker)}
+                    accessibilityLabel="Change evening reminder time"
+                    accessibilityHint="Opens time picker to customize evening check-in reminder"
+                  />
+
+                  {showEveningTimePicker && (
+                    <View style={{ marginTop: theme.spacing.sm }}>
+                      <DateTimePicker
+                        value={createTimeDate(eveningHour, eveningMinute)}
+                        mode="time"
+                        display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                        onChange={handleEveningTimeChange}
+                        testID="evening-time-picker"
+                      />
+                    </View>
+                  )}
+
+                  {Platform.OS === 'ios' && showEveningTimePicker && (
+                    <View style={{ marginTop: theme.spacing.sm }}>
+                      <Button
+                        title="Done"
+                        variant="primary"
+                        size="small"
+                        onPress={() => setShowEveningTimePicker(false)}
+                        accessibilityLabel="Done selecting evening time"
+                      />
+                    </View>
+                  )}
+                </View>
+              )}
+            </Card>
+
+            <Button
+              title={isUpdating ? 'Updating...' : 'Apply settings'}
+              onPress={() => applyReminderSettings()}
+              variant="primary"
+              size="large"
+              disabled={isUpdating}
+              loading={isUpdating}
+              accessibilityLabel="Apply notification settings"
+            />
+
+            <View style={{ height: theme.spacing.md }} />
+
+            <Button
+              title="Send test notification"
+              onPress={handleSendTest}
+              variant="secondary"
+              size="large"
+              disabled={!permissionGranted || isUpdating}
+              accessibilityLabel="Send a test notification"
+            />
+
+            <Card
+              variant="outlined"
+              style={{
+                marginTop: theme.spacing.lg,
+                backgroundColor: `${theme.colors.primary}10`,
+                borderColor: theme.colors.border,
+              }}
+            >
+              <Text variant="labelLarge">Scheduled notifications</Text>
+              <Text
+                variant="bodySmall"
+                color="textSecondary"
+                style={{ marginTop: theme.spacing.xs }}
+              >
+                {scheduledCount} scheduled (daily reminders + milestone celebrations)
+              </Text>
+            </Card>
+          </>
+        )}
+
+        {!permissionGranted && permissionStatus === 'undetermined' && (
+          <Card variant="elevated" style={{ marginTop: theme.spacing.md }}>
+            <Text variant="labelLarge">Enable notifications</Text>
+            <Text
+              variant="bodySmall"
+              color="textSecondary"
+              style={{ marginTop: theme.spacing.xs }}
+            >
+              Allow notifications to receive daily reminders.
+            </Text>
+            <View style={{ marginTop: theme.spacing.md }}>
+              <Button
+                title="Grant permission"
+                onPress={requestPermissions}
+                variant="primary"
+                size="large"
+                accessibilityLabel="Grant notification permission"
+              />
+            </View>
+          </Card>
+        )}
+
+        {!permissionGranted && permissionStatus === 'denied' && (
+          <Card
+            variant="elevated"
+            style={{ marginTop: theme.spacing.md, backgroundColor: theme.colors.surface }}
           >
-            <Text style={styles.buttonText}>
-              {isUpdating ? 'Updating...' : 'Apply Settings'}
+            <Text variant="labelLarge">Enable notifications in Settings</Text>
+            <Text
+              variant="bodySmall"
+              color="textSecondary"
+              style={{ marginTop: theme.spacing.xs }}
+            >
+              iOS blocks prompts after denying permission. Open system settings to enable notifications.
             </Text>
-          </TouchableOpacity>
-
-          {/* Test Notification */}
-          <TouchableOpacity style={[styles.button, styles.testButton]} onPress={handleSendTest}>
-            <Text style={styles.buttonText}>Send Test Notification</Text>
-          </TouchableOpacity>
-
-          {/* Scheduled Notifications Info */}
-          <View style={styles.infoSection}>
-            <Text style={styles.infoText}>
-              📅 Scheduled notifications: {scheduledCount}
-            </Text>
-            <Text style={styles.infoSubtext}>
-              Includes daily reminders and upcoming milestone celebrations
-            </Text>
-          </View>
-        </>
-      )}
-
-      {/* Request Permission Button */}
-      {!permissionGranted && permissionStatus === 'undetermined' && (
-        <TouchableOpacity style={styles.button} onPress={requestPermissions}>
-          <Text style={styles.buttonText}>Grant Notification Permission</Text>
-        </TouchableOpacity>
-      )}
-    </ScrollView>
+          </Card>
+        )}
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+  },
+  scrollView: {
+    flex: 1,
+  },
+  content: {
+    paddingTop: 4,
+  },
+  grow: {
+    flex: 1,
+    paddingRight: 12,
   },
   banner: {
     backgroundColor: '#FFF3CD',

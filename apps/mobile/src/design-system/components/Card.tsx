@@ -7,6 +7,7 @@ import React from 'react';
 import {
   View,
   StyleSheet,
+  StyleProp,
   ViewStyle,
   TouchableOpacity,
   Animated,
@@ -22,7 +23,7 @@ export interface CardProps {
   variant?: CardVariant;
   onPress?: () => void;
   animate?: boolean;
-  style?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
   testID?: string;
   accessibilityRole?: AccessibilityRole;
   accessibilityLabel?: string;

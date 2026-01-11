@@ -25,7 +25,8 @@ export async function createStorageAdapter(nativeDb?: unknown): Promise<StorageA
       throw new Error('SQLite database required for mobile platform');
     }
     const { SQLiteAdapter } = await import('./sqlite');
-    // Type assertion is now safe after guard check
-    return new SQLiteAdapter(nativeDb as { getAllAsync: Function; getFirstAsync: Function; runAsync: Function; execAsync: Function; withTransactionAsync: Function });
+    // Type assertion - expo-sqlite database object has required methods
+    // Using 'as any' to handle version differences in expo-sqlite types
+    return new SQLiteAdapter(nativeDb as any);
   }
 }

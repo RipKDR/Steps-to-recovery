@@ -8,7 +8,6 @@ import { View, FlatList, StyleSheet, ActivityIndicator } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTheme } from '../../../design-system/hooks/useTheme';
 import { EmptyState } from '../../../design-system/components/EmptyState';
-import { Button } from '../../../design-system/components/Button';
 import { MeetingCard } from '../components/MeetingCard';
 import { useDatabase } from '../../../contexts/DatabaseContext';
 import { useFavoriteMeetings } from '../hooks/useFavoriteMeetings';
@@ -140,12 +139,9 @@ export function FavoriteMeetingsScreen({
         <EmptyState
           icon="favorite-border"
           title="No Favorite Meetings"
-          message="Favorite meetings to access them quickly offline."
-          action={
-            <Button variant="primary" onPress={handleFindMeetings}>
-              Find Meetings
-            </Button>
-          }
+          description="Favorite meetings to access them quickly offline."
+          actionLabel="Find Meetings"
+          onAction={handleFindMeetings}
         />
       </View>
     );

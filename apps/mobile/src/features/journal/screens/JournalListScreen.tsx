@@ -61,7 +61,7 @@ export function JournalListScreen({ userId }: JournalListScreenProps): React.Rea
 
   const renderEmpty = (): React.ReactElement => (
     <EmptyState
-      icon={<MaterialIcons name="book" size={64} color={theme.colors.textSecondary} />}
+      icon={searchQuery ? 'search-off' : 'book'}
       title={searchQuery ? 'No entries found' : 'Your thoughts are safe here'}
       description={
         searchQuery

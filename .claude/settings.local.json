@@ -67,7 +67,11 @@
       "Skill(bmad:bmm:workflows:retrospective)",
       "Skill(bmad:bmm:workflows:research)",
       "Bash(xargs cat:*)",
-      "Bash(xargs:*)"
+      "Bash(xargs:*)",
+      "WebFetch(domain:gluestack.io)",
+      "WebFetch(domain:reactnativereusables.com)",
+      "WebFetch(domain:rnr-docs.vercel.app)",
+      "Bash(npx @react-native-reusables/cli@latest add:*)"
     ]
   },
   "outputStyle": "Explanatory"

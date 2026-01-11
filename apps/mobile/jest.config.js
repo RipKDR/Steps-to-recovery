@@ -12,9 +12,31 @@ const config = {
     '<rootDir>/jest.setup.js',
   ],
   
-  // Transform settings
+  // Transform settings - handle pnpm's .pnpm folder structure and React Native 0.83+
+  // pnpm creates: node_modules/.pnpm/package@version/node_modules/package/
+  // We need to NOT ignore packages that need transformation
   transformIgnorePatterns: [
-    'node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@unimodules/.*|unimodules|sentry-expo|native-base|react-native-svg|nativewind|uuid)',
+    // Match node_modules but allow through packages that need transformation
+    // This pattern handles both regular npm/yarn and pnpm structures
+    'node_modules/(?!(.pnpm|' +
+      '(jest-)?react-native|' +
+      'react-native-.*|' +     // All react-native-* packages (url-polyfill, css-interop, etc.)
+      '@react-native(-community)?|' +
+      '@react-native/js-polyfills|' +
+      'expo|' +
+      'expo-.*|' +             // All expo-* packages (expo-modules-core, expo-constants, etc.)
+      '@expo|' +
+      '@expo-google-fonts|' +
+      'react-navigation|' +
+      '@react-navigation|' +
+      '@unimodules|' +
+      'unimodules|' +
+      'sentry-expo|' +
+      'native-base|' +
+      'nativewind|' +
+      '@supabase|' +           // Supabase client
+      'uuid' +
+    ')/)',
   ],
   
   // Module name mappings

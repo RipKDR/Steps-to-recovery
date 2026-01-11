@@ -279,6 +279,7 @@ export function MeetingDetailScreen({
           Personal Notes
         </Text>
         <TextArea
+          label="Personal Notes"
           value={notes}
           onChangeText={setNotes}
           placeholder={

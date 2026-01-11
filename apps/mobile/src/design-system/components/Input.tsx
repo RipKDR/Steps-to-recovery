@@ -94,9 +94,9 @@ export const Input = forwardRef<TextInput, InputProps>(function Input({
             styles.input,
             theme.typography.body,
             { color: theme.colors.text },
-            leftIcon && styles.inputWithLeftIcon,
-            (rightIcon || hasPasswordToggle) && styles.inputWithRightIcon,
-          ]}
+            leftIcon ? styles.inputWithLeftIcon : undefined,
+            (rightIcon || hasPasswordToggle) ? styles.inputWithRightIcon : undefined,
+          ].filter(Boolean)}
           placeholderTextColor={theme.colors.textSecondary}
           {...textInputProps}
         />

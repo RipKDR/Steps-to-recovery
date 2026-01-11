@@ -3,6 +3,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '../contexts/AuthContext';
+import { useTheme } from '../design-system';
 import { HomeScreen } from '../features/home/screens/HomeScreen';
 import { JournalListScreen } from '../features/journal/screens/JournalListScreen';
 import { JournalEditorScreen } from '../features/journal/screens/JournalEditorScreen';
@@ -172,12 +173,18 @@ function ProfileStackNavigator(): React.ReactElement {
 }
 
 export function MainNavigator(): React.ReactElement {
+  const theme = useTheme();
+
   return (
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: '#2196f3',
-        tabBarInactiveTintColor: '#999',
+        tabBarActiveTintColor: theme.colors.primary,
+        tabBarInactiveTintColor: theme.colors.textSecondary,
+        tabBarStyle: {
+          backgroundColor: theme.colors.surface,
+          borderTopColor: theme.colors.border,
+        },
       }}
     >
       <Tab.Screen

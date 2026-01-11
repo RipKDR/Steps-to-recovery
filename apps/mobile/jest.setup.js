@@ -3,6 +3,11 @@
  * Mocks for Expo modules and React Native APIs
  */
 
+// Set up Supabase environment variables BEFORE any module imports
+// This prevents supabase.ts from throwing during initialization
+process.env.EXPO_PUBLIC_SUPABASE_URL = 'https://test-project.supabase.co';
+process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY = 'test-anon-key-for-jest';
+
 // Mock expo-secure-store
 jest.mock('expo-secure-store', () => ({
   getItemAsync: jest.fn(() => Promise.resolve(null)),
