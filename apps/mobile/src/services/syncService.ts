@@ -1,10 +1,37 @@
+/**
+ * Sync Service
+ * 
+ * Handles background synchronization of local data with Supabase cloud storage.
+ * Implements queue-based sync with retry logic, exponential backoff, and
+ * conflict resolution.
+ * 
+ * **Key Features**:
+ * - Queue-based sync (processes pending operations)
+ * - Retry logic with exponential backoff (max 3 attempts)
+ * - Network timeout protection (30 seconds)
+ * - Mutex to prevent concurrent syncs
+ * - Deletes processed before inserts/updates (avoids FK conflicts)
+ * - Idempotent operations using supabase_id
+ * 
+ * **Sync Order**:
+ * 1. Deletes (processed first to avoid foreign key conflicts)
+ * 2. Inserts
+ * 3. Updates
+ * 
+ * @module services/syncService
+ */
+
 import { supabase } from '../lib/supabase';
 import type { StorageAdapter } from '../adapters/storage';
 import { logger } from '../utils/logger';
 
 /**
  * Mutex to prevent concurrent sync operations
+ * 
  * Ensures only one sync runs at a time to avoid race conditions
+ * and data corruption.
+ * 
+ * @internal
  */
 class SyncMutex {
   private locked: boolean = false;
@@ -37,19 +64,13 @@ class SyncMutex {
 
 const syncMutex = new SyncMutex();
 
-/**
- * Network timeout for Supabase operations (30 seconds)
- */
+/** Network timeout for Supabase operations (30 seconds) */
 const NETWORK_TIMEOUT_MS = 30000;
 
-/**
- * Maximum retry attempts before giving up
- */
+/** Maximum retry attempts before marking as failed */
 const MAX_RETRY_COUNT = 3;
 
-/**
- * Base delay for exponential backoff (in milliseconds)
- */
+/** Base delay for exponential backoff (in milliseconds) */
 const BASE_BACKOFF_MS = 1000;
 
 /**
@@ -121,6 +142,7 @@ interface LocalStepWork {
   created_at: string;
   updated_at: string;
   sync_status: string;
+  supabase_id: string | null;
 }
 
 /**
@@ -267,8 +289,8 @@ export async function syncStepWork(
       return { success: false, error: 'Step work not found' };
     }
 
-    // Generate UUID for Supabase
-    const supabaseId = generateUUID();
+    // Generate or reuse Supabase ID
+    const supabaseId = stepWork.supabase_id || generateUUID();
 
     // Map local schema to Supabase schema
     // Supabase has simpler schema: just step_number + content (encrypted)
@@ -302,12 +324,12 @@ export async function syncStepWork(
       return { success: false, error: supabaseError.message };
     }
 
-    // Mark as synced in local database
+    // Mark as synced in local database and store supabase_id
     await db.runAsync(
       `UPDATE step_work
-       SET sync_status = 'synced', updated_at = ?
+       SET supabase_id = ?, sync_status = 'synced', updated_at = ?
        WHERE id = ?`,
-      [new Date().toISOString(), stepWorkId]
+      [supabaseId, new Date().toISOString(), stepWorkId]
     );
 
     logger.info('Step work synced successfully', { stepWorkId, supabaseId });

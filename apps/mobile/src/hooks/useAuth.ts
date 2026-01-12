@@ -1,6 +1,27 @@
 /**
  * Authentication Hook
- * Manages biometric and PIN authentication
+ * 
+ * Manages biometric and PIN authentication for app security.
+ * Handles auto-lock based on app state and user settings.
+ * 
+ * **Features**:
+ * - Biometric authentication (Face ID, Touch ID, fingerprint)
+ * - PIN fallback authentication
+ * - Auto-lock on app background
+ * - Session management
+ * 
+ * @returns Authentication state and methods
+ * @example
+ * ```ts
+ * const { isAuthenticated, authenticate, lock } = useAuth();
+ * 
+ * if (!isAuthenticated) {
+ *   const success = await authenticate();
+ *   if (!success) {
+ *     // Show PIN input
+ *   }
+ * }
+ * ```
  */
 
 import { useCallback, useEffect } from 'react';
@@ -8,6 +29,14 @@ import { AppState, AppStateStatus } from 'react-native';
 import { useAuthStore } from '@recovery/shared';
 import { useSettingsStore } from '@recovery/shared';
 
+/**
+ * Authentication hook
+ * 
+ * Provides authentication state and methods for securing the app.
+ * Automatically handles app state changes for auto-lock functionality.
+ * 
+ * @returns Object with authentication state and methods
+ */
 export function useAuth() {
   const {
     isAuthenticated,

@@ -52,7 +52,31 @@ export async function searchMeetings(
       );
 
       if (!response.ok) {
-        throw new Error(`API responded with status ${response.status}`);
+        let errorMessage = `API responded with status ${response.status}`;
+        switch (response.status) {
+          case 400:
+            errorMessage = 'Invalid search parameters';
+            break;
+          case 401:
+            errorMessage = 'API authentication failed';
+            break;
+          case 403:
+            errorMessage = 'API access forbidden';
+            break;
+          case 404:
+            errorMessage = 'Meeting search service not found';
+            break;
+          case 429:
+            errorMessage = 'Too many requests, please try again later';
+            break;
+          case 500:
+          case 502:
+          case 503:
+          case 504:
+            errorMessage = 'Meeting search service is temporarily unavailable';
+            break;
+        }
+        throw new Error(errorMessage);
       }
 
       const data: MeetingGuideResponse[] = await response.json();
@@ -177,6 +201,8 @@ export function validateCoordinates(
     longitude >= -180 &&
     longitude <= 180 &&
     !isNaN(latitude) &&
-    !isNaN(longitude)
+    !isNaN(longitude) &&
+    // Avoid exact 0,0 coordinates (likely invalid GPS)
+    !(latitude === 0 && longitude === 0)
   );
 }

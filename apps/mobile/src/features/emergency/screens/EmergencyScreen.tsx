@@ -5,7 +5,6 @@
  * Accessibility: WCAG AAA compliant, high contrast, clear labels
  */
 
-import React from 'react';
 import { ScrollView, StyleSheet, View, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -44,7 +43,7 @@ const CRISIS_HOTLINES: CrisisHotline[] = [
   },
 ];
 
-export function EmergencyScreen({ userId }: EmergencyScreenProps): React.ReactElement {
+export function EmergencyScreen({ userId: _userId }: EmergencyScreenProps): React.ReactElement {
   const theme = useTheme();
 
   const handleCall = (number: string): void => {

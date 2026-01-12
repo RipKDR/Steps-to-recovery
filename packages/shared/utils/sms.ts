@@ -1,21 +1,29 @@
 /**
  * SMS Utility
- * Send SMS messages with SOS functionality and fallback handling
+ * 
+ * Send SMS messages with SOS functionality and fallback handling.
+ * Provides cross-platform SMS capabilities with graceful degradation.
+ * 
+ * @module utils/sms
  */
 
 import * as SMS from 'expo-sms';
 import { Linking, Platform, Alert } from 'react-native';
 
-// Default SOS message
+/** Default SOS message for emergency contacts */
 export const SOS_MESSAGE = "Hey, I'm having a hard time. Can you talk?";
 
-// Alternative messages
+/** Predefined SOS message templates */
 export const SOS_MESSAGES = {
+  /** Default SOS message */
   default: SOS_MESSAGE,
+  /** Urgent support request */
   urgent: "I really need to talk. Are you available?",
+  /** Casual check-in message */
   checking_in: "Hey, just checking in. Do you have a few minutes?",
+  /** Message for when struggling */
   struggling: "I'm struggling right now and could use some support.",
-};
+} as const;
 
 interface SendSMSResult {
   success: boolean;
@@ -24,26 +32,65 @@ interface SendSMSResult {
 
 /**
  * Check if SMS is available on this device
+ * 
+ * @returns Promise resolving to true if SMS is available, false otherwise
+ * @example
+ * ```ts
+ * const available = await isSMSAvailable();
+ * if (available) {
+ *   await sendSMS('+1234567890', 'Hello');
+ * }
+ * ```
  */
 export async function isSMSAvailable(): Promise<boolean> {
   try {
     return await SMS.isAvailableAsync();
   } catch (error) {
-    console.error('Error checking SMS availability:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('[SMS] Error checking SMS availability:', errorMessage);
     return false;
   }
 }
 
 /**
  * Send an SMS message
- * @param phoneNumber - Recipient phone number
- * @param message - Message to send
- * @returns Result indicating success or failure
+ * 
+ * Attempts to send SMS using expo-sms, with automatic fallback to
+ * Linking API if expo-sms is unavailable.
+ * 
+ * @param phoneNumber - Recipient phone number (can include + prefix)
+ * @param message - Message text to send
+ * @returns Promise resolving to result indicating success or failure
+ * @throws Never throws - always returns a result object
+ * @example
+ * ```ts
+ * const result = await sendSMS('+1234567890', 'Hello!');
+ * if (result.success) {
+ *   console.log('Message sent');
+ * } else {
+ *   console.error('Failed:', result.error);
+ * }
+ * ```
  */
 export async function sendSMS(
   phoneNumber: string,
   message: string
 ): Promise<SendSMSResult> {
+  // Validate inputs
+  if (!phoneNumber || typeof phoneNumber !== 'string') {
+    return {
+      success: false,
+      error: 'Invalid phone number',
+    };
+  }
+
+  if (!message || typeof message !== 'string' || message.trim().length === 0) {
+    return {
+      success: false,
+      error: 'Message cannot be empty',
+    };
+  }
+
   try {
     // Check if SMS is available
     const available = await isSMSAvailable();
@@ -62,7 +109,8 @@ export async function sendSMS(
       error: result === 'cancelled' ? 'Message cancelled by user' : undefined,
     };
   } catch (error) {
-    console.error('Error sending SMS:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('[SMS] Error sending SMS:', errorMessage);
     
     // Try fallback
     try {
@@ -78,7 +126,14 @@ export async function sendSMS(
 
 /**
  * Send SMS via Linking API (fallback method)
- * This opens the SMS app with pre-filled content
+ * 
+ * Opens the device's default SMS app with pre-filled recipient and message.
+ * Note: This method cannot determine if the user actually sent the message.
+ * 
+ * @param phoneNumber - Recipient phone number
+ * @param message - Message text to pre-fill
+ * @returns Promise resolving to result (always assumes success when app opens)
+ * @internal
  */
 async function sendSMSViaLinking(
   phoneNumber: string,
@@ -123,7 +178,19 @@ async function sendSMSViaLinking(
 
 /**
  * Send SOS message to a contact
- * Shows confirmation and handles result
+ * 
+ * Shows a confirmation dialog before sending an SOS message.
+ * Uses the default SOS message unless a custom message is provided.
+ * 
+ * @param phoneNumber - Recipient phone number
+ * @param contactName - Display name of the contact (for confirmation dialog)
+ * @param customMessage - Optional custom message (defaults to SOS_MESSAGE)
+ * @returns Promise resolving to result indicating success or failure
+ * @example
+ * ```ts
+ * await sendSOSMessage('+1234567890', 'John Doe');
+ * // Shows: "Send SOS Message? Send 'Hey, I'm having a hard time...' to John Doe?"
+ * ```
  */
 export async function sendSOSMessage(
   phoneNumber: string,
@@ -163,6 +230,21 @@ export async function sendSOSMessage(
 
 /**
  * Quick send SOS without confirmation (for emergency use)
+ * 
+ * Immediately sends the default SOS message without showing a confirmation dialog.
+ * Use this for emergency situations where speed is critical.
+ * 
+ * @param phoneNumber - Recipient phone number
+ * @returns Promise resolving to result indicating success or failure
+ * @example
+ * ```ts
+ * // Emergency button handler
+ * const result = await quickSendSOS(sponsorPhoneNumber);
+ * if (!result.success) {
+ *   // Fallback to phone call
+ *   await makePhoneCall(sponsorPhoneNumber);
+ * }
+ * ```
  */
 export async function quickSendSOS(
   phoneNumber: string
@@ -172,7 +254,19 @@ export async function quickSendSOS(
 
 /**
  * Make a phone call
- * Falls back to tel: linking if expo-linking fails
+ * 
+ * Initiates a phone call using the device's default dialer.
+ * Falls back gracefully if phone calls are not available.
+ * 
+ * @param phoneNumber - Phone number to call (can include + prefix)
+ * @returns Promise resolving to true if call was initiated, false otherwise
+ * @example
+ * ```ts
+ * const success = await makePhoneCall('+1234567890');
+ * if (!success) {
+ *   Alert.alert('Unable to make call');
+ * }
+ * ```
  */
 export async function makePhoneCall(phoneNumber: string): Promise<boolean> {
   try {

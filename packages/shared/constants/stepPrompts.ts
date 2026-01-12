@@ -1,17 +1,28 @@
 /**
  * 12-Step Work Prompts
- * Guided prompts for each step of the program
+ * 
+ * Guided prompts for each step of the 12-step program.
+ * These prompts help users work through each step with
+ * thoughtful reflection and self-examination.
+ * 
+ * @module constants/stepPrompts
  */
 
 export interface StepPrompt {
-  step: number;
-  title: string;
-  principle: string;
-  description: string;
-  prompts: string[];
+  /** Step number (1-12) */
+  readonly step: number;
+  /** Step title (e.g., "Powerlessness", "Hope") */
+  readonly title: string;
+  /** Core principle of this step (e.g., "Honesty", "Hope") */
+  readonly principle: string;
+  /** Full step description/statement */
+  readonly description: string;
+  /** Array of reflection prompts for this step */
+  readonly prompts: readonly string[];
 }
 
-export const STEP_PROMPTS: StepPrompt[] = [
+/** All 12-step prompts organized by step number */
+export const STEP_PROMPTS: readonly StepPrompt[] = [
   {
     step: 1,
     title: 'Powerlessness',
@@ -172,8 +183,37 @@ export const STEP_PROMPTS: StepPrompt[] = [
 
 /**
  * Get prompts for a specific step
+ * 
+ * @param step - Step number (1-12)
+ * @returns Step prompt object if found, undefined otherwise
+ * @example
+ * ```ts
+ * const step1 = getStepPrompts(1);
+ * // Returns Step 1 prompts with title "Powerlessness"
+ * ```
  */
 export function getStepPrompts(step: number): StepPrompt | undefined {
+  if (step < 1 || step > 12 || !Number.isInteger(step)) {
+    return undefined;
+  }
   return STEP_PROMPTS.find((s) => s.step === step);
 }
 
+/**
+ * Check if a step number is valid
+ * 
+ * @param step - Step number to validate
+ * @returns True if step is between 1 and 12
+ */
+export function isValidStepNumber(step: number): boolean {
+  return Number.isInteger(step) && step >= 1 && step <= 12;
+}
+
+/**
+ * Get all step numbers that have prompts
+ * 
+ * @returns Array of step numbers (1-12)
+ */
+export function getAllStepNumbers(): readonly number[] {
+  return STEP_PROMPTS.map((s) => s.step);
+}

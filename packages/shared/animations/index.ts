@@ -1,6 +1,16 @@
 /**
  * Shared Animation Presets
- * Reusable animation configurations for consistent motion design
+ * 
+ * Reusable animation configurations for consistent motion design across the app.
+ * Uses react-native-reanimated for performant, native animations.
+ * 
+ * Provides:
+ * - Spring configurations for different contexts
+ * - Timing presets for various animation speeds
+ * - Helper functions for common animation patterns
+ * - Entering/exiting presets for layout animations
+ * 
+ * @module animations
  */
 
 import {
@@ -10,7 +20,7 @@ import {
   withDelay,
   Easing,
   SharedValue,
-  runOnJS,
+
 } from 'react-native-reanimated';
 
 // Spring presets for different contexts
@@ -66,12 +76,23 @@ export const TIMING_CONFIGS = {
 
 /**
  * Animate a shared value for counting up effect
+ * 
+ * Useful for animating numbers (e.g., days clean, achievement counts).
+ * 
+ * @param sharedValue - The shared value to animate
+ * @param targetValue - Target number to count up to
+ * @param duration - Animation duration in milliseconds (default: 1500ms)
+ * @example
+ * ```ts
+ * const count = useSharedValue(0);
+ * animateCountUp(count, 30); // Animates from 0 to 30
+ * ```
  */
 export function animateCountUp(
   sharedValue: SharedValue<number>,
   targetValue: number,
   duration: number = 1500
-) {
+): void {
   'worklet';
   sharedValue.value = withTiming(targetValue, {
     duration,

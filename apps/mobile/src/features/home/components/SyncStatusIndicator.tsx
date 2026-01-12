@@ -79,6 +79,7 @@ export function SyncStatusIndicator() {
 
   return (
     <TouchableOpacity
+      testID="sync-status-indicator"
       style={[styles.container, { backgroundColor: theme.colors.surface }]}
       onPress={handlePress}
       disabled={isSyncing || !isOnline}

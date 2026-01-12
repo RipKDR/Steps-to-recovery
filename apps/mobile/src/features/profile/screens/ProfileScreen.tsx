@@ -4,7 +4,7 @@
  * Design: iOS-style with design system components
  */
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { ScrollView, StyleSheet, View, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';

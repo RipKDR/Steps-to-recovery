@@ -1,10 +1,101 @@
-// Shared package exports
+/**
+ * Shared Package Exports
+ * 
+ * This is the main entry point for the @recovery/shared package.
+ * It exports all shared types, utilities, constants, and services
+ * used across the Steps to Recovery application.
+ * 
+ * @module @recovery/shared
+ * @example
+ * ```ts
+ * import { AchievementDefinition, sendSMS, useAuthStore } from '@recovery/shared';
+ * ```
+ */
+
 // Export only non-conflicting types from ./types
-export type { SyncStatus, CheckInType, SyncOperation, SyncQueueItem, DbUserProfile, DbDailyCheckIn, DbStepWork } from './types';
+export type { 
+  SyncStatus, 
+  CheckInType, 
+  SyncOperation, 
+  SyncQueueItem, 
+  DbUserProfile, 
+  DbDailyCheckIn, 
+  DbStepWork 
+} from './types';
 
 // Main application types (camelCase properties)
 export * from '../types';
-export * from '../constants';
+
+// Explicit exports from constants to avoid naming conflicts
+export {
+  DEFAULT_EMOTIONS,
+  type EmotionTag as EmotionTagConstant,
+  getEmotionByName,
+  isValidEmotionName
+} from '../constants';
+
+export {
+  TIME_MILESTONES,
+  type TimeMilestone,
+  getNextMilestone,
+  getLatestMilestone,
+  getAchievedMilestones,
+  hasAchievedMilestone
+} from '../constants';
+
+export {
+  ALL_ACHIEVEMENTS,
+  type AchievementDefinition,
+  getAchievementDefinition,
+  isValidAchievementId
+} from '../constants';
+
+export {
+  STEP_PROMPTS,
+  type StepPrompt,
+  getStepPrompts,
+  isValidStepNumber,
+  getAllStepNumbers
+} from '../constants';
+
+export {
+  type CrisisResource,
+  type CrisisHotline,
+  type RegionConfig,
+  CRISIS_REGIONS,
+  COPING_STRATEGIES,
+  DEFAULT_REGION,
+  getCrisisResources,
+  getEmergencyNumber,
+  getAvailableRegions,
+  isValidRegion
+} from '../constants';
+
+export {
+  PRAYERS,
+  type Prayer,
+  getPrayerById,
+  getPrayersByCategory,
+  getPrayersForStep
+} from '../constants';
+
+export {
+  SLOGANS,
+  type Slogan,
+  getSloganById,
+  getSlogansByCategory,
+  getRandomSlogan
+} from '../constants';
+
+export {
+  type Keytag,
+  type KeytagWithStatus,
+  KEYTAGS,
+  getKeytagForDays,
+  getNextKeytag,
+  getKeytagsWithStatus,
+  getEarnedKeytagsCount
+} from '../constants';
 export * from '../db';
 export * from '../store';
 export * from '../utils';

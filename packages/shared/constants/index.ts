@@ -1,5 +1,16 @@
 /**
  * Constants Exports
+ * 
+ * Central export point for all application constants including:
+ * - Achievement definitions
+ * - Milestone configurations
+ * - Step work prompts
+ * - Emotion tags
+ * - Meeting topics
+ * - Crisis resources
+ * - And more...
+ * 
+ * @module constants
  */
 
 export * from './emotions';
@@ -14,6 +25,7 @@ export * from './prayers';
 export * from './keytags';
 
 // Export everything from achievements except getAchievementsByCategory
+// (getAchievementsByCategory is kept internal to avoid naming conflicts)
 export {
   FELLOWSHIP_ACHIEVEMENTS,
   STEP_WORK_ACHIEVEMENTS,
@@ -22,6 +34,7 @@ export {
   ALL_ACHIEVEMENTS,
   getAchievementDefinition,
   getTotalAchievementsCount,
+  isValidAchievementId,
 } from './achievements';
 export type { AchievementDefinition } from './achievements';
 

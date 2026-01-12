@@ -3,7 +3,7 @@
  * Detailed view of a single meeting with favorite toggle and personal notes
  */
 
-import React, { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -12,7 +12,6 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
-import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useTheme } from '../../../design-system/hooks/useTheme';
 import { Button } from '../../../design-system/components/Button';
@@ -34,7 +33,6 @@ type MeetingDetailScreenProps = MeetingsStackScreenProps<'MeetingDetail'>;
 
 export function MeetingDetailScreen({
   route,
-  navigation,
 }: MeetingDetailScreenProps): React.ReactElement {
   const theme = useTheme();
   const { db } = useDatabase();

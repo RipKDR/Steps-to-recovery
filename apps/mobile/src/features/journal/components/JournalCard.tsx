@@ -1,8 +1,14 @@
-import React from 'react';
-import { StyleSheet, View, TouchableOpacity, Text } from 'react-native';
+import React, { useCallback, useMemo } from 'react';
+import { StyleSheet, View, Text } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import type { JournalEntryDecrypted } from '@recovery/shared/types';
 import { useTheme, Card, Badge } from '../../../design-system';
+
+// Constants
+const MAX_BODY_LENGTH = 100;
+const MAX_VISIBLE_TAGS = 2;
+const MOOD_RANGE = { min: 1, max: 5 } as const;
+const CRAVING_RANGE = { min: 0, max: 10 } as const;
 
 interface JournalCardProps {
   entry: JournalEntryDecrypted;
@@ -16,35 +22,52 @@ const MOOD_EMOJI: Record<number, string> = {
   3: '😐',
   4: '🙂',
   5: '😊',
+} as const;
+
+// Helper function to safely get mood emoji with bounds checking
+const getMoodEmoji = (mood: number | null): string => {
+  if (mood === null) return '';
+  const clampedMood = Math.max(MOOD_RANGE.min, Math.min(MOOD_RANGE.max, mood));
+  return MOOD_EMOJI[clampedMood];
 };
 
-// Helper function to get craving color based on level
-const getCravingColor = (craving: number, theme: ReturnType<typeof useTheme>): string => {
-  if (craving <= 2) return theme.colors.success;
-  if (craving <= 4) return theme.colors.successMuted;
-  if (craving <= 6) return theme.colors.warning;
+// Helper function to get craving color based on level with bounds checking
+const getCravingColor = (craving: number | null, theme: ReturnType<typeof useTheme>): string => {
+  if (craving === null) return theme.colors.textSecondary;
+
+  const clampedCraving = Math.max(CRAVING_RANGE.min, Math.min(CRAVING_RANGE.max, craving));
+
+  if (clampedCraving <= 2) return theme.colors.success;
+  if (clampedCraving <= 4) return theme.colors.successMuted;
+  if (clampedCraving <= 6) return theme.colors.warning;
   return theme.colors.danger;
 };
 
 export function JournalCard({ entry, onPress, accessibilityHint }: JournalCardProps): React.ReactElement {
   const theme = useTheme();
 
-  const formatDate = (dateString: string): string => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diff = now.getTime() - date.getTime();
-    const hours = Math.floor(diff / (1000 * 60 * 60));
+  const formatDate = useCallback((dateString: string): string => {
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return 'Invalid date';
 
-    if (hours < 1) return 'Just now';
-    if (hours < 24) return `${hours}h ago`;
-    if (hours < 48) return 'Yesterday';
-    return date.toLocaleDateString();
-  };
+      const now = new Date();
+      const diff = now.getTime() - date.getTime();
+      const hours = Math.floor(diff / (1000 * 60 * 60));
 
-  const truncateBody = (text: string, maxLength: number = 100): string => {
-    if (text.length <= maxLength) return text;
+      if (hours < 1) return 'Just now';
+      if (hours < 24) return `${hours}h ago`;
+      if (hours < 48) return 'Yesterday';
+      return date.toLocaleDateString();
+    } catch {
+      return 'Invalid date';
+    }
+  }, []);
+
+  const truncateBody = useCallback((text: string, maxLength: number = MAX_BODY_LENGTH): string => {
+    if (!text || text.length <= maxLength) return text || '';
     return `${text.substring(0, maxLength)}...`;
-  };
+  }, []);
 
   return (
     <Card variant="interactive" onPress={onPress} animate style={styles.cardContainer} accessibilityHint={accessibilityHint}>
@@ -77,10 +100,10 @@ export function JournalCard({ entry, onPress, accessibilityHint }: JournalCardPr
           {entry.mood !== null && (
             <View
               style={styles.indicator}
-              accessibilityLabel={`Mood: ${MOOD_EMOJI[entry.mood]}`}
+              accessibilityLabel={`Mood level: ${entry.mood} out of 5`}
               accessibilityRole="text"
             >
-              <Text style={styles.emoji}>{MOOD_EMOJI[entry.mood]}</Text>
+              <Text style={styles.emoji}>{getMoodEmoji(entry.mood)}</Text>
             </View>
           )}
           {entry.craving !== null && (
@@ -89,21 +112,26 @@ export function JournalCard({ entry, onPress, accessibilityHint }: JournalCardPr
               accessibilityLabel={`Craving level: ${entry.craving} out of 10`}
               accessibilityRole="text"
             >
-              <Text style={styles.cravingText}>{entry.craving}</Text>
+              <Text style={[styles.cravingText, { color: theme.colors.textInverse || '#FFFFFF' }]}>
+                {entry.craving}
+              </Text>
             </View>
           )}
         </View>
 
         {entry.tags.length > 0 && (
           <View style={styles.tags}>
-            {entry.tags.slice(0, 2).map((tag, index) => (
-              <Badge key={index} variant="primary" size="small">
+            {entry.tags.slice(0, MAX_VISIBLE_TAGS).map((tag, index) => (
+              <Badge key={`${tag}-${index}`} variant="primary" size="small">
                 {tag}
               </Badge>
             ))}
-            {entry.tags.length > 2 && (
-              <Text style={[theme.typography.caption, { color: theme.colors.textSecondary }]}>
-                +{entry.tags.length - 2}
+            {entry.tags.length > MAX_VISIBLE_TAGS && (
+              <Text
+                style={[theme.typography.caption, { color: theme.colors.textSecondary }]}
+                accessibilityLabel={`${entry.tags.length - MAX_VISIBLE_TAGS} more tags`}
+              >
+                +{entry.tags.length - MAX_VISIBLE_TAGS}
               </Text>
             )}
           </View>
@@ -154,7 +182,7 @@ const styles = StyleSheet.create({
   cravingText: {
     fontSize: 12,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: 'white', // Will be overridden by inline style with theme.colors.textInverse
   },
   tags: {
     flexDirection: 'row',

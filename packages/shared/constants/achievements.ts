@@ -525,22 +525,50 @@ export const ALL_ACHIEVEMENTS: AchievementDefinition[] = [
 
 /**
  * Get achievement definition by ID
+ * 
+ * @param id - The achievement ID to look up
+ * @returns The achievement definition if found, undefined otherwise
+ * @example
+ * ```ts
+ * const achievement = getAchievementDefinition('step-1-completed');
+ * ```
  */
 export function getAchievementDefinition(id: string): AchievementDefinition | undefined {
+  if (!id || typeof id !== 'string') {
+    return undefined;
+  }
   return ALL_ACHIEVEMENTS.find((a) => a.id === id);
 }
 
 /**
  * Get achievements by category
+ * 
+ * @param category - The achievement category to filter by
+ * @returns Array of all achievements in the specified category
+ * @example
+ * ```ts
+ * const stepAchievements = getAchievementsByCategory('step_work');
+ * ```
  */
-export function getAchievementsByCategory(category: AchievementCategory): AchievementDefinition[] {
+export function getAchievementsByCategory(category: AchievementCategory): readonly AchievementDefinition[] {
   return ALL_ACHIEVEMENTS.filter((a) => a.category === category);
 }
 
 /**
  * Get total achievements count
+ * 
+ * @returns The total number of available achievements
  */
 export function getTotalAchievementsCount(): number {
   return ALL_ACHIEVEMENTS.length;
 }
 
+/**
+ * Check if an achievement ID is valid
+ * 
+ * @param id - The achievement ID to validate
+ * @returns True if the achievement exists
+ */
+export function isValidAchievementId(id: string): boolean {
+  return ALL_ACHIEVEMENTS.some((a) => a.id === id);
+}

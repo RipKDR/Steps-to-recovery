@@ -1,9 +1,18 @@
 /**
- * Centralized logout cleanup utility
- * Handles all cleanup operations when user logs out:
- * - Clears encryption keys from secure storage
- * - Clears local database
- * - Clears web secure storage session
+ * Logout Cleanup Utility
+ * 
+ * Centralized utility for performing complete logout cleanup.
+ * Ensures all sensitive data is removed when a user logs out.
+ * 
+ * **Cleanup Operations**:
+ * 1. Deletes encryption keys from secure storage
+ * 2. Clears web secure storage session (web only)
+ * 3. Clears all local database data
+ * 
+ * **Security**: This MUST be called before signing out to prevent
+ * data leaks. All operations are logged and errors are handled gracefully.
+ * 
+ * @module utils/logoutCleanup
  */
 
 import { deleteEncryptionKey } from './encryption';
@@ -21,7 +30,20 @@ export interface LogoutCleanupOptions {
 
 /**
  * Perform complete logout cleanup
- * MUST be called before signing out to prevent data leaks
+ * 
+ * **Critical**: This MUST be called before signing out to prevent data leaks.
+ * All sensitive data (encryption keys, local database, session) is cleared.
+ * 
+ * @param options - Cleanup options
+ * @param options.db - Database instance (required for mobile, optional for web)
+ * @returns Promise that resolves when cleanup is complete
+ * @throws Never throws - errors are logged but cleanup continues
+ * @example
+ * ```ts
+ * // Before calling supabase.auth.signOut()
+ * await performLogoutCleanup({ db });
+ * await supabase.auth.signOut();
+ * ```
  */
 export async function performLogoutCleanup(options: LogoutCleanupOptions = {}): Promise<void> {
   const errors: Error[] = [];

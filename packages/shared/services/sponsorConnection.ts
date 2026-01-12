@@ -1,10 +1,15 @@
 /**
  * Sponsor Connection Service
- * Handles code generation and sponsor pairing for limited data sharing
  * 
- * Note: This is a local-only implementation. The connection codes are
+ * Handles code generation and sponsor pairing for limited data sharing.
+ * Provides a privacy-focused way for sponsees to share recovery progress
+ * with their sponsors without exposing sensitive details.
+ * 
+ * **Note**: This is a local-only implementation. The connection codes are
  * designed to be shared manually (text/email) and enable limited
  * one-way data sharing from sponsee to sponsor.
+ * 
+ * @module services/sponsorConnection
  */
 
 import { v4 as uuidv4 } from 'uuid';
@@ -70,7 +75,16 @@ export interface SponsorShareData {
 
 /**
  * Generate a new sponsor connection code
- * Code format: RC-XXXXXX (6 alphanumeric characters)
+ * 
+ * Creates a unique connection code that can be shared with a sponsor.
+ * Codes expire after 7 days for security. Format: RC-XXXXXX (6 alphanumeric characters).
+ * 
+ * @returns Promise resolving to connection code object with expiry information
+ * @example
+ * ```ts
+ * const code = await generateSponsorCode();
+ * // Share code.code with sponsor: "RC-A3B7K9"
+ * ```
  */
 export async function generateSponsorCode(): Promise<ConnectionCode> {
   // Generate random 6-character code
@@ -99,6 +113,17 @@ export async function generateSponsorCode(): Promise<ConnectionCode> {
 
 /**
  * Get the current sponsor connection code (if exists and valid)
+ * 
+ * Retrieves the active connection code if one exists and hasn't expired.
+ * 
+ * @returns Promise resolving to connection code or null if none exists/expired
+ * @example
+ * ```ts
+ * const code = await getCurrentSponsorCode();
+ * if (code && !code.isExpired) {
+ *   // Display code to user
+ * }
+ * ```
  */
 export async function getCurrentSponsorCode(): Promise<ConnectionCode | null> {
   try {
@@ -285,9 +310,23 @@ export function generateShareMessage(data: SponsorShareData): string {
 
 /**
  * Validate a connection code format
+ * 
+ * Checks if a code string matches the expected format (RC-XXXXXX).
+ * 
+ * @param code - Code string to validate
+ * @returns True if code format is valid
+ * @example
+ * ```ts
+ * if (isValidCodeFormat(userInput)) {
+ *   await addSponseeConnection(userInput, name);
+ * }
+ * ```
  */
 export function isValidCodeFormat(code: string): boolean {
-  // Format: RC-XXXXXX (6 alphanumeric characters)
+  if (!code || typeof code !== 'string') {
+    return false;
+  }
+  // Format: RC-XXXXXX (6 alphanumeric characters, excluding similar chars)
   const pattern = /^RC-[A-Z2-9]{6}$/;
   return pattern.test(code.toUpperCase());
 }

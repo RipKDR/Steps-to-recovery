@@ -7,7 +7,7 @@ export type SyncStatus = 'pending' | 'synced' | 'error';
 
 export interface UserProfile {
   id: string;
-  email: string;
+  encrypted_email: string;
   sobriety_start_date: string;
   created_at: string;
   updated_at: string;
@@ -53,6 +53,7 @@ export interface StepWork {
   created_at: string;
   updated_at: string;
   sync_status: SyncStatus;
+  supabase_id: string | null;
 }
 
 export type AchievementType = 'milestone' | 'streak' | 'step_completion';
@@ -76,4 +77,14 @@ export interface SyncQueueItem {
   created_at: string;
   retry_count: number;
   last_error: string | null;
+}
+
+export interface DbTimeCapsule {
+  id: string;
+  title: string;
+  content: string;
+  unlock_date: string;
+  is_unlocked: number;
+  unlocked_at: string | null;
+  created_at: string;
 }

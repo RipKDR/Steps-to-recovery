@@ -1,6 +1,18 @@
 /**
  * Weekly Report Service
- * Generates comprehensive weekly recovery summaries
+ * 
+ * Generates comprehensive weekly recovery summaries that help users
+ * track their progress, identify patterns, and celebrate achievements.
+ * 
+ * Reports include:
+ * - Check-in statistics and trends
+ * - Meeting attendance
+ * - Fellowship activity
+ * - Step work progress
+ * - Achievements unlocked
+ * - Personalized encouragement
+ * 
+ * @module services/weeklyReport
  */
 
 import { getCheckinHistory, getReadingStreak, getPhoneCallLogs } from '../db/models';
@@ -59,6 +71,29 @@ export interface WeeklyReport {
 
 /**
  * Generate a weekly report
+ * 
+ * Creates a comprehensive weekly summary of recovery activities and progress.
+ * Analyzes data from the past 7 days and generates insights, highlights,
+ * and areas for growth.
+ * 
+ * @param soberDays - Current number of days of sobriety
+ * @param meetingLogs - Array of meeting attendance records
+ * @param stepProgress - Array of step work progress records
+ * @param achievements - Array of achievement records
+ * @param keytags - Array of keytag/milestone records
+ * @param sponsorContactDate - Optional date of last sponsor contact
+ * @returns Promise resolving to complete weekly report
+ * @example
+ * ```ts
+ * const report = await generateWeeklyReport(
+ *   cleanDays,
+ *   meetings,
+ *   stepWork,
+ *   achievements,
+ *   keytags,
+ *   lastSponsorCall
+ * );
+ * ```
  */
 export async function generateWeeklyReport(
   soberDays: number,

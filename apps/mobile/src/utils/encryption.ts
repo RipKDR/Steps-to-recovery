@@ -1,12 +1,37 @@
+/**
+ * Encryption Utilities
+ * 
+ * Provides AES-256-CBC encryption for sensitive user data (journal entries,
+ * step work, check-ins, etc.). All encryption keys are stored securely using
+ * platform-specific secure storage (Keychain on iOS, Keystore on Android).
+ * 
+ * **Security Features**:
+ * - AES-256-CBC encryption with unique IV per encryption
+ * - PBKDF2 key derivation (100,000 iterations)
+ * - Keys stored in SecureStore (never in AsyncStorage or database)
+ * - Platform-agnostic implementation (works on mobile and web)
+ * 
+ * @module utils/encryption
+ */
+
 import CryptoJS from 'crypto-js';
 import { Platform } from 'react-native';
 import { secureStorage } from '../adapters/secureStorage';
 
+/** Secure storage key for encryption master key */
 const ENCRYPTION_KEY_NAME = 'journal_encryption_key';
+
+/** PBKDF2 iterations for key derivation (higher = more secure, slower) */
 const KEY_DERIVATION_ITERATIONS = 100000;
 
 /**
  * Get random bytes in a platform-agnostic way
+ * 
+ * Uses crypto.getRandomValues on web and expo-crypto on mobile.
+ * 
+ * @param length - Number of random bytes to generate
+ * @returns Promise resolving to Uint8Array of random bytes
+ * @internal
  */
 async function getRandomBytes(length: number): Promise<Uint8Array> {
   if (Platform.OS === 'web') {
@@ -20,6 +45,11 @@ async function getRandomBytes(length: number): Promise<Uint8Array> {
 
 /**
  * Generate random UUID in a platform-agnostic way
+ * 
+ * Uses crypto.randomUUID on web and expo-crypto on mobile.
+ * 
+ * @returns Promise resolving to UUID string
+ * @internal
  */
 async function generateUUID(): Promise<string> {
   if (Platform.OS === 'web') {
@@ -31,6 +61,24 @@ async function generateUUID(): Promise<string> {
   }
 }
 
+/**
+ * Generate a new encryption key
+ * 
+ * Creates a cryptographically secure encryption key using PBKDF2 key derivation.
+ * The key is stored securely in platform-specific secure storage.
+ * 
+ * **Important**: This should only be called during onboarding. If a key already
+ * exists, use `getEncryptionKey()` instead.
+ * 
+ * @returns Promise resolving to the generated encryption key (hex string)
+ * @throws Error if key generation or storage fails
+ * @example
+ * ```ts
+ * // During onboarding
+ * const key = await generateEncryptionKey();
+ * // Key is now stored securely and ready to use
+ * ```
+ */
 export async function generateEncryptionKey(): Promise<string> {
   const randomBytes = await getRandomBytes(32);
   const randomString = Array.from(randomBytes).map(b => b.toString(16).padStart(2, '0')).join('');
@@ -43,10 +91,42 @@ export async function generateEncryptionKey(): Promise<string> {
   return derivedKey;
 }
 
+/**
+ * Get the current encryption key
+ * 
+ * Retrieves the encryption key from secure storage. Returns null if no key exists.
+ * 
+ * @returns Promise resolving to encryption key or null if not found
+ * @example
+ * ```ts
+ * const key = await getEncryptionKey();
+ * if (!key) {
+ *   // Redirect to onboarding to generate key
+ * }
+ * ```
+ */
 export async function getEncryptionKey(): Promise<string | null> {
   return await secureStorage.getItemAsync(ENCRYPTION_KEY_NAME);
 }
 
+/**
+ * Encrypt content using AES-256-CBC
+ * 
+ * Encrypts sensitive content (journal entries, step work answers, etc.) using
+ * AES-256-CBC with a unique IV for each encryption. The IV is prepended to
+ * the ciphertext in the format: `{iv}:{ciphertext}`
+ * 
+ * **Security**: Each encryption uses a unique IV, preventing pattern analysis.
+ * 
+ * @param content - Plaintext content to encrypt
+ * @returns Promise resolving to encrypted string in format `{iv}:{ciphertext}`
+ * @throws Error if encryption key is not found
+ * @example
+ * ```ts
+ * const encrypted = await encryptContent('My journal entry');
+ * // Returns: "a1b2c3d4...:encrypted_ciphertext..."
+ * ```
+ */
 export async function encryptContent(content: string): Promise<string> {
   const key = await getEncryptionKey();
   if (!key) throw new Error('Encryption key not found');
@@ -58,6 +138,25 @@ export async function encryptContent(content: string): Promise<string> {
   return `${iv}:${encrypted.toString()}`;
 }
 
+/**
+ * Decrypt content encrypted with encryptContent()
+ * 
+ * Decrypts content that was encrypted using `encryptContent()`. Extracts the
+ * IV from the encrypted string and uses it along with the stored encryption key.
+ * 
+ * @param encrypted - Encrypted string in format `{iv}:{ciphertext}`
+ * @returns Promise resolving to decrypted plaintext
+ * @throws Error if encryption key is not found, format is invalid, or decryption fails
+ * @example
+ * ```ts
+ * try {
+ *   const decrypted = await decryptContent(encryptedString);
+ *   // Use decrypted content
+ * } catch (error) {
+ *   // Handle decryption failure
+ * }
+ * ```
+ */
 export async function decryptContent(encrypted: string): Promise<string> {
   const key = await getEncryptionKey();
   if (!key) throw new Error('Encryption key not found');
@@ -71,10 +170,36 @@ export async function decryptContent(encrypted: string): Promise<string> {
   return plaintext;
 }
 
+/**
+ * Delete the encryption key
+ * 
+ * **Warning**: This will make all encrypted data permanently inaccessible!
+ * Only call this during account deletion or complete data wipe.
+ * 
+ * @returns Promise that resolves when key is deleted
+ * @example
+ * ```ts
+ * // During logout/account deletion
+ * await deleteEncryptionKey();
+ * await clearDatabase(db);
+ * ```
+ */
 export async function deleteEncryptionKey(): Promise<void> {
   await secureStorage.deleteItemAsync(ENCRYPTION_KEY_NAME);
 }
 
+/**
+ * Check if an encryption key exists
+ * 
+ * @returns Promise resolving to true if encryption key exists, false otherwise
+ * @example
+ * ```ts
+ * const hasKey = await hasEncryptionKey();
+ * if (!hasKey) {
+ *   // Show onboarding to generate key
+ * }
+ * ```
+ */
 export async function hasEncryptionKey(): Promise<boolean> {
   const key = await getEncryptionKey();
   return key !== null && key.length > 0;

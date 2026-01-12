@@ -3,7 +3,7 @@
  * Platform-specific: iOS uses shadowColor/shadowOffset, Android uses elevation
  */
 
-import { Platform, ViewStyle } from 'react-native';
+import { Platform } from 'react-native';
 
 interface ShadowStyle {
   shadowColor?: string;

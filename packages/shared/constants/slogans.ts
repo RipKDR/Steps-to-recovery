@@ -1,14 +1,26 @@
 /**
  * Recovery Slogans
- * Common slogans used in 12-step programs with explanations
+ * 
+ * Common slogans used in 12-step programs with detailed explanations.
+ * These slogans provide wisdom and guidance for various situations in recovery.
+ * 
+ * @module constants/slogans
  */
 
+/**
+ * Recovery slogan with explanation
+ */
 export interface Slogan {
-  id: string;
-  text: string;
-  explanation: string;
-  whenToUse: string;
-  category: 'foundation' | 'daily' | 'struggle' | 'growth' | 'fellowship';
+  /** Unique identifier */
+  readonly id: string;
+  /** The slogan text */
+  readonly text: string;
+  /** Detailed explanation of the slogan's meaning */
+  readonly explanation: string;
+  /** Guidance on when to use this slogan */
+  readonly whenToUse: string;
+  /** Slogan category */
+  readonly category: 'foundation' | 'daily' | 'struggle' | 'growth' | 'fellowship';
 }
 
 export const SLOGANS: Slogan[] = [
@@ -218,23 +230,61 @@ Cultivating gratitude on a daily basis protects our recovery. An addict full of 
 
 /**
  * Get slogans by category
+ * 
+ * @param category - Slogan category to filter by
+ * @returns Array of slogans in the specified category
+ * @example
+ * ```ts
+ * const dailySlogans = getSlogansByCategory('daily');
+ * ```
  */
-export function getSlogansByCategory(category: Slogan['category']): Slogan[] {
+export function getSlogansByCategory(category: Slogan['category']): readonly Slogan[] {
   return SLOGANS.filter((s) => s.category === category);
 }
 
 /**
  * Get slogan by ID
+ * 
+ * @param id - Slogan ID to look up
+ * @returns Slogan object if found, undefined otherwise
+ * @example
+ * ```ts
+ * const slogan = getSloganById('one-day');
+ * ```
  */
 export function getSloganById(id: string): Slogan | undefined {
+  if (!id || typeof id !== 'string') {
+    return undefined;
+  }
   return SLOGANS.find((s) => s.id === id);
 }
 
 /**
  * Get random slogan
+ * 
+ * Useful for displaying daily inspiration or random encouragement.
+ * 
+ * @returns A randomly selected slogan
+ * @example
+ * ```ts
+ * const dailySlogan = getRandomSlogan();
+ * ```
  */
 export function getRandomSlogan(): Slogan {
+  if (SLOGANS.length === 0) {
+    throw new Error('No slogans available');
+  }
   return SLOGANS[Math.floor(Math.random() * SLOGANS.length)];
+}
+
+/**
+ * Check if a slogan ID is valid
+ * 
+ * @param id - Slogan ID to validate
+ * @returns True if slogan exists
+ */
+export function isValidSloganId(id: string): boolean {
+  return SLOGANS.some((s) => s.id === id);
 }
 
 /**

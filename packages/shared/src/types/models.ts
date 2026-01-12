@@ -41,6 +41,7 @@ export interface StepWorkDecrypted {
   created_at: string;
   updated_at: string;
   sync_status: 'pending' | 'synced' | 'error';
+  supabase_id?: string | null;
 }
 
 export interface MilestoneDefinition {
@@ -55,4 +56,14 @@ export interface Streak {
   current_streak: number;
   longest_streak: number;
   total_check_ins: number;
+}
+
+export interface TimeCapsule {
+  id: string;
+  title: string;
+  content: string;
+  unlockDate: Date;
+  isUnlocked: boolean;
+  unlockedAt?: Date;
+  createdAt: Date;
 }

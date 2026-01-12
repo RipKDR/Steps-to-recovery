@@ -1,9 +1,17 @@
 /**
  * Notification Service
- * Handles scheduling and managing daily check-in reminders
- *
- * Note: We lazily require expo-notifications to avoid SSR/web build crashes
+ * 
+ * Handles scheduling and managing notifications for the recovery app including:
+ * - Daily check-in reminders
+ * - Milestone celebrations
+ * - Meeting reminders
+ * - Achievement unlocks
+ * - Time capsule notifications
+ * 
+ * **Note**: We lazily require expo-notifications to avoid SSR/web build crashes
  * when localStorage is not available during server-side rendering.
+ * 
+ * @module notifications
  */
 
 import { Platform } from 'react-native';
@@ -49,7 +57,18 @@ const REGULAR_MEETING_REMINDER_PREFIX = 'regular-meeting-';
 
 /**
  * Request notification permissions
- * @returns true if permissions granted
+ * 
+ * Requests notification permissions from the user and sets up Android channels
+ * if needed. Must be called before scheduling any notifications.
+ * 
+ * @returns Promise resolving to true if permissions were granted, false otherwise
+ * @example
+ * ```ts
+ * const granted = await requestNotificationPermissions();
+ * if (granted) {
+ *   await scheduleDailyCheckinReminder('09:00');
+ * }
+ * ```
  */
 export async function requestNotificationPermissions(): Promise<boolean> {
   ensureNotificationHandler();

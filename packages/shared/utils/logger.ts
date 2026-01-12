@@ -1,33 +1,33 @@
 /**
- * Secure Logger Utility
- * 
+ * Secure Logger Utility for Shared Package
+ *
  * Provides secure logging with automatic data sanitization to prevent
  * sensitive information from appearing in logs or error tracking services.
- * 
+ *
  * **Security Features**:
  * - Automatically redacts sensitive fields (encrypted content, keys, tokens)
  * - Sanitizes error stack traces
  * - Redacts long strings and hex values (likely encrypted data)
  * - Development vs production logging modes
- * 
+ *
  * **Usage**: Always use this logger instead of console.log/error to ensure
  * sensitive recovery data is never logged.
- * 
+ *
  * @module utils/logger
  * @example
  * ```ts
- * import { logger } from '@/utils/logger';
- * 
+ * import { logger } from '@recovery/shared/utils/logger';
+ *
  * logger.info('User action', { userId, action: 'save' }); // Safe
  * logger.error('Encryption failed', error); // Error sanitized
  * ```
  */
 
-const isDevelopment = process.env.EXPO_PUBLIC_ENV === 'development';
+const isDevelopment = process?.env?.EXPO_PUBLIC_ENV === 'development' || process?.env?.NODE_ENV === 'development';
 
 /**
  * List of sensitive field names that should be redacted from logs
- * 
+ *
  * Any field matching these names (case-insensitive) will be replaced
  * with '[REDACTED]' in log output.
  */
@@ -40,12 +40,22 @@ const SENSITIVE_FIELDS = new Set([
   'encrypted_tags',
   'encrypted_intention',
   'encrypted_reflection',
+  'encrypted_takeaways',
+  'encrypted_learned',
+  'encrypted_quote',
+  'encrypted_notes',
+  'encrypted_share',
   'title',
   'body',
   'answer',
   'content',
   'reflection',
   'intention',
+  'takeaways',
+  'learned',
+  'quote',
+  'notes',
+  'share',
   'password',
   'token',
   'key',
@@ -56,13 +66,13 @@ const SENSITIVE_FIELDS = new Set([
 
 /**
  * Sanitize data to remove sensitive information before logging
- * 
+ *
  * Recursively processes objects and arrays, redacting:
  * - Fields matching SENSITIVE_FIELDS
  * - Long strings (>100 chars, likely encrypted content)
  * - Hex strings (32+ chars, likely keys/IVs)
  * - Nested sensitive data
- * 
+ *
  * @param data - Data to sanitize
  * @param depth - Recursion depth (prevents infinite loops)
  * @returns Sanitized data safe for logging
@@ -129,10 +139,10 @@ function sanitizeData(data: unknown, depth: number = 0): unknown {
 
 /**
  * Sanitize error objects to remove sensitive stack trace information
- * 
+ *
  * Removes file paths that might contain usernames and redacts
  * sensitive patterns from error messages.
- * 
+ *
  * @param error - Error object to sanitize
  * @returns Sanitized error object
  * @internal
@@ -164,14 +174,14 @@ function sanitizeError(error: unknown): unknown {
 
 /**
  * Secure logger with automatic data sanitization
- * 
+ *
  * All logging methods automatically sanitize data before output.
  * In production, logs are minimal to reduce exposure.
  */
 export const logger = {
   /**
    * Log an error
-   * 
+   *
    * @param message - Error message
    * @param error - Optional error object (will be sanitized)
    * @example
@@ -189,26 +199,14 @@ export const logger = {
     if (isDevelopment) {
       console.error(`[ERROR] ${message}`, sanitized);
     } else {
-      // Production: log without details (or send to Sentry with sanitization)
+      // Production: log without details
       console.error(`[ERROR] ${message}`);
-
-      // Sentry integration (when configured)
-      // To enable:
-      // 1. npm install @sentry/react-native
-      // 2. Configure in App.tsx with your DSN
-      // 3. Uncomment below:
-      // import * as Sentry from '@sentry/react-native';
-      // Sentry.captureException(error instanceof Error ? error : new Error(message), {
-      //   extra: sanitized,
-      //   level: 'error',
-      //   tags: { component: 'logger' }
-      // });
     }
   },
 
   /**
    * Log a warning
-   * 
+   *
    * @param message - Warning message
    * @param data - Optional data (will be sanitized)
    */
@@ -222,7 +220,7 @@ export const logger = {
 
   /**
    * Log informational message
-   * 
+   *
    * @param message - Info message
    * @param data - Optional data (will be sanitized)
    */
@@ -236,7 +234,7 @@ export const logger = {
 
   /**
    * Log debug message (development only)
-   * 
+   *
    * @param message - Debug message
    * @param data - Optional data (will be sanitized)
    */

@@ -257,7 +257,7 @@ export function measurePerformance<T>(
   const result = fn();
   const duration = performance.now() - start;
   
-  if (__DEV__ && duration > 16) {
+  if (process.env.NODE_ENV === 'development' && duration > 16) {
     // Warn if operation takes longer than one frame (16ms)
     console.warn(`[Performance] ${name} took ${duration.toFixed(2)}ms`);
   }
@@ -276,7 +276,7 @@ export async function measurePerformanceAsync<T>(
   const result = await fn();
   const duration = performance.now() - start;
   
-  if (__DEV__ && duration > 100) {
+  if (process.env.NODE_ENV === 'development' && duration > 100) {
     // Warn if async operation takes longer than 100ms
     console.warn(`[Performance] ${name} took ${duration.toFixed(2)}ms`);
   }

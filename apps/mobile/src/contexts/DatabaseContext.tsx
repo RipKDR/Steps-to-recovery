@@ -98,8 +98,8 @@ function WebDatabaseProvider({ children }: DatabaseProviderProps): React.ReactEl
       } catch (err) {
         logger.error('Web: Failed to initialize database', err);
         setError(err as Error);
-        // Set a dummy adapter to unblock the app for now
-        setAdapter({} as StorageAdapter);
+        // Keep adapter as null - consuming code should handle null db gracefully
+        setAdapter(null);
       }
     }
     setupAdapter();

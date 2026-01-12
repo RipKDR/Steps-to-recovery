@@ -3,25 +3,35 @@
   "compilerOptions": {
     "strict": true,
     "target": "ES2020",
-    "module": "ES2022",
+    "module": "ESNext",
     "lib": [
       "ES2020"
     ],
-    "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "allowJs": true,
     "noEmit": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "declaration": true,
-    "declarationMap": true
+    "moduleResolution": "bundler"
   },
   "include": [
-    "src"
+    "src",
+    "types",
+    "constants",
+    "db",
+    "store",
+    "utils",
+    "jitai",
+    "notifications",
+    "animations",
+    "export",
+    "services"
   ],
   "exclude": [
     "node_modules",
-    "dist"
+    "dist",
+    "**/*.test.ts",
+    "**/*.test.js"
   ]
 }

@@ -62,6 +62,20 @@ export function SharedEntriesScreen(): React.ReactElement {
             const decryptedBody = await decryptContent(entry.content);
             const decryptedMood = entry.mood ? await decryptContent(entry.mood) : undefined;
 
+            let tags: string[] = [];
+            if (Array.isArray(entry.tags) && entry.tags.length > 0 && entry.tags[0]) {
+              try {
+                // Tags are stored as a single encrypted JSON string in the first array slot
+                const decryptedTagsJson = await decryptContent(entry.tags[0]);
+                const parsed = JSON.parse(decryptedTagsJson);
+                if (Array.isArray(parsed)) {
+                  tags = parsed;
+                }
+              } catch (tagError) {
+                logger.warn('Failed to decrypt shared entry tags', { entryId: entry.id, error: tagError });
+              }
+            }
+
             return {
               id: entry.id,
               user_id: entry.user_id,
@@ -69,7 +83,7 @@ export function SharedEntriesScreen(): React.ReactElement {
               body: decryptedBody,
               mood: decryptedMood ? parseInt(decryptedMood, 10) : null,
               craving: null, // Not available in shared entries
-              tags: entry.tags || [],
+              tags,
               created_at: entry.created_at,
               updated_at: entry.updated_at,
               sync_status: 'synced',

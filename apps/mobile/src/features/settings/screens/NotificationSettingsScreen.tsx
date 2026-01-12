@@ -8,7 +8,7 @@
  * - View scheduled notifications
  */
 
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
@@ -57,6 +57,7 @@ export function NotificationSettingsScreen(): React.ReactElement {
 
   const [scheduledCount, setScheduledCount] = useState(0);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [isTogglingNotifications, setIsTogglingNotifications] = useState(false);
 
   const [showMorningTimePicker, setShowMorningTimePicker] = useState(false);
   const [showEveningTimePicker, setShowEveningTimePicker] = useState(false);
@@ -85,24 +86,32 @@ export function NotificationSettingsScreen(): React.ReactElement {
    * Toggle master notification switch
    */
   const handleToggleNotifications = async (enabled: boolean): Promise<void> => {
-    if (enabled && permissionStatus !== 'granted') {
-      // Need to request permissions first
-      const granted = await requestPermissions();
-      if (!granted) {
-        showToast('Enable notifications in device settings to receive reminders.', 'warning');
-        return;
+    if (isTogglingNotifications) return; // Prevent rapid toggling
+
+    setIsTogglingNotifications(true);
+
+    try {
+      if (enabled && permissionStatus !== 'granted') {
+        // Need to request permissions first
+        const granted = await requestPermissions();
+        if (!granted) {
+          showToast('Enable notifications in device settings to receive reminders.', 'warning');
+          return;
+        }
       }
-    }
 
-    setNotificationsEnabled(enabled);
+      setNotificationsEnabled(enabled);
 
-    if (enabled) {
-      // Re-schedule daily reminders
-      await applyReminderSettings(true);
-    } else {
-      // Cancel all reminders
-      await cancelDailyReminders();
-      await loadScheduledNotifications();
+      if (enabled) {
+        // Re-schedule daily reminders
+        await applyReminderSettings(true);
+      } else {
+        // Cancel all reminders
+        await cancelDailyReminders();
+        await loadScheduledNotifications();
+      }
+    } finally {
+      setIsTogglingNotifications(false);
     }
   };
 
@@ -273,7 +282,7 @@ export function NotificationSettingsScreen(): React.ReactElement {
             value={notificationsEnabled}
             onValueChange={handleToggleNotifications}
             label="Enable notifications"
-            disabled={isUpdating}
+            disabled={isUpdating || isTogglingNotifications}
             style={{ marginBottom: theme.spacing.xs }}
           />
           <Text variant="bodySmall" color="textSecondary">

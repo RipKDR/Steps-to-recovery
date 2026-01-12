@@ -1,21 +1,63 @@
+/**
+ * Database Utilities
+ * 
+ * Provides database initialization, schema management, and migration utilities.
+ * Works with both SQLite (mobile) and IndexedDB (web) via StorageAdapter abstraction.
+ * 
+ * **Features**:
+ * - Versioned schema migrations
+ * - Idempotent initialization (safe to call multiple times)
+ * - Concurrent initialization protection
+ * - Automatic index creation for performance
+ * 
+ * @module utils/database
+ */
+
 import type { StorageAdapter } from '../adapters/storage';
 import { logger } from './logger';
 
-// Guard against duplicate/concurrent initialization (common in dev StrictMode and fast refresh)
-// Use database name instead of object identity for more reliable duplicate detection
+/**
+ * Guard against duplicate/concurrent initialization
+ * 
+ * Common in React StrictMode (dev) and fast refresh scenarios.
+ * Uses database name instead of object identity for more reliable duplicate detection.
+ */
 const initializedDatabases = new Set<string>();
 const initPromises = new Map<string, Promise<void>>();
 
 /**
  * Current database schema version
- * Increment this when adding new migrations
+ * 
+ * Increment this when adding new migrations. Migrations are applied
+ * sequentially from the current version to this target version.
  */
-const CURRENT_SCHEMA_VERSION = 3;
+const CURRENT_SCHEMA_VERSION = 4;
 
 /**
  * Initialize database with schema for offline-first storage
- * Creates tables for journal entries, step work, and user profile
- * Works with both SQLite (mobile) and IndexedDB (web) via StorageAdapter
+ * 
+ * Creates all required tables, indexes, and applies pending migrations.
+ * Safe to call multiple times (idempotent).
+ * 
+ * **Tables Created**:
+ * - user_profile - User metadata
+ * - journal_entries - Encrypted journal entries
+ * - daily_checkins - Morning/evening check-ins
+ * - step_work - 12-step work progress
+ * - achievements - User achievements
+ * - sync_queue - Pending cloud sync operations
+ * - cached_meetings - Public meeting data cache
+ * - favorite_meetings - User's favorite meetings
+ * 
+ * @param db - Storage adapter instance (SQLite or IndexedDB)
+ * @returns Promise that resolves when initialization is complete
+ * @throws Error if initialization fails critically
+ * @example
+ * ```ts
+ * const db = await getDatabase();
+ * await initDatabase(db);
+ * // Database is ready to use
+ * ```
  */
 export async function initDatabase(db: StorageAdapter): Promise<void> {
   const dbName = db.getDatabaseName();
@@ -53,7 +95,7 @@ export async function initDatabase(db: StorageAdapter): Promise<void> {
     const statements: string[] = [
       `CREATE TABLE IF NOT EXISTS user_profile (
         id TEXT PRIMARY KEY,
-        email TEXT NOT NULL,
+        encrypted_email TEXT NOT NULL,
         sobriety_start_date TEXT NOT NULL,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL
@@ -98,6 +140,7 @@ export async function initDatabase(db: StorageAdapter): Promise<void> {
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL,
         sync_status TEXT DEFAULT 'pending',
+        supabase_id TEXT,
         UNIQUE(user_id, step_number, question_number),
         FOREIGN KEY (user_id) REFERENCES user_profile(id)
       );`,
@@ -133,6 +176,7 @@ export async function initDatabase(db: StorageAdapter): Promise<void> {
       `CREATE INDEX IF NOT EXISTS idx_checkin_date ON daily_checkins(check_in_date);`,
       `CREATE INDEX IF NOT EXISTS idx_step_user ON step_work(user_id);`,
       `CREATE INDEX IF NOT EXISTS idx_step_number ON step_work(step_number);`,
+      `CREATE INDEX IF NOT EXISTS idx_step_supabase_id ON step_work(supabase_id);`,
       `CREATE INDEX IF NOT EXISTS idx_achievement_user ON achievements(user_id);`,
       `CREATE INDEX IF NOT EXISTS idx_sync_queue_table ON sync_queue(table_name);`,
     ];
@@ -156,10 +200,11 @@ export async function initDatabase(db: StorageAdapter): Promise<void> {
 }
 
 /**
- * Clear all local data (used for logout or account deletion)
- */
-/**
  * Get current schema version from database
+ * 
+ * @param db - Storage adapter instance
+ * @returns Promise resolving to current schema version (0 if no migrations applied)
+ * @internal
  */
 async function getCurrentSchemaVersion(db: StorageAdapter): Promise<number> {
   try {
@@ -174,7 +219,41 @@ async function getCurrentSchemaVersion(db: StorageAdapter): Promise<number> {
 }
 
 /**
+ * Check if a column exists in a table
+ * 
+ * Used during migrations to safely add columns only if they don't exist.
+ * 
+ * @param db - Storage adapter instance
+ * @param tableName - Name of the table to check
+ * @param columnName - Name of the column to check
+ * @returns Promise resolving to true if column exists, false otherwise
+ * @internal
+ */
+async function columnExists(
+  db: StorageAdapter,
+  tableName: string,
+  columnName: string
+): Promise<boolean> {
+  try {
+    // SQLite pragma to get table info
+    const result = await db.getAllAsync<{ name: string }>(
+      `PRAGMA table_info(${tableName})`
+    );
+    return result.some((col) => col.name === columnName);
+  } catch {
+    // Table might not exist
+    return false;
+  }
+}
+
+/**
  * Mark a migration as applied
+ * 
+ * Records the migration version in schema_migrations table.
+ * 
+ * @param db - Storage adapter instance
+ * @param version - Migration version number
+ * @internal
  */
 async function recordMigration(db: StorageAdapter, version: number): Promise<void> {
   await db.runAsync(
@@ -185,7 +264,13 @@ async function recordMigration(db: StorageAdapter, version: number): Promise<voi
 
 /**
  * Run all pending migrations
- * Migrations are versioned and applied sequentially
+ * 
+ * Applies migrations sequentially from current version to CURRENT_SCHEMA_VERSION.
+ * Each migration is idempotent and can be safely re-run.
+ * 
+ * @param db - Storage adapter instance
+ * @returns Promise that resolves when all migrations are complete
+ * @internal
  */
 async function runMigrations(db: StorageAdapter): Promise<void> {
   const currentVersion = await getCurrentSchemaVersion(db);
@@ -203,18 +288,29 @@ async function runMigrations(db: StorageAdapter): Promise<void> {
   // Migration version 1: Initial columns for sync and check-ins
   if (currentVersion < 1) {
     logger.info('Running migration v1: Adding sync tracking columns');
-    const v1Migrations = [
-      `ALTER TABLE daily_checkins ADD COLUMN supabase_id TEXT;`,
-      `ALTER TABLE daily_checkins ADD COLUMN updated_at TEXT NOT NULL DEFAULT (datetime('now'));`,
-      `ALTER TABLE sync_queue ADD COLUMN supabase_id TEXT;`,
-    ];
-
-    for (const migration of v1Migrations) {
+    
+    // Only add columns if they don't already exist (base schema may have them)
+    if (!(await columnExists(db, 'daily_checkins', 'supabase_id'))) {
       try {
-        await db.execAsync(migration);
+        await db.execAsync(`ALTER TABLE daily_checkins ADD COLUMN supabase_id TEXT;`);
       } catch (error) {
-        // Column may already exist from old migration system
-        logger.warn('Migration v1 step failed (may be already applied)', error);
+        logger.warn('Migration v1: Failed to add daily_checkins.supabase_id', error);
+      }
+    }
+    
+    if (!(await columnExists(db, 'daily_checkins', 'updated_at'))) {
+      try {
+        await db.execAsync(`ALTER TABLE daily_checkins ADD COLUMN updated_at TEXT NOT NULL DEFAULT (datetime('now'));`);
+      } catch (error) {
+        logger.warn('Migration v1: Failed to add daily_checkins.updated_at', error);
+      }
+    }
+    
+    if (!(await columnExists(db, 'sync_queue', 'supabase_id'))) {
+      try {
+        await db.execAsync(`ALTER TABLE sync_queue ADD COLUMN supabase_id TEXT;`);
+      } catch (error) {
+        logger.warn('Migration v1: Failed to add sync_queue.supabase_id', error);
       }
     }
 
@@ -225,10 +321,13 @@ async function runMigrations(db: StorageAdapter): Promise<void> {
   // Migration version 2: Add failed_at for permanent sync failures
   if (currentVersion < 2) {
     logger.info('Running migration v2: Adding failed_at to sync_queue');
-    try {
-      await db.execAsync(`ALTER TABLE sync_queue ADD COLUMN failed_at TEXT;`);
-    } catch (error) {
-      logger.warn('Migration v2 failed (may be already applied)', error);
+    
+    if (!(await columnExists(db, 'sync_queue', 'failed_at'))) {
+      try {
+        await db.execAsync(`ALTER TABLE sync_queue ADD COLUMN failed_at TEXT;`);
+      } catch (error) {
+        logger.warn('Migration v2: Failed to add sync_queue.failed_at', error);
+      }
     }
 
     await recordMigration(db, 2);
@@ -305,11 +404,47 @@ async function runMigrations(db: StorageAdapter): Promise<void> {
     logger.info('Migration v3 completed');
   }
 
+  // Migration version 4: Add supabase_id to step_work for idempotent sync
+  if (currentVersion < 4) {
+    logger.info('Running migration v4: Adding supabase_id to step_work');
+    
+    if (!(await columnExists(db, 'step_work', 'supabase_id'))) {
+      try {
+        await db.execAsync(`ALTER TABLE step_work ADD COLUMN supabase_id TEXT;`);
+      } catch (error) {
+        logger.warn('Migration v4: Failed to add step_work.supabase_id', error);
+      }
+    }
+
+    // Index creation is idempotent (IF NOT EXISTS), so safe to run always
+    try {
+      await db.execAsync(`CREATE INDEX IF NOT EXISTS idx_step_supabase_id ON step_work(supabase_id);`);
+    } catch (error) {
+      logger.warn('Migration v4: Index creation failed', error);
+    }
+
+    await recordMigration(db, 4);
+    logger.info('Migration v4 completed');
+  }
+
   logger.info('All migrations completed', { newVersion: CURRENT_SCHEMA_VERSION });
 }
 
 /**
- * Clear all local data (used for logout or account deletion)
+ * Clear all local data
+ * 
+ * **Warning**: This permanently deletes all user data from the local database!
+ * Only call this during logout or account deletion. Encryption keys should
+ * be deleted separately using `deleteEncryptionKey()`.
+ * 
+ * @param db - Storage adapter instance
+ * @returns Promise that resolves when all data is cleared
+ * @example
+ * ```ts
+ * // During logout
+ * await clearDatabase(db);
+ * await deleteEncryptionKey();
+ * ```
  */
 export async function clearDatabase(db: StorageAdapter): Promise<void> {
   await db.execAsync(`

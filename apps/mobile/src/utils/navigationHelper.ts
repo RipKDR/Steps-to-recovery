@@ -1,24 +1,35 @@
 /**
  * Navigation Helper
- * Bridges expo-router-style paths to React Navigation screen names
- *
- * CONTEXT: Components were initially written with expo-router syntax,
+ * 
+ * Bridges expo-router-style paths to React Navigation screen names.
+ * Provides backward compatibility for components written with expo-router
+ * syntax while the app uses React Navigation.
+ * 
+ * **Context**: Components were initially written with expo-router syntax,
  * but the app uses React Navigation. This helper provides backward
- * compatibility while we migrate.
+ * compatibility during migration.
+ * 
+ * @module utils/navigationHelper
  */
 
 import { useNavigationState } from '@react-navigation/native';
 import type { NavigationState, PartialState, Route } from '@react-navigation/native';
 import { navigationRef } from '../navigation/navigationRef';
-import type { MainTabParamList } from '../navigation/types';
 import { logger } from './logger';
 
 /**
  * Navigate using expo-router-style paths
- * Maps paths to React Navigation screens
- *
+ * 
+ * Maps expo-router-style paths to React Navigation screens.
+ * Handles both static routes and dynamic routes (e.g., `/journal/123`).
+ * 
  * @param path - expo-router style path (e.g., '/journal', '/(tabs)/emergency')
  * @param params - Optional navigation parameters
+ * @example
+ * ```ts
+ * navigateToPath('/journal');
+ * navigateToPath('/journal/abc123', { mode: 'edit' });
+ * ```
  */
 export function navigateToPath(path: string, params?: Record<string, unknown>): void {
   if (!navigationRef.isReady()) {
@@ -135,7 +146,17 @@ export function navigateToPath(path: string, params?: Record<string, unknown>): 
 
 /**
  * Hook that provides expo-router compatible navigation
- * Use this instead of expo-router's useRouter()
+ * 
+ * Returns a router-like object compatible with expo-router's `useRouter()` hook.
+ * Use this instead of expo-router's `useRouter()` when using React Navigation.
+ * 
+ * @returns Router-like object with push, replace, back, and canGoBack methods
+ * @example
+ * ```ts
+ * const router = useRouterCompat();
+ * router.push('/journal');
+ * router.back();
+ * ```
  */
 export function useRouterCompat() {
   return {
@@ -152,14 +173,18 @@ export function useRouterCompat() {
 
 /**
  * Hook that provides expo-router compatible segments
- * Tracks the current navigation route and returns it as path segments
- *
+ * 
+ * Tracks the current navigation route and returns it as path segments,
+ * compatible with expo-router's `useSegments()` hook.
+ * 
  * @returns Array of path segments (e.g., ['home'], ['journal', 'edit'])
- *
  * @example
+ * ```ts
+ * const segments = useSegmentsCompat();
  * // On Home screen: ['home']
  * // On Journal List: ['journal']
  * // On Journal Editor: ['journal', 'editor']
+ * ```
  */
 export function useSegmentsCompat(): string[] {
   const segments = useNavigationState((state) => {

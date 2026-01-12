@@ -46,3 +46,13 @@ android.os.*
 android.view.*
 com.facebook.react.*
 *.zip
+
+# Test coverage
+coverage/
+
+# Turbo cache
+.turbo/
+
+# IDE
+.vscode/
+.idea/

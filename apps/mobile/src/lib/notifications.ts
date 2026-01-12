@@ -202,7 +202,7 @@ export function registerNotificationHandlers(handlers: NotificationHandlers): ()
  */
 export async function getLastNotificationResponse(): Promise<Notifications.NotificationResponse | null> {
   try {
-    return await Notifications.getLastNotificationResponseAsync();
+    return Notifications.getLastNotificationResponse();
   } catch (error) {
     logger.error('Error getting last notification response', { error });
     return null;

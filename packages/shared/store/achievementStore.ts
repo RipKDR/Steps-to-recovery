@@ -22,7 +22,7 @@ import {
   type KeytagWithStatus,
 } from '../constants/keytags';
 import { ALL_ACHIEVEMENTS, getTotalAchievementsCount } from '../constants/achievements';
-import type { Achievement, AchievementCategory, AchievementStatus } from '../types';
+import type { Achievement, AchievementCategory } from '../types';
 
 interface AchievementState {
   achievements: Achievement[];

@@ -22,6 +22,7 @@ async function decryptStepWork(stepWork: StepWork): Promise<StepWorkDecrypted> {
     created_at: stepWork.created_at,
     updated_at: stepWork.updated_at,
     sync_status: stepWork.sync_status,
+    supabase_id: stepWork.supabase_id ?? null,
   };
 }
 
@@ -77,7 +78,7 @@ export function useSaveStepAnswer(userId: string): {
   saveAnswer: (stepNumber: number, questionNumber: number, answer: string, isComplete: boolean) => Promise<void>;
   isPending: boolean;
 } {
-  const { db, isReady } = useDatabase();
+  const { db } = useDatabase();
   const queryClient = useQueryClient();
 
   const mutation = useMutation({
@@ -142,15 +143,15 @@ export function useStepProgress(userId: string): {
   overallProgress: number;
   isLoading: boolean;
 } {
-  const { db, isReady } = useDatabase();
+  const { db } = useDatabase();
 
   const { data, isLoading } = useQuery({
     queryKey: ['step_progress', userId],
     queryFn: async () => {
-      if (!db) return { stepsProgress: [], overallProgress: 0 };
+      if (!db) return { stepsCompleted: [], currentStep: 1, overallProgress: 0 };
 
       try {
-        const result = await db.getAllAsync<{ step_number: number; total: number; completed: number }>(
+        const result = await db.getAllAsync<{ step_number: number; total: number; completed: number; }>(
           `SELECT
             step_number,
             COUNT(*) as total,
@@ -174,12 +175,13 @@ export function useStepProgress(userId: string): {
         return { stepsCompleted: [], currentStep: 1, overallProgress: 0 };
       }
     },
+    enabled: !!db,
   });
 
   return {
-    stepsCompleted: data?.stepsCompleted || [],
-    currentStep: data?.currentStep || 1,
-    overallProgress: data?.overallProgress || 0,
+    stepsCompleted: data?.stepsCompleted ?? [],
+    currentStep: data?.currentStep ?? 1,
+    overallProgress: data?.overallProgress ?? 0,
     isLoading,
   };
 }

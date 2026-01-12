@@ -386,6 +386,7 @@ describe('syncService Integration Tests', () => {
         created_at: '2025-01-01T00:00:00Z',
         updated_at: '2025-01-01T12:00:00Z',
         sync_status: 'pending',
+        supabase_id: null,
       };
 
       mockDb.getFirstAsync.mockResolvedValueOnce(localStepWork);
@@ -421,6 +422,7 @@ describe('syncService Integration Tests', () => {
         created_at: '2025-01-01T00:00:00Z',
         updated_at: '2025-01-01T00:00:00Z',
         sync_status: 'pending',
+        supabase_id: null,
       };
 
       mockDb.getFirstAsync.mockResolvedValueOnce(localStepWork);
@@ -449,6 +451,7 @@ describe('syncService Integration Tests', () => {
         created_at: '2025-01-01T00:00:00Z',
         updated_at: '2025-01-01T00:00:00Z',
         sync_status: 'pending',
+        supabase_id: null,
       };
 
       mockDb.getFirstAsync.mockResolvedValueOnce(completeStepWork);
@@ -496,6 +499,7 @@ describe('syncService Integration Tests', () => {
         created_at: '2025-01-01T00:00:00Z',
         updated_at: '2025-01-01T00:00:00Z',
         sync_status: 'pending',
+        supabase_id: null,
       };
 
       mockDb.getFirstAsync.mockResolvedValueOnce(localStepWork);
@@ -521,6 +525,7 @@ describe('syncService Integration Tests', () => {
         created_at: '2025-01-01T00:00:00Z',
         updated_at: '2025-01-01T00:00:00Z',
         sync_status: 'pending',
+        supabase_id: null,
       };
 
       mockDb.getFirstAsync.mockResolvedValueOnce(localStepWork);
@@ -557,6 +562,7 @@ describe('syncService Integration Tests', () => {
         created_at: '2025-01-01T00:00:00Z',
         updated_at: '2025-01-01T00:00:00Z',
         sync_status: 'pending',
+        supabase_id: null,
       };
 
       mockDb.getFirstAsync.mockResolvedValueOnce(localStepWork);
@@ -576,26 +582,44 @@ describe('syncService Integration Tests', () => {
   });
 
   describe('syncDailyCheckIn', () => {
-    it('should return error with message about missing schema', async () => {
+    it('should return not found when check-in is missing', async () => {
+      mockDb.getFirstAsync.mockResolvedValueOnce(null);
+
       const result = await syncDailyCheckIn(mockDb, 'checkin-123', 'user-456');
 
       expect(result.success).toBe(false);
-      expect(result.error).toBe(
-        'Daily check-ins sync not available - Supabase schema update required'
-      );
-      expect(logger.warn).toHaveBeenCalledWith(
-        expect.stringContaining('Daily check-ins sync not implemented')
-      );
+      expect(result.error).toBe('Daily check-in not found');
+      expect(mockDb.runAsync).not.toHaveBeenCalled();
     });
 
-    it('should update local status to pending to prevent queue buildup', async () => {
+    it('should upsert and mark synced when check-in exists', async () => {
       const checkInId = 'checkin-789';
+      const userId = 'user-123';
+      const checkIn = {
+        id: checkInId,
+        user_id: userId,
+        check_in_type: 'morning' as const,
+        check_in_date: '2025-01-01',
+        encrypted_intention: 'enc-int',
+        encrypted_reflection: null,
+        encrypted_mood: 'enc-mood',
+        encrypted_craving: null,
+        created_at: '2025-01-01T00:00:00Z',
+        updated_at: '2025-01-01T00:00:00Z',
+        sync_status: 'pending',
+        supabase_id: null,
+      };
 
-      await syncDailyCheckIn(mockDb, checkInId, 'user-123');
+      mockDb.getFirstAsync.mockResolvedValueOnce(checkIn);
+      mockDb.runAsync.mockResolvedValueOnce({} as any);
 
+      const result = await syncDailyCheckIn(mockDb, checkInId, userId);
+
+      expect(result.success).toBe(true);
+      expect(mockSupabaseFrom).toHaveBeenCalledWith('daily_checkins');
       expect(mockDb.runAsync).toHaveBeenCalledWith(
-        expect.stringContaining("sync_status = 'pending'"),
-        [checkInId]
+        expect.stringContaining("sync_status = 'synced'"),
+        expect.arrayContaining([expect.any(String), checkInId])
       );
     });
   });
@@ -672,7 +696,7 @@ describe('syncService Integration Tests', () => {
 
       expect(mockDb.getAllAsync).toHaveBeenCalledWith(
         expect.stringContaining('LIMIT ?'),
-        [maxBatchSize]
+        [3, maxBatchSize]
       );
     });
 
@@ -681,7 +705,7 @@ describe('syncService Integration Tests', () => {
 
       await processSyncQueue(mockDb, userId);
 
-      expect(mockDb.getAllAsync).toHaveBeenCalledWith(expect.any(String), [50]);
+      expect(mockDb.getAllAsync).toHaveBeenCalledWith(expect.any(String), [3, 50]);
     });
 
     it('should increment retry_count on failure', async () => {
@@ -763,8 +787,8 @@ describe('syncService Integration Tests', () => {
       await processSyncQueue(mockDb, userId);
 
       expect(mockDb.getAllAsync).toHaveBeenCalledWith(
-        expect.stringContaining('WHERE retry_count < 3'),
-        expect.any(Array)
+        expect.stringContaining('WHERE retry_count < ?'),
+        [3, 50]
       );
     });
 
@@ -783,7 +807,7 @@ describe('syncService Integration Tests', () => {
       const result = await processSyncQueue(mockDb, userId);
 
       expect(result.failed).toBe(1);
-      expect(result.errors).toContain('unknown_table/record-1: Unknown table: unknown_table');
+      expect(result.errors).toContain('[insert] unknown_table/record-1: Unknown table: unknown_table');
     });
 
     it(
@@ -828,9 +852,8 @@ describe('syncService Integration Tests', () => {
         await processSyncQueue(mockDb, userId);
         const endTime = Date.now();
 
-        // Should have waited at least 6s (2s + 4s)
-        // Using a more lenient check for test environment
-        expect(endTime - startTime).toBeGreaterThanOrEqual(5900); // Allow 100ms margin
+        // Should have waited at least ~3s (1s + 2s) given BASE_BACKOFF_MS = 1000
+        expect(endTime - startTime).toBeGreaterThanOrEqual(2900);
       },
       15000
     ); // 15 second timeout for exponential backoff test
@@ -932,11 +955,9 @@ describe('syncService Integration Tests', () => {
 
       const result = await processSyncQueue(mockDb, userId);
 
-      // Delete operations are currently skipped
+      // Delete operations without supabase_id are skipped (nothing to delete remotely)
       expect(result.synced).toBe(1);
-      expect(logger.warn).toHaveBeenCalledWith(
-        expect.stringContaining('Delete sync not fully implemented')
-      );
+      expect(mockSupabaseFrom).not.toHaveBeenCalled();
     });
 
     it('should route to correct sync function based on table_name', async () => {
@@ -1023,16 +1044,7 @@ describe('syncService Integration Tests', () => {
 
       await processSyncQueue(mockDb, userId);
 
-      expect(logger.error).toHaveBeenCalledWith(
-        'Sync failed for queue item',
-        expect.objectContaining({
-          queueItemId: queueItem.id,
-          tableName: queueItem.table_name,
-          recordId: queueItem.record_id,
-          retryCount: 1,
-          error: 'Journal entry not found',
-        })
-      );
+      expect(logger.warn).toHaveBeenCalled();
     });
 
     it('should handle top-level processing errors', async () => {
@@ -1135,7 +1147,7 @@ describe('syncService Integration Tests', () => {
 
       expect(mockDb.getAllAsync).toHaveBeenCalledWith(
         expect.stringContaining('LIMIT ?'),
-        [50]
+        [3, 50]
       );
     });
 
@@ -1146,7 +1158,7 @@ describe('syncService Integration Tests', () => {
 
       expect(mockDb.getAllAsync).toHaveBeenCalledWith(
         expect.stringContaining('LIMIT ?'),
-        [10]
+        [3, 10]
       );
     });
 

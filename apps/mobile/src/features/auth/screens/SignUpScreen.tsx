@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -36,6 +36,27 @@ export function SignUpScreen({ navigation }: Props) {
   const confirmPasswordRef = useRef<TextInput>(null);
   const { signUp } = useAuth();
 
+  // Password strength calculation
+  const passwordStrength = useMemo(() => {
+    if (!password) return { level: 0, label: '', color: theme.colors.muted };
+
+    let score = 0;
+    const checks = [
+      password.length >= 8,
+      /[A-Z]/.test(password),
+      /[a-z]/.test(password),
+      /[0-9]/.test(password),
+      /[^A-Za-z0-9]/.test(password), // Special characters
+    ];
+
+    score = checks.filter(Boolean).length;
+
+    if (score <= 2) return { level: score, label: 'Weak', color: theme.colors.danger };
+    if (score <= 3) return { level: score, label: 'Fair', color: theme.colors.warning };
+    if (score <= 4) return { level: score, label: 'Good', color: theme.colors.primary };
+    return { level: score, label: 'Strong', color: theme.colors.success };
+  }, [password, theme.colors]);
+
   const clearError = (field: keyof FormErrors) => {
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: undefined }));
@@ -60,7 +81,7 @@ export function SignUpScreen({ navigation }: Props) {
 
     if (!confirmPassword) {
       newErrors.confirmPassword = 'Please confirm your password';
-    } else if (password !== confirmPassword) {
+    } else if (password !== confirmPassword.trim()) {
       newErrors.confirmPassword = 'Passwords do not match';
     }
 
@@ -79,7 +100,23 @@ export function SignUpScreen({ navigation }: Props) {
       await signUp(email.trim().toLowerCase(), password);
       // After successful signup, user will be navigated to onboarding
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Please try again';
+      let message = 'Please try again';
+
+      if (error instanceof Error) {
+        // Handle specific Supabase auth errors
+        if (error.message.includes('already registered')) {
+          message = 'An account with this email already exists. Try logging in instead.';
+        } else if (error.message.includes('Invalid email')) {
+          message = 'Please enter a valid email address.';
+        } else if (error.message.includes('Password should be at least')) {
+          message = 'Password is too weak. Please choose a stronger password.';
+        } else if (error.message.includes('network') || error.message.includes('fetch')) {
+          message = 'Network error. Please check your connection and try again.';
+        } else {
+          message = error.message;
+        }
+      }
+
       setFormError(message);
     } finally {
       setLoading(false);
@@ -124,6 +161,8 @@ export function SignUpScreen({ navigation }: Props) {
               error={errors.email}
               required
               testID="signup-email-input"
+              accessibilityLabel="Email address"
+              accessibilityHint="Enter your email address for account creation"
             />
 
             <Input
@@ -143,7 +182,30 @@ export function SignUpScreen({ navigation }: Props) {
               hint="At least 8 characters with uppercase, lowercase, and number"
               required
               testID="signup-password-input"
+              accessibilityLabel="Password"
+              accessibilityHint="Create a strong password with at least 8 characters, including uppercase, lowercase, and numbers"
             />
+
+            {password.length > 0 && (
+              <View style={styles.passwordStrength}>
+                <Text style={[theme.typography.caption, { color: passwordStrength.color, fontWeight: '600' }]}>
+                  Password Strength: {passwordStrength.label}
+                </Text>
+                <View style={styles.strengthBar}>
+                  {[1, 2, 3, 4, 5].map((level) => (
+                    <View
+                      key={level}
+                      style={[
+                        styles.strengthSegment,
+                        {
+                          backgroundColor: level <= passwordStrength.level ? passwordStrength.color : theme.colors.muted,
+                        },
+                      ]}
+                    />
+                  ))}
+                </View>
+              </View>
+            )}
 
             <Input
               ref={confirmPasswordRef}
@@ -161,19 +223,25 @@ export function SignUpScreen({ navigation }: Props) {
               error={errors.confirmPassword}
               required
               testID="signup-confirm-password-input"
+              accessibilityLabel="Confirm password"
+              accessibilityHint="Re-enter your password to confirm it matches"
             />
 
-            <View style={[
-              styles.privacyNotice,
-              {
-                backgroundColor: theme.colors.surface,
-                padding: theme.spacing.md,
-                borderRadius: theme.radius.md,
-                marginVertical: theme.spacing.sm,
-                borderWidth: 1,
-                borderColor: theme.colors.border,
-              }
-            ]}>
+            <View
+              style={[
+                styles.privacyNotice,
+                {
+                  backgroundColor: theme.colors.surface,
+                  padding: theme.spacing.md,
+                  borderRadius: theme.radius.md,
+                  marginVertical: theme.spacing.sm,
+                  borderWidth: 1,
+                  borderColor: theme.colors.border,
+                }
+              ]}
+              accessibilityRole="text"
+              accessibilityLabel="Privacy and security notice"
+            >
               <Text style={[styles.privacyIcon, { marginRight: theme.spacing.sm }]}>🔒</Text>
               <Text style={[theme.typography.caption, { flex: 1, color: theme.colors.textSecondary, lineHeight: 20 }]}>
                 Your data is encrypted and never shared without your permission.
@@ -187,6 +255,9 @@ export function SignUpScreen({ navigation }: Props) {
                   styles.errorContainer,
                   { backgroundColor: theme.colors.dangerLight || '#FFE5E5', borderColor: theme.colors.danger },
                 ]}
+                accessibilityRole="alert"
+                accessibilityLabel="Error message"
+                accessibilityLiveRegion="assertive"
               >
                 <Text style={[theme.typography.bodySmall, { color: theme.colors.danger, textAlign: 'center' }]}>
                   {formError}
@@ -199,6 +270,9 @@ export function SignUpScreen({ navigation }: Props) {
               onPress={handleSignUp}
               loading={loading}
               testID="signup-submit-button"
+              accessibilityLabel="Create account"
+              accessibilityHint={loading ? "Creating your account, please wait" : "Submit the form to create your account"}
+              accessibilityState={{ disabled: loading }}
             />
           </View>
 
@@ -245,6 +319,20 @@ const styles = StyleSheet.create({
   },
   privacyIcon: {
     fontSize: 20,
+  },
+  passwordStrength: {
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  strengthBar: {
+    flexDirection: 'row',
+    marginTop: 4,
+    gap: 2,
+  },
+  strengthSegment: {
+    flex: 1,
+    height: 4,
+    borderRadius: 2,
   },
   errorContainer: {
     padding: 12,

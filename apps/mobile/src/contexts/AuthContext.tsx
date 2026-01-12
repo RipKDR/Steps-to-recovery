@@ -9,6 +9,7 @@ interface AuthState {
   user: User | null;
   loading: boolean;
   error: AuthError | null;
+  initialized: boolean;
 }
 
 interface AuthContextType extends AuthState {
@@ -27,30 +28,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     user: null,
     loading: true,
     error: null,
+    initialized: false,
   });
 
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(async ({ data: { session }, error }) => {
-      // Initialize secure storage with session token (web only)
-      if (session?.access_token && session?.user?.id) {
-        await secureStorage.initializeWithSession(session.user.id, session.access_token);
-      }
+    const loadSession = async (): Promise<void> => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
 
-      setState(prev => ({
-        ...prev,
-        session,
-        user: session?.user ?? null,
-        loading: false,
-        error: error ?? null,
-      }));
-    }).catch((error) => {
-      setState(prev => ({
-        ...prev,
-        loading: false,
-        error: error as AuthError,
-      }));
-    });
+        // Initialize secure storage with session token (web only)
+        if (session?.access_token && session?.user?.id) {
+          await secureStorage.initializeWithSession(session.user.id, session.access_token);
+        }
+
+        setState(prev => ({
+          ...prev,
+          session,
+          user: session?.user ?? null,
+          loading: false,
+          initialized: true,
+          error: error ?? null,
+        }));
+      } catch (error) {
+        setState(prev => ({
+          ...prev,
+          loading: false,
+          initialized: true,
+          error: error as AuthError,
+        }));
+      }
+    };
+
+    void loadSession();
 
     // Listen for auth changes
     const {

@@ -1,36 +1,71 @@
 /**
  * Crisis Resources by Region
- * Emergency hotlines and support services for recovery
+ * 
+ * Emergency hotlines and support services for recovery organized by region.
+ * Provides critical support resources for users in crisis situations.
+ * 
+ * **Important**: These resources are for emergency and crisis situations.
+ * Always call emergency services (911, 000, etc.) for life-threatening emergencies.
+ * 
+ * @module constants/crisisResources
  */
 
 import { CrisisRegion } from '../types';
 
+/**
+ * Crisis hotline information
+ */
 export interface CrisisHotline {
-  id: string;
-  name: string;
-  phone: string;
-  description: string;
-  available: string;
-  color: string;
-  isEmergency?: boolean;
+  /** Unique identifier for the hotline */
+  readonly id: string;
+  /** Display name of the service */
+  readonly name: string;
+  /** Phone number to call */
+  readonly phone: string;
+  /** Description of the service */
+  readonly description: string;
+  /** Availability information (e.g., "24/7", "9am-5pm") */
+  readonly available: string;
+  /** Color code for UI display */
+  readonly color: string;
+  /** True if this is an emergency service */
+  readonly isEmergency?: boolean;
 }
 
+/**
+ * Quick access crisis resource
+ */
 export interface CrisisResource {
-  id: string;
-  title: string;
-  subtitle: string;
-  phone: string;
-  color: string;
-  emoji: string;
-  isEmergency?: boolean;
+  /** Unique identifier */
+  readonly id: string;
+  /** Display title */
+  readonly title: string;
+  /** Subtitle with phone number */
+  readonly subtitle: string;
+  /** Phone number (formatted for dialing) */
+  readonly phone: string;
+  /** Tailwind CSS color class */
+  readonly color: string;
+  /** Emoji icon */
+  readonly emoji: string;
+  /** True if this is an emergency service */
+  readonly isEmergency?: boolean;
 }
 
+/**
+ * Regional crisis resource configuration
+ */
 export interface RegionConfig {
-  code: CrisisRegion;
-  name: string;
-  emergencyNumber: string;
-  hotlines: CrisisHotline[];
-  quickResources: CrisisResource[];
+  /** Region code */
+  readonly code: CrisisRegion;
+  /** Region name */
+  readonly name: string;
+  /** Emergency services number (911, 000, 999, etc.) */
+  readonly emergencyNumber: string;
+  /** List of available hotlines */
+  readonly hotlines: readonly CrisisHotline[];
+  /** Quick access resources for emergency screen */
+  readonly quickResources: readonly CrisisResource[];
 }
 
 /**
@@ -589,6 +624,14 @@ export const CRISIS_REGIONS: Record<CrisisRegion, RegionConfig> = {
 
 /**
  * Get crisis resources for a specific region
+ * 
+ * @param region - Region code (AU, US, UK, CA, NZ, IE, or 'global')
+ * @returns Region configuration with hotlines and resources
+ * @example
+ * ```ts
+ * const usResources = getCrisisResources('US');
+ * const emergencyNumber = usResources.emergencyNumber; // "911"
+ * ```
  */
 export function getCrisisResources(region: CrisisRegion): RegionConfig {
   return CRISIS_REGIONS[region] || CRISIS_REGIONS.US; // Default to US
@@ -596,16 +639,41 @@ export function getCrisisResources(region: CrisisRegion): RegionConfig {
 
 /**
  * Get all available regions
+ * 
+ * @returns Array of region codes and names
+ * @example
+ * ```ts
+ * const regions = getAvailableRegions();
+ * // [{ code: 'US', name: 'United States' }, ...]
+ * ```
  */
-export function getAvailableRegions(): { code: CrisisRegion; name: string }[] {
+export function getAvailableRegions(): readonly { code: CrisisRegion; name: string }[] {
   return Object.values(CRISIS_REGIONS).map(({ code, name }) => ({ code, name }));
 }
 
 /**
  * Get emergency number for a region
+ * 
+ * @param region - Region code
+ * @returns Emergency services phone number (defaults to "911" if region not found)
+ * @example
+ * ```ts
+ * const emergency = getEmergencyNumber('AU'); // "000"
+ * const emergency = getEmergencyNumber('US'); // "911"
+ * ```
  */
 export function getEmergencyNumber(region: CrisisRegion): string {
   return CRISIS_REGIONS[region]?.emergencyNumber || '911';
+}
+
+/**
+ * Check if a region code is valid
+ * 
+ * @param region - Region code to validate
+ * @returns True if region exists in CRISIS_REGIONS
+ */
+export function isValidRegion(region: string): region is CrisisRegion {
+  return region in CRISIS_REGIONS;
 }
 
 /**

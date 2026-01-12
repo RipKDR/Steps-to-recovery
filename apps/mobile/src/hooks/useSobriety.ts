@@ -1,15 +1,38 @@
-// @ts-nocheck
-// TODO: Phase 3 - This hook needs to be aligned with store exports
 /**
  * Sobriety Hook
- * Provides sobriety calculations and milestone tracking
+ * 
+ * Provides sobriety calculations, milestone tracking, and automatic
+ * milestone celebration notifications.
+ * 
+ * **Features**:
+ * - Real-time sobriety duration calculation (updates every minute)
+ * - Milestone detection and tracking
+ * - Progress calculation to next milestone
+ * - Automatic milestone celebration notifications
+ * - Formatted duration display (days, months, years)
+ * 
+ * @returns Sobriety state, calculations, and milestone information
+ * @example
+ * ```ts
+ * const { soberDays, nextMilestone, formattedDuration } = useSobriety();
+ * // Display: "45 days" or "1 year, 30 days"
+ * ```
  */
 
 import { useEffect, useMemo, useRef } from 'react';
-import { useProfileStore, useSettingsStore } from '../store';
-import { getNextMilestone, getLatestMilestone, getAchievedMilestones } from '../constants/milestones';
-import { scheduleMilestoneNotification } from '../notifications';
+import { useProfileStore } from '@recovery/shared/store/profileStore';
+import { useSettingsStore } from '@recovery/shared/store/settingsStore';
+import { getNextMilestone, getLatestMilestone, getAchievedMilestones } from '@recovery/shared/constants/milestones';
+import { scheduleMilestoneNotification } from '@recovery/shared/notifications';
 
+/**
+ * Sobriety calculation and milestone tracking hook
+ * 
+ * Automatically recalculates sobriety duration every minute and
+ * triggers milestone celebrations when new milestones are achieved.
+ * 
+ * @returns Object with sobriety state, calculations, and milestones
+ */
 export function useSobriety() {
   const {
     profile,
@@ -23,7 +46,7 @@ export function useSobriety() {
     calculateSobriety,
   } = useProfileStore();
 
-  const { settings } = useSettingsStore();
+  const appSettings = useSettingsStore((state: any) => state.settings);
   const previousMilestoneCountRef = useRef<number | null>(null);
 
   // Load profile on mount
@@ -42,7 +65,7 @@ export function useSobriety() {
 
   // Check for new milestones and celebrate
   useEffect(() => {
-    if (!profile || !settings?.notificationsEnabled) return;
+    if (!profile || !appSettings?.notificationsEnabled) return;
 
     const achievedCount = getAchievedMilestones(soberDays).length;
     
@@ -59,7 +82,7 @@ export function useSobriety() {
     }
 
     previousMilestoneCountRef.current = achievedCount;
-  }, [soberDays, profile, settings?.notificationsEnabled]);
+  }, [soberDays, profile, appSettings?.notificationsEnabled]);
 
   // Computed milestone info
   const nextMilestone = useMemo(() => getNextMilestone(soberDays), [soberDays]);

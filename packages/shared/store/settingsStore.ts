@@ -58,7 +58,6 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
   updateSettings: async (updates) => {
     set({ isLoading: true, error: null });
     try {
-      const currentSettings = get().settings;
       const settings = await createOrUpdateAppSettings(updates);
       set({ settings, isLoading: false });
 

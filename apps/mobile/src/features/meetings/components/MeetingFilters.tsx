@@ -3,12 +3,13 @@
  * Filter UI for day, time of day, and meeting type
  */
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
-import { MaterialIcons } from '@expo/vector-icons';
 import { useTheme } from '../../../design-system/hooks/useTheme';
+// #region agent log
+fetch('http://127.0.0.1:7242/ingest/8ee2f1ba-6721-4d25-a19f-6b48c11b7c48',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'MeetingFilters.tsx:10',message:'Badge import loaded',data:{importPresent:true},timestamp:Date.now(),sessionId:'debug-badge-import',runId:'initial',hypothesisId:'B'})}).catch(()=>{});
+// #endregion
 import { Button } from '../../../design-system/components/Button';
-import { Badge } from '../../../design-system/components/Badge';
 import type { MeetingFilters as MeetingFiltersType, DayOfWeek, TimeOfDay, MeetingType } from '../types/meeting';
 import { getMeetingTypeLabel } from '../types/meeting';
 
@@ -53,6 +54,9 @@ export function MeetingFilters({
   onApplyFilters,
   onClearFilters,
 }: MeetingFiltersProps): React.ReactElement {
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/8ee2f1ba-6721-4d25-a19f-6b48c11b7c48',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'MeetingFilters.tsx:53',message:'Component rendered',data:{hasFilters:!!currentFilters},timestamp:Date.now(),sessionId:'debug-badge-import',runId:'initial',hypothesisId:'B'})}).catch(()=>{});
+  // #endregion
   const theme = useTheme();
 
   const [selectedDay, setSelectedDay] = useState<DayOfWeek | null>(

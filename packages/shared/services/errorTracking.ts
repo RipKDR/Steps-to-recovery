@@ -2,43 +2,76 @@
  * Error Tracking Service
  * 
  * A centralized error tracking service that can be integrated with Sentry
- * or other error monitoring solutions.
+ * or other error monitoring solutions. Provides a consistent API for error
+ * reporting across the application.
+ * 
+ * **Privacy Note**: This service is designed to respect user privacy and
+ * does not send sensitive recovery data (journal entries, step work, etc.)
+ * to error tracking services.
  * 
  * To enable Sentry:
- * 1. Install: npx expo install @sentry/react-native
+ * 1. Install: `npx expo install @sentry/react-native`
  * 2. Set up Sentry project at https://sentry.io
- * 3. Add SENTRY_DSN to your environment variables
+ * 3. Add `EXPO_PUBLIC_SENTRY_DSN` to your environment variables
  * 4. Uncomment the Sentry initialization below
+ * 
+ * @module services/errorTracking
  */
 
 // Uncomment when Sentry is installed:
 // import * as Sentry from '@sentry/react-native';
 import React from 'react';
 
-interface ErrorContext {
+/**
+ * Context information for error tracking
+ */
+export interface ErrorContext {
+  /** Component or module name where error occurred */
   component?: string;
+  /** Action being performed when error occurred */
   action?: string;
+  /** User ID (anonymous, no PII) */
   userId?: string;
+  /** Additional context data (must not contain sensitive information) */
   extra?: Record<string, unknown>;
 }
 
-interface BreadcrumbData {
+/**
+ * Breadcrumb data for error tracking
+ */
+export interface BreadcrumbData {
+  /** Category of the breadcrumb (e.g., 'navigation', 'user', 'database') */
   category: string;
+  /** Message describing the event */
   message: string;
+  /** Severity level */
   level?: 'debug' | 'info' | 'warning' | 'error';
+  /** Additional data (must not contain sensitive information) */
   data?: Record<string, unknown>;
 }
 
 /**
  * Initialize error tracking service
- * Call this in your app entry point (_layout.tsx)
+ * 
+ * Call this once in your app entry point (e.g., `_layout.tsx` or `App.tsx`).
+ * If Sentry DSN is not configured, error tracking will be disabled gracefully.
+ * 
+ * @example
+ * ```ts
+ * // In App.tsx or _layout.tsx
+ * useEffect(() => {
+ *   initializeErrorTracking();
+ * }, []);
+ * ```
  */
 export function initializeErrorTracking(): void {
   const dsn = process.env.EXPO_PUBLIC_SENTRY_DSN;
   
   if (!dsn) {
-    console.log('[ErrorTracking] Sentry DSN not configured. Error tracking disabled.');
-    console.log('[ErrorTracking] To enable, set EXPO_PUBLIC_SENTRY_DSN in your environment.');
+    if (__DEV__) {
+      console.log('[ErrorTracking] Sentry DSN not configured. Error tracking disabled.');
+      console.log('[ErrorTracking] To enable, set EXPO_PUBLIC_SENTRY_DSN in your environment.');
+    }
     return;
   }
 
@@ -83,12 +116,30 @@ export function initializeErrorTracking(): void {
 
 /**
  * Capture an exception and send to error tracking service
+ * 
+ * Use this to report errors that occur during app execution.
+ * The error will be logged and sent to the configured error tracking service.
+ * 
+ * @param error - The error object to capture
+ * @param context - Optional context about where/why the error occurred
+ * @example
+ * ```ts
+ * try {
+ *   await riskyOperation();
+ * } catch (error) {
+ *   captureException(error as Error, {
+ *     component: 'JournalScreen',
+ *     action: 'saveEntry',
+ *   });
+ * }
+ * ```
  */
 export function captureException(
   error: Error,
   context?: ErrorContext
 ): void {
-  console.error('[ErrorTracking] Exception:', error.message, context);
+  const errorMessage = error instanceof Error ? error.message : String(error);
+  console.error('[ErrorTracking] Exception:', errorMessage, context);
 
   // Uncomment when Sentry is installed:
   // Sentry.captureException(error, {

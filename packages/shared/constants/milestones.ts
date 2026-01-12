@@ -1,13 +1,20 @@
 /**
  * Time-Based Milestones
- * Recovery milestones based on sobriety duration
+ * 
+ * Recovery milestones based on sobriety duration.
+ * These milestones celebrate key recovery anniversaries and provide
+ * encouragement at significant time intervals.
  */
 
 export interface TimeMilestone {
-  days: number;
-  title: string;
-  message: string;
-  emoji: string;
+  /** Number of days of sobriety required for this milestone */
+  readonly days: number;
+  /** Display title for the milestone */
+  readonly title: string;
+  /** Encouraging message to display when milestone is reached */
+  readonly message: string;
+  /** Emoji icon for visual representation */
+  readonly emoji: string;
 }
 
 export const TIME_MILESTONES: TimeMilestone[] = [
@@ -105,23 +112,63 @@ export const TIME_MILESTONES: TimeMilestone[] = [
 
 /**
  * Get the next upcoming milestone
+ * 
+ * @param soberDays - Current number of days of sobriety
+ * @returns The next milestone to achieve, or null if all milestones are achieved
+ * @example
+ * ```ts
+ * const next = getNextMilestone(5); // Returns 7-day milestone
+ * ```
  */
 export function getNextMilestone(soberDays: number): TimeMilestone | null {
+  if (soberDays < 0) {
+    return TIME_MILESTONES[0] || null;
+  }
   return TIME_MILESTONES.find((m) => m.days > soberDays) || null;
 }
 
 /**
  * Get all achieved milestones
+ * 
+ * @param soberDays - Current number of days of sobriety
+ * @returns Array of all milestones that have been achieved
+ * @example
+ * ```ts
+ * const achieved = getAchievedMilestones(30); // Returns [1, 3, 7, 14, 30 day milestones]
+ * ```
  */
-export function getAchievedMilestones(soberDays: number): TimeMilestone[] {
+export function getAchievedMilestones(soberDays: number): readonly TimeMilestone[] {
+  if (soberDays < 0) {
+    return [];
+  }
   return TIME_MILESTONES.filter((m) => m.days <= soberDays);
 }
 
 /**
  * Get the most recent achieved milestone
+ * 
+ * @param soberDays - Current number of days of sobriety
+ * @returns The most recently achieved milestone, or null if none achieved
+ * @example
+ * ```ts
+ * const latest = getLatestMilestone(45); // Returns 30-day milestone
+ * ```
  */
 export function getLatestMilestone(soberDays: number): TimeMilestone | null {
+  if (soberDays < 0) {
+    return null;
+  }
   const achieved = getAchievedMilestones(soberDays);
   return achieved.length > 0 ? achieved[achieved.length - 1] : null;
 }
 
+/**
+ * Check if a specific milestone has been achieved
+ * 
+ * @param soberDays - Current number of days of sobriety
+ * @param milestoneDays - The milestone days to check (e.g., 30, 90, 365)
+ * @returns True if the milestone has been achieved
+ */
+export function hasAchievedMilestone(soberDays: number, milestoneDays: number): boolean {
+  return soberDays >= milestoneDays && TIME_MILESTONES.some((m) => m.days === milestoneDays);
+}

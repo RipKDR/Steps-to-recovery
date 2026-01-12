@@ -3,7 +3,7 @@
  * Provides consistent spring and timing values throughout the app
  */
 
-import { Animated, Easing } from 'react-native';
+import { Easing } from 'react-native';
 
 /**
  * Spring animation configurations

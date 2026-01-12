@@ -106,7 +106,7 @@ cd apps/mobile && npx tsc --noEmit
 ```bash
 # Required: Create .env file in apps/mobile/
 # Must include:
-EXPO_PUBLIC_SUPABASE_URL=your-project-url.supabase.co
+EXPO_PUBLIC_SUPABASE_URL=https://your-project-url.supabase.co
 EXPO_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 ```
 

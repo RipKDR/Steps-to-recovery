@@ -3,9 +3,27 @@
  * Provides reusable animation patterns using React Native Animated API
  */
 
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useCallback } from 'react';
 import { Animated } from 'react-native';
 import { springConfigs, timingDurations, easingCurves } from '../tokens/animations';
+
+/**
+ * Type definitions for animation hooks
+ */
+interface PressAnimationReturn {
+  scaleAnim: Animated.Value;
+  animatePress: (isPressed: boolean) => void;
+}
+
+interface BounceAnimationReturn {
+  scaleAnim: Animated.Value;
+  bounce: () => void;
+}
+
+interface FadeAndScaleReturn {
+  fadeAnim: Animated.Value;
+  scaleAnim: Animated.Value;
+}
 
 /**
  * Fade-in animation hook
@@ -27,19 +45,25 @@ import { springConfigs, timingDurations, easingCurves } from '../tokens/animatio
  * }
  * ```
  */
-export function useFadeIn(delay: number = 0) {
+export function useFadeIn(delay: number = 0): Animated.Value {
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
+    let animation: Animated.CompositeAnimation | null = null;
+
     const timer = setTimeout(() => {
-      Animated.spring(fadeAnim, {
+      animation = Animated.spring(fadeAnim, {
         toValue: 1,
         ...springConfigs.default,
-      }).start();
+      });
+      animation.start();
     }, delay);
 
-    return () => clearTimeout(timer);
-  }, [fadeAnim, delay]);
+    return () => {
+      clearTimeout(timer);
+      animation?.stop();
+    };
+  }, [delay]);
 
   return fadeAnim;
 }
@@ -65,19 +89,25 @@ export function useFadeIn(delay: number = 0) {
  * }
  * ```
  */
-export function useScaleIn(initialScale: number = 0.95, delay: number = 0) {
+export function useScaleIn(initialScale: number = 0.95, delay: number = 0): Animated.Value {
   const scaleAnim = useRef(new Animated.Value(initialScale)).current;
 
   useEffect(() => {
+    let animation: Animated.CompositeAnimation | null = null;
+
     const timer = setTimeout(() => {
-      Animated.spring(scaleAnim, {
+      animation = Animated.spring(scaleAnim, {
         toValue: 1,
         ...springConfigs.default,
-      }).start();
+      });
+      animation.start();
     }, delay);
 
-    return () => clearTimeout(timer);
-  }, [scaleAnim, delay]);
+    return () => {
+      clearTimeout(timer);
+      animation?.stop();
+    };
+  }, [delay]);
 
   return scaleAnim;
 }
@@ -86,6 +116,7 @@ export function useScaleIn(initialScale: number = 0.95, delay: number = 0) {
  * Press animation hook
  * Provides scale animation for press interactions
  *
+ * @param pressScale - Scale value when pressed (default: 0.98)
  * @returns Object with scaleAnim value and animatePress function
  *
  * @example
@@ -106,15 +137,15 @@ export function useScaleIn(initialScale: number = 0.95, delay: number = 0) {
  * }
  * ```
  */
-export function usePressAnimation(pressScale: number = 0.98) {
+export function usePressAnimation(pressScale: number = 0.98): PressAnimationReturn {
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
-  const animatePress = (isPressed: boolean) => {
+  const animatePress = useCallback((isPressed: boolean) => {
     Animated.spring(scaleAnim, {
       toValue: isPressed ? pressScale : 1,
       ...springConfigs.gentle,
     }).start();
-  };
+  }, [scaleAnim, pressScale]);
 
   return { scaleAnim, animatePress };
 }
@@ -123,6 +154,7 @@ export function usePressAnimation(pressScale: number = 0.98) {
  * Bounce animation hook
  * Provides a bounce effect that can be triggered
  *
+ * @param bounceScale - Scale value for bounce effect (default: 1.15)
  * @returns Object with scaleAnim value and bounce function
  *
  * @example
@@ -143,10 +175,10 @@ export function usePressAnimation(pressScale: number = 0.98) {
  * }
  * ```
  */
-export function useBounceAnimation(bounceScale: number = 1.15) {
+export function useBounceAnimation(bounceScale: number = 1.15): BounceAnimationReturn {
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
-  const bounce = () => {
+  const bounce = useCallback(() => {
     Animated.sequence([
       Animated.spring(scaleAnim, {
         toValue: bounceScale,
@@ -157,7 +189,7 @@ export function useBounceAnimation(bounceScale: number = 1.15) {
         ...springConfigs.bouncy,
       }),
     ]).start();
-  };
+  }, [scaleAnim, bounceScale]);
 
   return { scaleAnim, bounce };
 }
@@ -183,19 +215,25 @@ export function useBounceAnimation(bounceScale: number = 1.15) {
  * }
  * ```
  */
-export function useSlideIn(offset: number = 50, delay: number = 0) {
+export function useSlideIn(offset: number = 50, delay: number = 0): Animated.Value {
   const slideAnim = useRef(new Animated.Value(offset)).current;
 
   useEffect(() => {
+    let animation: Animated.CompositeAnimation | null = null;
+
     const timer = setTimeout(() => {
-      Animated.spring(slideAnim, {
+      animation = Animated.spring(slideAnim, {
         toValue: 0,
         ...springConfigs.default,
-      }).start();
+      });
+      animation.start();
     }, delay);
 
-    return () => clearTimeout(timer);
-  }, [slideAnim, delay, offset]);
+    return () => {
+      clearTimeout(timer);
+      animation?.stop();
+    };
+  }, [delay]);
 
   return slideAnim;
 }
@@ -223,13 +261,15 @@ export function useSlideIn(offset: number = 50, delay: number = 0) {
  * }
  * ```
  */
-export function useFadeAndScaleIn(delay: number = 0) {
+export function useFadeAndScaleIn(delay: number = 0): FadeAndScaleReturn {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.95)).current;
 
   useEffect(() => {
+    let animation: Animated.CompositeAnimation | null = null;
+
     const timer = setTimeout(() => {
-      Animated.parallel([
+      animation = Animated.parallel([
         Animated.spring(fadeAnim, {
           toValue: 1,
           ...springConfigs.default,
@@ -238,11 +278,15 @@ export function useFadeAndScaleIn(delay: number = 0) {
           toValue: 1,
           ...springConfigs.default,
         }),
-      ]).start();
+      ]);
+      animation.start();
     }, delay);
 
-    return () => clearTimeout(timer);
-  }, [fadeAnim, scaleAnim, delay]);
+    return () => {
+      clearTimeout(timer);
+      animation?.stop();
+    };
+  }, [delay]);
 
   return { fadeAnim, scaleAnim };
 }
@@ -254,7 +298,7 @@ export function useFadeAndScaleIn(delay: number = 0) {
  * @param start - Starting number
  * @param end - Ending number
  * @param duration - Animation duration in ms
- * @returns Animated value that interpolates between start and end
+ * @returns Animated value that goes from 0 to 1, use interpolate for custom ranges
  *
  * @example
  * ```tsx
@@ -264,25 +308,34 @@ export function useFadeAndScaleIn(delay: number = 0) {
  *   return (
  *     <Animated.Text>
  *       {animatedValue.interpolate({
- *         inputRange: [0, value],
- *         outputRange: [0, value],
+ *         inputRange: [0, 1],
+ *         outputRange: ['0', value.toString()],
  *       })}
  *     </Animated.Text>
  *   );
  * }
  * ```
  */
-export function useNumberAnimation(start: number, end: number, duration: number = 500) {
-  const animValue = useRef(new Animated.Value(start)).current;
+export function useNumberAnimation(start: number, end: number, duration: number = 500): Animated.Value {
+  const animValue = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    Animated.timing(animValue, {
-      toValue: end,
+    let animation: Animated.CompositeAnimation | null = null;
+
+    // Reset to 0 and animate to 1
+    animValue.setValue(0);
+    animation = Animated.timing(animValue, {
+      toValue: 1,
       duration,
       easing: easingCurves.easeOut,
       useNativeDriver: true,
-    }).start();
-  }, [animValue, end, duration]);
+    });
+    animation.start();
+
+    return () => {
+      animation?.stop();
+    };
+  }, [end, duration]); // Only re-run when end or duration changes
 
   return animValue;
 }

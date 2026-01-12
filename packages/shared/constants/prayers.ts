@@ -1,16 +1,30 @@
 /**
  * Prayer Library
- * Common recovery prayers from 12-step programs
+ * 
+ * Common recovery prayers from 12-step programs.
+ * These prayers support spiritual growth and daily practice in recovery.
+ * 
+ * @module constants/prayers
  */
 
+/**
+ * Prayer definition
+ */
 export interface Prayer {
-  id: string;
-  title: string;
-  content: string;
-  source?: string;
-  stepAssociation?: number[];
-  category: 'foundation' | 'step' | 'daily' | 'situational';
-  isFavorite?: boolean;
+  /** Unique identifier */
+  readonly id: string;
+  /** Prayer title */
+  readonly title: string;
+  /** Full prayer text/content */
+  readonly content: string;
+  /** Source attribution (e.g., "Alcoholics Anonymous (Big Book)") */
+  readonly source?: string;
+  /** Associated step numbers (if applicable) */
+  readonly stepAssociation?: readonly number[];
+  /** Prayer category */
+  readonly category: 'foundation' | 'step' | 'daily' | 'situational';
+  /** Whether this prayer is marked as favorite */
+  readonly isFavorite?: boolean;
 }
 
 export const PRAYERS: Prayer[] = [
@@ -302,23 +316,60 @@ as others were of service to me.`,
 
 /**
  * Get prayers by category
+ * 
+ * @param category - Prayer category to filter by
+ * @returns Array of prayers in the specified category
+ * @example
+ * ```ts
+ * const dailyPrayers = getPrayersByCategory('daily');
+ * ```
  */
-export function getPrayersByCategory(category: Prayer['category']): Prayer[] {
+export function getPrayersByCategory(category: Prayer['category']): readonly Prayer[] {
   return PRAYERS.filter((p) => p.category === category);
 }
 
 /**
  * Get prayers associated with a specific step
+ * 
+ * @param stepNumber - Step number (1-12)
+ * @returns Array of prayers associated with the step
+ * @example
+ * ```ts
+ * const step3Prayers = getPrayersForStep(3); // Returns Third Step Prayer
+ * ```
  */
-export function getPrayersForStep(stepNumber: number): Prayer[] {
+export function getPrayersForStep(stepNumber: number): readonly Prayer[] {
+  if (stepNumber < 1 || stepNumber > 12 || !Number.isInteger(stepNumber)) {
+    return [];
+  }
   return PRAYERS.filter((p) => p.stepAssociation?.includes(stepNumber));
 }
 
 /**
  * Get prayer by ID
+ * 
+ * @param id - Prayer ID to look up
+ * @returns Prayer object if found, undefined otherwise
+ * @example
+ * ```ts
+ * const serenity = getPrayerById('serenity-short');
+ * ```
  */
 export function getPrayerById(id: string): Prayer | undefined {
+  if (!id || typeof id !== 'string') {
+    return undefined;
+  }
   return PRAYERS.find((p) => p.id === id);
+}
+
+/**
+ * Check if a prayer ID is valid
+ * 
+ * @param id - Prayer ID to validate
+ * @returns True if prayer exists
+ */
+export function isValidPrayerId(id: string): boolean {
+  return PRAYERS.some((p) => p.id === id);
 }
 
 /**

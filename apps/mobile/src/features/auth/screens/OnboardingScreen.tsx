@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -7,11 +7,11 @@ import {
   ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { useDatabase } from '../../../contexts/DatabaseContext';
 import { useAuth } from '../../../contexts/AuthContext';
 import { Button, useTheme } from '../../../design-system';
-import { generateEncryptionKey } from '../../../utils/encryption';
+import { generateEncryptionKey, encryptContent } from '../../../utils/encryption';
 import { formatDate, calculateDaysSober } from '../../../utils/validation';
 import { supabase } from '../../../lib/supabase';
 
@@ -25,10 +25,26 @@ export function OnboardingScreen() {
   const { db, isReady } = useDatabase();
   const theme = useTheme();
 
-  const daysSober = calculateDaysSober(sobrietyDate);
+  const daysSober = useMemo(() => calculateDaysSober(sobrietyDate), [sobrietyDate]);
 
   const handleComplete = async () => {
     setFormError(null);
+
+    // Validate sobriety date
+    const today = new Date();
+    today.setHours(23, 59, 59, 999); // End of today
+    const hundredYearsAgo = new Date();
+    hundredYearsAgo.setFullYear(hundredYearsAgo.getFullYear() - 100);
+
+    if (sobrietyDate > today) {
+      setFormError('Sobriety date cannot be in the future');
+      return;
+    }
+
+    if (sobrietyDate < hundredYearsAgo) {
+      setFormError('Please select a more recent sobriety date');
+      return;
+    }
 
     if (!user || !db || !isReady) {
       setFormError('Please wait for initialization');
@@ -54,13 +70,14 @@ export function OnboardingScreen() {
 
       if (supabaseError) throw supabaseError;
 
-      // Save profile locally for offline access
+      // Save profile locally for offline access (encrypt email for security)
+      const encryptedEmail = user.email ? await encryptContent(user.email) : '';
       await db.runAsync(
-        `INSERT INTO user_profile (id, email, sobriety_start_date, created_at, updated_at)
+        `INSERT INTO user_profile (id, encrypted_email, sobriety_start_date, created_at, updated_at)
          VALUES (?, ?, ?, ?, ?)`,
         [
           user.id,
-          user.email || '',
+          encryptedEmail,
           formatDate(sobrietyDate),
           new Date().toISOString(),
           new Date().toISOString(),
@@ -69,7 +86,21 @@ export function OnboardingScreen() {
 
       // Navigation will be handled by RootNavigator detecting profile exists
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Please try again';
+      let message = 'Please try again';
+
+      if (error instanceof Error) {
+        // Handle specific Supabase and database errors
+        if (error.message.includes('duplicate key') || error.message.includes('already exists')) {
+          message = 'Profile already exists. You should be redirected shortly.';
+        } else if (error.message.includes('network') || error.message.includes('fetch')) {
+          message = 'Network error. Please check your connection and try again.';
+        } else if (error.message.includes('encrypt') || error.message.includes('key')) {
+          message = 'Security setup failed. Please try again.';
+        } else {
+          message = error.message;
+        }
+      }
+
       setFormError(message);
     } finally {
       setLoading(false);
@@ -91,18 +122,22 @@ export function OnboardingScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.header}>
-          <Text style={styles.welcomeEmoji}>🌱</Text>
-          <Text style={[styles.title, { color: theme.colors.text }]}>Welcome to Your{'\n'}Recovery Journey</Text>
-          <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>
+        <View style={styles.header} accessibilityRole="header">
+          <Text style={styles.welcomeEmoji} accessibilityLabel="Welcome emoji">🌱</Text>
+          <Text style={[styles.title, { color: theme.colors.text }]} accessibilityRole="header" accessibilityLabel="Welcome to Your Recovery Journey">
+            Welcome to Your{'\n'}Recovery Journey
+          </Text>
+          <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]} accessibilityLabel="App description">
             This app is your private, secure companion for recovery. All your
             data is encrypted and stays on your device unless you choose to share.
           </Text>
         </View>
 
         <View style={styles.dateSection}>
-          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>When did your sobriety begin?</Text>
-          <Text style={[styles.sectionHint, { color: theme.colors.textSecondary }]}>
+          <Text style={[styles.sectionTitle, { color: theme.colors.text }]} accessibilityRole="header" accessibilityLabel="Sobriety start date question">
+            When did your sobriety begin?
+          </Text>
+          <Text style={[styles.sectionHint, { color: theme.colors.textSecondary }]} accessibilityLabel="Why we ask for this date">
             This helps us celebrate your milestones with you
           </Text>
 
@@ -111,15 +146,21 @@ export function OnboardingScreen() {
             onPress={() => setShowDatePicker(true)}
             variant="outline"
             testID="date-picker-button"
+            accessibilityLabel={`Select sobriety start date, currently set to ${formatDisplayDate(sobrietyDate)}`}
+            accessibilityHint="Opens date picker to select when your sobriety journey began"
           />
 
           {daysSober > 0 && (
-            <View style={[styles.streakCard, { backgroundColor: theme.colors.primary }]}>
-              <Text style={styles.streakNumber}>{daysSober}</Text>
-              <Text style={styles.streakLabel}>
+            <View
+              style={[styles.streakCard, { backgroundColor: theme.colors.primary }]}
+              accessibilityRole="text"
+              accessibilityLabel={`Congratulations! ${daysSober} ${daysSober === 1 ? 'day' : 'days'} of recovery. ${daysSober < 7 ? "Every day counts. You're doing great!" : daysSober < 30 ? "Amazing progress! Keep going!" : "Incredible dedication. You're an inspiration!"}`}
+            >
+              <Text style={styles.streakNumber} accessibilityLabel={`${daysSober} days sober`}>{daysSober}</Text>
+              <Text style={styles.streakLabel} accessibilityLabel={`${daysSober === 1 ? 'day' : 'days'} of recovery`}>
                 {daysSober === 1 ? 'day' : 'days'} of recovery
               </Text>
-              <Text style={styles.streakMessage}>
+              <Text style={styles.streakMessage} accessibilityLabel="Encouraging message">
                 {daysSober < 7
                   ? "Every day counts. You're doing great!"
                   : daysSober < 30
@@ -135,7 +176,7 @@ export function OnboardingScreen() {
             value={sobrietyDate}
             mode="date"
             display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-            onChange={(event, selectedDate) => {
+            onChange={(_event: DateTimePickerEvent, selectedDate?: Date) => {
               if (Platform.OS === 'android') {
                 setShowDatePicker(false);
               }
@@ -145,6 +186,8 @@ export function OnboardingScreen() {
             }}
             maximumDate={new Date()}
             testID="date-picker"
+            accessibilityLabel="Sobriety start date picker"
+            accessibilityHint="Select the date when your sobriety journey began"
           />
         )}
 
@@ -157,8 +200,11 @@ export function OnboardingScreen() {
           />
         )}
 
-        <View style={[styles.features, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
-          <Text style={[styles.featuresTitle, { color: theme.colors.text }]}>What you can do:</Text>
+        <View
+          style={[styles.features, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
+          accessibilityLabel="App features section"
+        >
+          <Text style={[styles.featuresTitle, { color: theme.colors.text }]} accessibilityRole="header">What you can do:</Text>
           <FeatureItem
             emoji="📓"
             title="Private Journaling"
@@ -194,6 +240,9 @@ export function OnboardingScreen() {
                 borderColor: theme.colors.danger,
               },
             ]}
+            accessibilityRole="alert"
+            accessibilityLabel="Error message"
+            accessibilityLiveRegion="assertive"
           >
             <Text style={[theme.typography.bodySmall, { color: theme.colors.danger, textAlign: 'center' }]}>
               {formError}
@@ -208,6 +257,9 @@ export function OnboardingScreen() {
             loading={loading}
             size="large"
             testID="complete-setup-button"
+            accessibilityLabel="Complete setup"
+            accessibilityHint={loading ? "Setting up your account, please wait" : "Complete the onboarding process and start your recovery journey"}
+            accessibilityState={{ disabled: loading }}
           />
         </View>
       </ScrollView>
@@ -224,10 +276,10 @@ interface FeatureItemProps {
 
 function FeatureItem({ emoji, title, description, theme }: FeatureItemProps) {
   return (
-    <View style={styles.featureItem}>
-      <Text style={styles.featureEmoji}>{emoji}</Text>
+    <View style={styles.featureItem} accessibilityRole="text" accessibilityLabel={`${title}: ${description}`}>
+      <Text style={styles.featureEmoji} accessibilityLabel={`${title} icon`}>{emoji}</Text>
       <View style={styles.featureText}>
-        <Text style={[styles.featureTitle, { color: theme.colors.text }]}>{title}</Text>
+        <Text style={[styles.featureTitle, { color: theme.colors.text }]} accessibilityRole="header">{title}</Text>
         <Text style={[styles.featureDescription, { color: theme.colors.textSecondary }]}>{description}</Text>
       </View>
     </View>

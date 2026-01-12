@@ -1,6 +1,14 @@
 /**
  * Data Export Utility
- * Exports all user data to a JSON file for privacy compliance
+ * 
+ * Exports all user data to a JSON file for privacy compliance (GDPR, CCPA, etc.).
+ * All encrypted content is decrypted before export so users have access to
+ * their complete data.
+ * 
+ * **Privacy Note**: Exported data contains decrypted sensitive information.
+ * Users should handle exported files with care and store them securely.
+ * 
+ * @module export
  */
 import * as ExpoFileSystem from 'expo-file-system';
 import * as ExpoSharing from 'expo-sharing';
@@ -60,7 +68,17 @@ export interface ExportData {
 
 /**
  * Export all user data to a JSON file
- * Decrypts all encrypted content before export
+ * 
+ * Fetches all user data from the database, decrypts encrypted content,
+ * and writes it to a JSON file. Returns the file path for sharing.
+ * 
+ * @returns Promise resolving to file path of exported JSON file
+ * @throws May throw if database access fails or decryption errors occur
+ * @example
+ * ```ts
+ * const filePath = await exportAllData();
+ * // File is saved and ready to share
+ * ```
  */
 export async function exportAllData(): Promise<string> {
   const db = await getDatabase();
@@ -318,6 +336,21 @@ export async function exportAllData(): Promise<string> {
 
 /**
  * Export data and share via system share sheet
+ * 
+ * Exports all data and immediately opens the system share sheet
+ * so users can share the exported file via email, cloud storage, etc.
+ * 
+ * @returns Promise resolving to true if sharing succeeded
+ * @throws Error if sharing is not available or export fails
+ * @example
+ * ```ts
+ * try {
+ *   await exportAndShare();
+ *   // Share sheet opens automatically
+ * } catch (error) {
+ *   Alert.alert('Export failed', error.message);
+ * }
+ * ```
  */
 export async function exportAndShare(): Promise<boolean> {
   try {
@@ -340,9 +373,9 @@ export async function exportAndShare(): Promise<boolean> {
     // Clean up the temporary file after a delay
     setTimeout(async () => {
       try {
-        await FileSystem.deleteAsync(filePath, { idempotent: true });
+        await FileSystem.deleteAsync(filePath);
       } catch {
-        // Ignore cleanup errors
+        // Ignore cleanup errors (file may not exist or already deleted)
       }
     }, 60000); // Delete after 1 minute
 
@@ -354,7 +387,17 @@ export async function exportAndShare(): Promise<boolean> {
 }
 
 /**
- * Get export statistics (for showing in UI)
+ * Get export statistics
+ * 
+ * Returns counts of all data types that would be included in an export.
+ * Useful for showing users what will be exported before they proceed.
+ * 
+ * @returns Promise resolving to object with counts for each data type
+ * @example
+ * ```ts
+ * const stats = await getExportStats();
+ * // Show: "Your export will include 45 journal entries, 120 check-ins, etc."
+ * ```
  */
 export async function getExportStats(): Promise<{
   journalCount: number;
