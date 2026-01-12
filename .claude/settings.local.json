@@ -79,5 +79,6 @@
       "Bash(npm explain:*)"
     ]
   },
-  "outputStyle": "Explanatory"
+  "outputStyle": "default",
+  "spinnerTipsEnabled": false
 }

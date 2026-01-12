@@ -101,4 +101,4 @@ const config = {
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
 };
 
-module.exports = config;
+export default config;

@@ -5,7 +5,6 @@ import {
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
-  Alert,
   TouchableOpacity,
   ScrollView,
 } from 'react-native';
@@ -23,10 +22,13 @@ export function ForgotPasswordScreen({ navigation }: Props) {
   const [loading, setLoading] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
   const [error, setError] = useState<string | undefined>();
+  const [formError, setFormError] = useState<string | null>(null);
 
   const { resetPassword } = useAuth();
 
   const handleResetPassword = async () => {
+    setFormError(null);
+
     // Validate email
     if (!email.trim()) {
       setError('Email is required');
@@ -57,7 +59,7 @@ export function ForgotPasswordScreen({ navigation }: Props) {
         }
       }
       
-      Alert.alert('Reset Failed', message);
+      setFormError(message);
     } finally {
       setLoading(false);
     }
@@ -121,6 +123,7 @@ export function ForgotPasswordScreen({ navigation }: Props) {
               onChangeText={(text) => {
                 setEmail(text);
                 if (error) setError(undefined);
+                if (formError) setFormError(null);
               }}
               placeholder="your.email@example.com"
               autoCapitalize="none"
@@ -131,6 +134,22 @@ export function ForgotPasswordScreen({ navigation }: Props) {
               error={error}
               testID="forgot-password-email-input"
             />
+
+            {formError && (
+              <View
+                style={[
+                  styles.errorContainer,
+                  {
+                    backgroundColor: theme.colors.dangerLight || '#FFE5E5',
+                    borderColor: theme.colors.danger,
+                  },
+                ]}
+              >
+                <Text style={[theme.typography.bodySmall, { color: theme.colors.danger, textAlign: 'center' }]}>
+                  {formError}
+                </Text>
+              </View>
+            )}
 
             <Button
               title="Send Reset Link"
@@ -177,6 +196,12 @@ const styles = StyleSheet.create({
   },
   form: {
     gap: 8,
+  },
+  errorContainer: {
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    marginVertical: 8,
   },
   footer: {
     flexDirection: 'row',

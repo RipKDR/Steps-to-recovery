@@ -5,7 +5,6 @@ import {
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
-  Alert,
   TouchableOpacity,
   ScrollView,
   TextInput,
@@ -31,6 +30,7 @@ export function SignUpScreen({ navigation }: Props) {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<FormErrors>({});
+  const [formError, setFormError] = useState<string | null>(null);
 
   const passwordRef = useRef<TextInput>(null);
   const confirmPasswordRef = useRef<TextInput>(null);
@@ -73,13 +73,14 @@ export function SignUpScreen({ navigation }: Props) {
 
     setLoading(true);
     setErrors({});
+    setFormError(null);
 
     try {
       await signUp(email.trim().toLowerCase(), password);
       // After successful signup, user will be navigated to onboarding
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Please try again';
-      Alert.alert('Sign Up Failed', message);
+      setFormError(message);
     } finally {
       setLoading(false);
     }
@@ -180,6 +181,19 @@ export function SignUpScreen({ navigation }: Props) {
               </Text>
             </View>
 
+            {formError && (
+              <View
+                style={[
+                  styles.errorContainer,
+                  { backgroundColor: theme.colors.dangerLight || '#FFE5E5', borderColor: theme.colors.danger },
+                ]}
+              >
+                <Text style={[theme.typography.bodySmall, { color: theme.colors.danger, textAlign: 'center' }]}>
+                  {formError}
+                </Text>
+              </View>
+            )}
+
             <Button
               title="Create Account"
               onPress={handleSignUp}
@@ -231,6 +245,12 @@ const styles = StyleSheet.create({
   },
   privacyIcon: {
     fontSize: 20,
+  },
+  errorContainer: {
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    marginVertical: 8,
   },
   footer: {
     flexDirection: 'row',

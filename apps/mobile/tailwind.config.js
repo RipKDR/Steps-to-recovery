@@ -1,6 +1,6 @@
 /** @type {any} */
 // @ts-ignore
-const nativewindPreset = require('nativewind/preset');
+import nativewindPreset from 'nativewind/preset';
 
 /** @type {import('tailwindcss').Config} */
 const config = {
@@ -192,4 +192,4 @@ const config = {
   plugins: [],
 };
 
-module.exports = config;
+export default config;

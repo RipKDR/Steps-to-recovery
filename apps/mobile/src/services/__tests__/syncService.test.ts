@@ -77,6 +77,7 @@ describe('syncService Integration Tests', () => {
         tableName,
         recordId,
         operation,
+        supabaseId: null,
       });
     });
 

@@ -78,8 +78,8 @@ describe('Encryption Utilities', () => {
       for (let i = 0; i < 32; i++) {
         mockRandomBytes[i] = i;
       }
-      mockCrypto.getRandomBytesAsync.mockResolvedValue(mockRandomBytes);
-      mockCrypto.randomUUID.mockReturnValue('test-salt-uuid');
+      (global.crypto.getRandomValues as jest.Mock).mockReturnValue(mockRandomBytes);
+      (global.crypto.randomUUID as jest.Mock).mockReturnValue('test-salt-uuid');
       mockSecureStorage.setItemAsync.mockResolvedValue(undefined);
 
       // Execute
@@ -93,8 +93,8 @@ describe('Encryption Utilities', () => {
 
     it('should store the key in SecureStore', async () => {
       const mockRandomBytes = new Uint8Array(32).fill(1);
-      mockCrypto.getRandomBytesAsync.mockResolvedValue(mockRandomBytes);
-      mockCrypto.randomUUID.mockReturnValue('test-salt-uuid');
+      (global.crypto.getRandomValues as jest.Mock).mockReturnValue(mockRandomBytes);
+      (global.crypto.randomUUID as jest.Mock).mockReturnValue('test-salt-uuid');
       mockSecureStorage.setItemAsync.mockResolvedValue(undefined);
 
       await generateEncryptionKey();
@@ -109,8 +109,8 @@ describe('Encryption Utilities', () => {
 
     it('should return the generated key string', async () => {
       const mockRandomBytes = new Uint8Array(32).fill(255);
-      mockCrypto.getRandomBytesAsync.mockResolvedValue(mockRandomBytes);
-      mockCrypto.randomUUID.mockReturnValue('test-salt');
+      (global.crypto.getRandomValues as jest.Mock).mockReturnValue(mockRandomBytes);
+      (global.crypto.randomUUID as jest.Mock).mockReturnValue('test-salt');
       mockSecureStorage.setItemAsync.mockResolvedValue(undefined);
 
       const key = await generateEncryptionKey();
@@ -123,14 +123,18 @@ describe('Encryption Utilities', () => {
       // We can verify this by checking the implementation uses the constant
       // This is more of an integration test to ensure the algorithm is correct
       const mockRandomBytes = new Uint8Array(32).fill(42);
-      mockCrypto.getRandomBytesAsync.mockResolvedValue(mockRandomBytes);
-      mockCrypto.randomUUID.mockReturnValue('salt-123');
+      (global.crypto.getRandomValues as jest.Mock).mockReturnValue(mockRandomBytes);
+      (global.crypto.randomUUID as jest.Mock).mockReturnValue('salt-123');
       mockSecureStorage.setItemAsync.mockResolvedValue(undefined);
 
       const key = await generateEncryptionKey();
 
       // The key should be deterministic for the same input
       expect(key).toBeDefined();
+
+      // Setup for second call
+      (global.crypto.getRandomValues as jest.Mock).mockReturnValue(mockRandomBytes);
+      (global.crypto.randomUUID as jest.Mock).mockReturnValue('salt-123');
 
       // Generate again with same mocks to verify consistency
       const key2 = await generateEncryptionKey();
@@ -139,24 +143,24 @@ describe('Encryption Utilities', () => {
 
     it('should use getRandomBytesAsync for key generation', async () => {
       const mockRandomBytes = new Uint8Array(32).fill(99);
-      mockCrypto.getRandomBytesAsync.mockResolvedValue(mockRandomBytes);
-      mockCrypto.randomUUID.mockReturnValue('uuid-salt');
+      (global.crypto.getRandomValues as jest.Mock).mockReturnValue(mockRandomBytes);
+      (global.crypto.randomUUID as jest.Mock).mockReturnValue('uuid-salt');
       mockSecureStorage.setItemAsync.mockResolvedValue(undefined);
 
       await generateEncryptionKey();
 
-      expect(mockCrypto.getRandomBytesAsync).toHaveBeenCalledWith(32);
+      expect(global.crypto.getRandomValues).toHaveBeenCalledWith(expect.any(Uint8Array));
     });
 
     it('should use randomUUID for salt generation', async () => {
       const mockRandomBytes = new Uint8Array(32).fill(77);
-      mockCrypto.getRandomBytesAsync.mockResolvedValue(mockRandomBytes);
-      mockCrypto.randomUUID.mockReturnValue('unique-uuid-salt');
+      (global.crypto.getRandomValues as jest.Mock).mockReturnValue(mockRandomBytes);
+      (global.crypto.randomUUID as jest.Mock).mockReturnValue('unique-uuid-salt');
       mockSecureStorage.setItemAsync.mockResolvedValue(undefined);
 
       await generateEncryptionKey();
 
-      expect(mockCrypto.randomUUID).toHaveBeenCalled();
+      expect(global.crypto.randomUUID).toHaveBeenCalled();
     });
   });
 
@@ -189,7 +193,7 @@ describe('Encryption Utilities', () => {
 
     it('should encrypt plaintext successfully', async () => {
       const mockIV = new Uint8Array(16).fill(0);
-      mockCrypto.getRandomBytesAsync.mockResolvedValue(mockIV);
+      (global.crypto.getRandomValues as jest.Mock).mockReturnValue(mockIV);
 
       const plaintext = 'Hello, World!';
       const encrypted = await encryptContent(plaintext);
@@ -204,7 +208,7 @@ describe('Encryption Utilities', () => {
       for (let i = 0; i < 16; i++) {
         mockIV[i] = i;
       }
-      mockCrypto.getRandomBytesAsync.mockResolvedValue(mockIV);
+      (global.crypto.getRandomValues as jest.Mock).mockReturnValue(mockIV);
 
       const encrypted = await encryptContent('test data');
       const parts = encrypted.split(':');
@@ -216,10 +220,9 @@ describe('Encryption Utilities', () => {
 
     it('should use different IVs for same plaintext', async () => {
       let callCount = 0;
-      mockCrypto.getRandomBytesAsync.mockImplementation(async () => {
-        const iv = new Uint8Array(16);
-        iv.fill(callCount++);
-        return iv;
+      (global.crypto.getRandomValues as jest.Mock).mockImplementation((array: Uint8Array) => {
+        array.fill(callCount++);
+        return array;
       });
 
       const plaintext = 'Same content';
@@ -236,7 +239,7 @@ describe('Encryption Utilities', () => {
 
     it('should handle empty strings', async () => {
       const mockIV = new Uint8Array(16).fill(5);
-      mockCrypto.getRandomBytesAsync.mockResolvedValue(mockIV);
+      (global.crypto.getRandomValues as jest.Mock).mockReturnValue(mockIV);
 
       const encrypted = await encryptContent('');
 
@@ -246,7 +249,7 @@ describe('Encryption Utilities', () => {
 
     it('should handle special characters', async () => {
       const mockIV = new Uint8Array(16).fill(10);
-      mockCrypto.getRandomBytesAsync.mockResolvedValue(mockIV);
+      (global.crypto.getRandomValues as jest.Mock).mockReturnValue(mockIV);
 
       const specialChars = '!@#$%^&*()_+-=[]{}|;:,.<>?';
       const encrypted = await encryptContent(specialChars);
@@ -257,7 +260,7 @@ describe('Encryption Utilities', () => {
 
     it('should handle unicode and emojis', async () => {
       const mockIV = new Uint8Array(16).fill(15);
-      mockCrypto.getRandomBytesAsync.mockResolvedValue(mockIV);
+      (global.crypto.getRandomValues as jest.Mock).mockReturnValue(mockIV);
 
       const unicode = '你好世界 🎉🚀💯';
       const encrypted = await encryptContent(unicode);
@@ -274,11 +277,11 @@ describe('Encryption Utilities', () => {
 
     it('should generate 16-byte IV', async () => {
       const mockIV = new Uint8Array(16).fill(20);
-      mockCrypto.getRandomBytesAsync.mockResolvedValue(mockIV);
+      (global.crypto.getRandomValues as jest.Mock).mockReturnValue(mockIV);
 
       await encryptContent('test');
 
-      expect(mockCrypto.getRandomBytesAsync).toHaveBeenCalledWith(16);
+      expect(global.crypto.getRandomValues).toHaveBeenCalledWith(expect.any(Uint8Array));
     });
   });
 
@@ -292,7 +295,7 @@ describe('Encryption Utilities', () => {
     it('should decrypt ciphertext to original plaintext', async () => {
       // First encrypt something
       const mockIV = new Uint8Array(16).fill(1);
-      mockCrypto.getRandomBytesAsync.mockResolvedValue(mockIV);
+      (global.crypto.getRandomValues as jest.Mock).mockReturnValue(mockIV);
 
       const original = 'Secret message';
       const encrypted = await encryptContent(original);
@@ -333,7 +336,7 @@ describe('Encryption Utilities', () => {
 
     it('should throw error on empty string decryption', async () => {
       const mockIV = new Uint8Array(16).fill(2);
-      mockCrypto.getRandomBytesAsync.mockResolvedValue(mockIV);
+      (global.crypto.getRandomValues as jest.Mock).mockReturnValue(mockIV);
 
       const encrypted = await encryptContent('');
 
@@ -351,7 +354,7 @@ describe('Encryption Utilities', () => {
 
     it('should encrypt and decrypt to return original text', async () => {
       const mockIV = new Uint8Array(16).fill(3);
-      mockCrypto.getRandomBytesAsync.mockResolvedValue(mockIV);
+      (global.crypto.getRandomValues as jest.Mock).mockReturnValue(mockIV);
 
       const original = 'This is a test message';
       const encrypted = await encryptContent(original);
@@ -362,7 +365,7 @@ describe('Encryption Utilities', () => {
 
     it('should work with special characters', async () => {
       const mockIV = new Uint8Array(16).fill(4);
-      mockCrypto.getRandomBytesAsync.mockResolvedValue(mockIV);
+      (global.crypto.getRandomValues as jest.Mock).mockReturnValue(mockIV);
 
       const original = '!@#$%^&*()_+-=[]{}\\|;:",.<>?/~`';
       const encrypted = await encryptContent(original);
@@ -373,7 +376,7 @@ describe('Encryption Utilities', () => {
 
     it('should work with emojis', async () => {
       const mockIV = new Uint8Array(16).fill(5);
-      mockCrypto.getRandomBytesAsync.mockResolvedValue(mockIV);
+      (global.crypto.getRandomValues as jest.Mock).mockReturnValue(mockIV);
 
       const original = 'Hello 👋 World 🌍 Test 🧪 Success ✅';
       const encrypted = await encryptContent(original);
@@ -384,7 +387,7 @@ describe('Encryption Utilities', () => {
 
     it('should work with unicode characters', async () => {
       const mockIV = new Uint8Array(16).fill(6);
-      mockCrypto.getRandomBytesAsync.mockResolvedValue(mockIV);
+      (global.crypto.getRandomValues as jest.Mock).mockReturnValue(mockIV);
 
       const original = '日本語 中文 한국어 العربية עברית';
       const encrypted = await encryptContent(original);
@@ -395,7 +398,7 @@ describe('Encryption Utilities', () => {
 
     it('should work with long strings (>10KB)', async () => {
       const mockIV = new Uint8Array(16).fill(7);
-      mockCrypto.getRandomBytesAsync.mockResolvedValue(mockIV);
+      (global.crypto.getRandomValues as jest.Mock).mockReturnValue(mockIV);
 
       // Generate a string larger than 10KB
       const original = 'A'.repeat(15000);
@@ -408,7 +411,7 @@ describe('Encryption Utilities', () => {
 
     it('should work with multiline text', async () => {
       const mockIV = new Uint8Array(16).fill(8);
-      mockCrypto.getRandomBytesAsync.mockResolvedValue(mockIV);
+      (global.crypto.getRandomValues as jest.Mock).mockReturnValue(mockIV);
 
       const original = `Line 1
 Line 2
@@ -422,7 +425,7 @@ With\ttabs\tand\nnewlines\r\n`;
 
     it('should work with JSON strings', async () => {
       const mockIV = new Uint8Array(16).fill(9);
-      mockCrypto.getRandomBytesAsync.mockResolvedValue(mockIV);
+      (global.crypto.getRandomValues as jest.Mock).mockReturnValue(mockIV);
 
       const original = JSON.stringify({
         name: 'Test',
@@ -490,8 +493,8 @@ With\ttabs\tand\nnewlines\r\n`;
 
       // Generate key
       const mockRandomBytes = new Uint8Array(32).fill(1);
-      mockCrypto.getRandomBytesAsync.mockResolvedValue(mockRandomBytes);
-      mockCrypto.randomUUID.mockReturnValue('test-salt');
+      (global.crypto.getRandomValues as jest.Mock).mockReturnValue(mockRandomBytes);
+      (global.crypto.randomUUID as jest.Mock).mockReturnValue('test-salt');
       mockSecureStorage.setItemAsync.mockResolvedValue(undefined);
 
       const key = await generateEncryptionKey();
@@ -538,11 +541,10 @@ With\ttabs\tand\nnewlines\r\n`;
 
     it('should use random IV for each encryption', async () => {
       let callCount = 0;
-      mockCrypto.getRandomBytesAsync.mockImplementation(async (size) => {
-        const iv = new Uint8Array(size);
+      (global.crypto.getRandomValues as jest.Mock).mockImplementation((array: Uint8Array) => {
         // Each call gets different values
-        iv.fill(callCount++);
-        return iv;
+        array.fill(callCount++);
+        return array;
       });
 
       const plaintext = 'Same message';
@@ -563,7 +565,7 @@ With\ttabs\tand\nnewlines\r\n`;
     it('should use AES-256-CBC encryption mode', async () => {
       // This is verified by the implementation using CryptoJS.AES with 256-bit key
       const mockIV = new Uint8Array(16).fill(11);
-      mockCrypto.getRandomBytesAsync.mockResolvedValue(mockIV);
+      (global.crypto.getRandomValues as jest.Mock).mockReturnValue(mockIV);
 
       const plaintext = 'Test encryption mode';
       const encrypted = await encryptContent(plaintext);
@@ -575,10 +577,9 @@ With\ttabs\tand\nnewlines\r\n`;
 
     it('should produce different ciphertexts for same plaintext', async () => {
       let ivCounter = 0;
-      mockCrypto.getRandomBytesAsync.mockImplementation(async () => {
-        const iv = new Uint8Array(16);
-        iv.fill(ivCounter++);
-        return iv;
+      (global.crypto.getRandomValues as jest.Mock).mockImplementation((array: Uint8Array) => {
+        array.fill(ivCounter++);
+        return array;
       });
 
       const plaintext = 'Identical content';
@@ -599,11 +600,16 @@ With\ttabs\tand\nnewlines\r\n`;
         mockRandomBytes[i] = i * 7; // Deterministic pattern
       }
 
-      mockCrypto.getRandomBytesAsync.mockResolvedValue(mockRandomBytes);
-      mockCrypto.randomUUID.mockReturnValue('consistent-salt');
+      (global.crypto.getRandomValues as jest.Mock).mockReturnValue(mockRandomBytes);
+      (global.crypto.randomUUID as jest.Mock).mockReturnValue('consistent-salt');
       mockSecureStorage.setItemAsync.mockResolvedValue(undefined);
 
       const key1 = await generateEncryptionKey();
+
+      // Reset mocks for second call
+      (global.crypto.getRandomValues as jest.Mock).mockReturnValue(mockRandomBytes);
+      (global.crypto.randomUUID as jest.Mock).mockReturnValue('consistent-salt');
+
       const key2 = await generateEncryptionKey();
 
       // Same inputs should produce same output (PBKDF2 is deterministic)
@@ -612,13 +618,15 @@ With\ttabs\tand\nnewlines\r\n`;
 
     it('should verify different salts produce different keys', async () => {
       const mockRandomBytes = new Uint8Array(32).fill(42);
-      mockCrypto.getRandomBytesAsync.mockResolvedValue(mockRandomBytes);
+      (global.crypto.getRandomValues as jest.Mock).mockReturnValue(mockRandomBytes);
       mockSecureStorage.setItemAsync.mockResolvedValue(undefined);
 
-      mockCrypto.randomUUID.mockReturnValue('salt-1');
+      (global.crypto.randomUUID as jest.Mock).mockReturnValue('salt-1');
       const key1 = await generateEncryptionKey();
 
-      mockCrypto.randomUUID.mockReturnValue('salt-2');
+      // Reset for second call
+      (global.crypto.getRandomValues as jest.Mock).mockReturnValue(mockRandomBytes);
+      (global.crypto.randomUUID as jest.Mock).mockReturnValue('salt-2');
       const key2 = await generateEncryptionKey();
 
       // Different salts should produce different keys
@@ -629,8 +637,8 @@ With\ttabs\tand\nnewlines\r\n`;
   describe('Error Handling', () => {
     it('should handle SecureStore errors during key generation', async () => {
       const mockRandomBytes = new Uint8Array(32).fill(1);
-      mockCrypto.getRandomBytesAsync.mockResolvedValue(mockRandomBytes);
-      mockCrypto.randomUUID.mockReturnValue('salt');
+      (global.crypto.getRandomValues as jest.Mock).mockReturnValue(mockRandomBytes);
+      (global.crypto.randomUUID as jest.Mock).mockReturnValue('salt');
       mockSecureStorage.setItemAsync.mockRejectedValue(new Error('Storage error'));
 
       await expect(generateEncryptionKey()).rejects.toThrow('Storage error');
@@ -650,7 +658,9 @@ With\ttabs\tand\nnewlines\r\n`;
 
     it('should handle Crypto errors during IV generation', async () => {
       mockSecureStorage.getItemAsync.mockResolvedValue('key');
-      mockCrypto.getRandomBytesAsync.mockRejectedValue(new Error('Crypto error'));
+      (global.crypto.getRandomValues as jest.Mock).mockImplementation(() => {
+        throw new Error('Crypto error');
+      });
 
       await expect(encryptContent('test')).rejects.toThrow('Crypto error');
     });
@@ -682,7 +692,7 @@ With\ttabs\tand\nnewlines\r\n`;
 
     it('should handle very long content (100KB)', async () => {
       const mockIV = new Uint8Array(16).fill(12);
-      mockCrypto.getRandomBytesAsync.mockResolvedValue(mockIV);
+      (global.crypto.getRandomValues as jest.Mock).mockReturnValue(mockIV);
 
       const longContent = 'X'.repeat(100000);
       const encrypted = await encryptContent(longContent);
@@ -694,7 +704,7 @@ With\ttabs\tand\nnewlines\r\n`;
 
     it('should handle content with null bytes', async () => {
       const mockIV = new Uint8Array(16).fill(13);
-      mockCrypto.getRandomBytesAsync.mockResolvedValue(mockIV);
+      (global.crypto.getRandomValues as jest.Mock).mockReturnValue(mockIV);
 
       const content = 'Hello\x00World';
       const encrypted = await encryptContent(content);
@@ -705,7 +715,7 @@ With\ttabs\tand\nnewlines\r\n`;
 
     it('should handle all whitespace content', async () => {
       const mockIV = new Uint8Array(16).fill(14);
-      mockCrypto.getRandomBytesAsync.mockResolvedValue(mockIV);
+      (global.crypto.getRandomValues as jest.Mock).mockReturnValue(mockIV);
 
       const content = '   \t\n\r   ';
       const encrypted = await encryptContent(content);
@@ -716,7 +726,7 @@ With\ttabs\tand\nnewlines\r\n`;
 
     it('should handle content with only special characters', async () => {
       const mockIV = new Uint8Array(16).fill(15);
-      mockCrypto.getRandomBytesAsync.mockResolvedValue(mockIV);
+      (global.crypto.getRandomValues as jest.Mock).mockReturnValue(mockIV);
 
       const content = '!@#$%^&*()';
       const encrypted = await encryptContent(content);
@@ -727,10 +737,9 @@ With\ttabs\tand\nnewlines\r\n`;
 
     it('should handle rapid successive encryptions', async () => {
       let ivCounter = 0;
-      mockCrypto.getRandomBytesAsync.mockImplementation(async () => {
-        const iv = new Uint8Array(16);
-        iv.fill(ivCounter++);
-        return iv;
+      (global.crypto.getRandomValues as jest.Mock).mockImplementation((array: Uint8Array) => {
+        array.fill(ivCounter++);
+        return array;
       });
 
       const promises = [];

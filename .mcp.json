@@ -1,5 +1,5 @@
 {
-  "$schema": "https://raw.githubusercontent.com/anthropics/claude-code/main/schemas/mcp.json",
+  "$schema": "https://raw.githubusercontent.com/modelcontextprotocol/specification/main/schema/config.json",
   "mcpServers": {
     "supabase": {
       "transport": "http",

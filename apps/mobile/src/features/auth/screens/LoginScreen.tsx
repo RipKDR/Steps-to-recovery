@@ -5,7 +5,6 @@ import {
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
-  Alert,
   TouchableOpacity,
   ScrollView,
   TextInput,
@@ -24,6 +23,7 @@ export function LoginScreen({ navigation }: Props) {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+  const [formError, setFormError] = useState<string | null>(null);
 
   const passwordRef = useRef<TextInput>(null);
   const { signIn } = useAuth();
@@ -52,13 +52,14 @@ export function LoginScreen({ navigation }: Props) {
 
     setLoading(true);
     setErrors({});
+    setFormError(null);
 
     try {
       await signIn(email.trim().toLowerCase(), password);
       // Navigation handled by root navigator based on auth state
     } catch (error: unknown) {
       let message = 'Please check your credentials and try again.';
-      
+
       if (error && typeof error === 'object' && 'message' in error) {
         const errorMessage = String(error.message);
         // Provide user-friendly error messages
@@ -72,8 +73,8 @@ export function LoginScreen({ navigation }: Props) {
           message = errorMessage;
         }
       }
-      
-      Alert.alert('Login Failed', message);
+
+      setFormError(message);
     } finally {
       setLoading(false);
     }
@@ -136,6 +137,19 @@ export function LoginScreen({ navigation }: Props) {
               textContentType="password"
             />
 
+            {formError && (
+              <View
+                style={[
+                  styles.errorContainer,
+                  { backgroundColor: theme.colors.dangerLight || '#FFE5E5', borderColor: theme.colors.danger },
+                ]}
+              >
+                <Text style={[theme.typography.bodySmall, { color: theme.colors.danger, textAlign: 'center' }]}>
+                  {formError}
+                </Text>
+              </View>
+            )}
+
             <Button
               title="Log In"
               onPress={handleLogin}
@@ -192,6 +206,12 @@ const styles = StyleSheet.create({
   },
   form: {
     gap: 8,
+  },
+  errorContainer: {
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    marginVertical: 8,
   },
   forgotPassword: {
     alignSelf: 'center',

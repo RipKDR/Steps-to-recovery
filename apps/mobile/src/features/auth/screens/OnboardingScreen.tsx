@@ -3,7 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  Alert,
   Platform,
   ScrollView,
 } from 'react-native';
@@ -20,6 +19,7 @@ export function OnboardingScreen() {
   const [sobrietyDate, setSobrietyDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
   const { user } = useAuth();
   const { db, isReady } = useDatabase();
@@ -28,8 +28,10 @@ export function OnboardingScreen() {
   const daysSober = calculateDaysSober(sobrietyDate);
 
   const handleComplete = async () => {
+    setFormError(null);
+
     if (!user || !db || !isReady) {
-      Alert.alert('Error', 'Please wait for initialization');
+      setFormError('Please wait for initialization');
       return;
     }
 
@@ -68,7 +70,7 @@ export function OnboardingScreen() {
       // Navigation will be handled by RootNavigator detecting profile exists
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Please try again';
-      Alert.alert('Setup Failed', message);
+      setFormError(message);
     } finally {
       setLoading(false);
     }
@@ -182,6 +184,22 @@ export function OnboardingScreen() {
             theme={theme}
           />
         </View>
+
+        {formError && (
+          <View
+            style={[
+              styles.errorContainer,
+              {
+                backgroundColor: theme.colors.dangerLight || '#FFE5E5',
+                borderColor: theme.colors.danger,
+              },
+            ]}
+          >
+            <Text style={[theme.typography.bodySmall, { color: theme.colors.danger, textAlign: 'center' }]}>
+              {formError}
+            </Text>
+          </View>
+        )}
 
         <View style={styles.footer}>
           <Button
@@ -313,5 +331,11 @@ const styles = StyleSheet.create({
   footer: {
     marginTop: 'auto',
     paddingTop: 12,
+  },
+  errorContainer: {
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    marginBottom: 12,
   },
 });
