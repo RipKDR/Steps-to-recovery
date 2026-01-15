@@ -112,7 +112,7 @@ function sanitizeData(data: unknown, depth: number = 0): unknown {
       // Check if key contains sensitive keywords
       const lowerKey = key.toLowerCase();
       if (lowerKey.includes('encrypted') || lowerKey.includes('password') ||
-          lowerKey.includes('token') || lowerKey.includes('secret')) {
+        lowerKey.includes('token') || lowerKey.includes('secret')) {
         sanitized[key] = '[REDACTED]';
         continue;
       }
@@ -155,7 +155,7 @@ function sanitizeError(error: unknown): unknown {
         .map(line => {
           // Redact file paths that might contain usernames
           return line.replace(/\/Users\/[^/]+/g, '/Users/[USER]')
-                    .replace(/C:\\Users\\[^\\]+/g, 'C:\\Users\\[USER]');
+            .replace(/C:\\Users\\[^\\]+/g, 'C:\\Users\\[USER]');
         })
         .join('\n')
     }),
@@ -230,6 +230,7 @@ export const logger = {
     const sanitized = sanitizeData(data);
 
     if (isDevelopment) {
+      // eslint-disable-next-line no-console
       console.log(`[INFO] ${message}`, sanitized);
     }
   },
@@ -244,6 +245,7 @@ export const logger = {
     const sanitized = sanitizeData(data);
 
     if (isDevelopment) {
+      // eslint-disable-next-line no-console
       console.debug(`[DEBUG] ${message}`, sanitized);
     }
   },

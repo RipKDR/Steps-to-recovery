@@ -43,7 +43,7 @@ export function useMeetings() {
 
     const now = new Date();
     let streak = 0;
-    let currentWeekStart = new Date(now);
+    const currentWeekStart = new Date(now);
     currentWeekStart.setDate(now.getDate() - now.getDay()); // Start of current week
     currentWeekStart.setHours(0, 0, 0, 0);
 

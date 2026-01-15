@@ -22,12 +22,12 @@ const MIN_EVALUATION_INTERVAL_MS = 5 * 60 * 1000;
 export function useJitai() {
   const lastEvaluationRef = useRef<number>(0);
   const appStateRef = useRef<AppStateStatus>(AppState.currentState);
-  
+
   // Get app state from various stores
   const { soberDays } = useSobriety();
-  const { 
-    todayCheckin, 
-    averageMood, 
+  const {
+    todayCheckin,
+    averageMood,
     averageCraving,
     moodTrend,
     cravingTrend,
@@ -43,7 +43,7 @@ export function useJitai() {
    */
   const buildContext = useCallback((): JitaiContext => {
     const now = new Date();
-    
+
     // Calculate days since last check-in
     let daysSinceLastCheckin = 0;
     if (checkinHistory.length > 0) {
@@ -52,7 +52,7 @@ export function useJitai() {
         (now.getTime() - lastCheckin.getTime()) / (24 * 60 * 60 * 1000)
       );
     }
-    
+
     // Calculate days since last meeting
     let daysSinceLastMeeting = 999;
     if (meetings.length > 0) {
@@ -61,14 +61,14 @@ export function useJitai() {
         (now.getTime() - lastMeeting.getTime()) / (24 * 60 * 60 * 1000)
       );
     }
-    
+
     // Calculate meetings this week
     const oneWeekAgo = new Date();
     oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
     const meetingsThisWeek = meetings.filter(
       (log: MeetingLog) => new Date(log.attendedAt) >= oneWeekAgo
     ).length;
-    
+
     // Calculate days since last sponsor contact
     let daysSinceLastSponsorContact = 999;
     if (sponsor?.lastContactedAt) {
@@ -76,15 +76,15 @@ export function useJitai() {
         (now.getTime() - new Date(sponsor.lastContactedAt).getTime()) / (24 * 60 * 60 * 1000)
       );
     }
-    
+
     // Get current step
     const currentStep =
       stepProgress.find((p) => p.questionsAnswered < p.totalQuestions)?.stepNumber || 1;
-    
+
     // Calculate days since last step work
-    let daysSinceLastStepWork = 999;
+    const daysSinceLastStepWork = 999;
     // This would need step work history tracking
-    
+
     // Map mood/craving trends
     // Note: For cravings, 'positive' means declining (good), 'negative' means rising (bad)
     const mapMoodTrend = (trend: string): 'rising' | 'stable' | 'declining' => {
@@ -92,14 +92,14 @@ export function useJitai() {
       if (trend === 'negative') return 'declining';
       return 'stable';
     };
-    
+
     const mapCravingTrend = (trend: string): 'rising' | 'stable' | 'declining' => {
       // Invert: 'positive' trend means declining cravings (good), 'negative' means rising (bad)
       if (trend === 'positive') return 'declining';
       if (trend === 'negative') return 'rising';
       return 'stable';
     };
-    
+
     return {
       currentHour: now.getHours(),
       currentDayOfWeek: now.getDay(),
@@ -140,14 +140,14 @@ export function useJitai() {
    */
   const evaluate = useCallback(async () => {
     const now = Date.now();
-    
+
     // Check minimum interval
     if (now - lastEvaluationRef.current < MIN_EVALUATION_INTERVAL_MS) {
       return;
     }
-    
+
     lastEvaluationRef.current = now;
-    
+
     try {
       const context = buildContext();
       await runJitaiEvaluation(context);

@@ -1,0 +1,41 @@
+# Steps to Recovery - AI Agent Rules
+
+## Core Philosophy
+You are an intelligent developer working on "Steps to Recovery", a privacy-first, offline-first, security-first recovery companion app.
+Your Code Style: strict TypeScript, functional React patterns, comprehensive error handling.
+
+## Critical Guardrails (NON-NEGOTIABLE)
+
+1. **Security (Zero Compromise)**
+   - **Encryption**: ALL sensitive user data (journal, steps, check-ins) MUST be encrypted using `apps/mobile/src/utils/encryption.ts` BEFORE storage or sync.
+   - **Keys**: Store encryption keys ONLY in `SecureStore` (via `adapters/secureStorage`). NEVER in AsyncStorage, SQLite, or plain text.
+   - **Logs**: NEVER log sensitive data or keys. Use `utils/logger`.
+   - **RLS**: All Supabase tables must have Row Level Security enabled. Policies must enforce `auth.uid() = user_id`.
+
+2. **Architecture**
+   - **Offline-First**: SQLite/IndexedDB is the single source of truth. Supabase is for backup/sync.
+   - **Sync**: Use `SyncContext` and `syncService` queue. Process deletes before updates.
+   - **Design System**: strictly use tokens from `apps/mobile/src/design-system/tokens`. Do not use hardcoded hex values or arbitrary spacing.
+
+3. **Code Standards**
+   - **TypeScript**: Strict mode. NO `any`. Explicit return types on ALL functions.
+   - **Accessibility**: WCAG AAA compliance. REQUIRED: `accessibilityLabel` & `accessibilityRole` on all interactive elements. Test touch targets (48dp+).
+   - **React Query**: Use `useQuery`/`useMutation` for server state.
+
+4. **Meta-Workflow (The "Agent" Process)**
+   - **Consult**: ALWAYS check `CLAUDE.md` and `AGENTS_ARCHITECT.md` for complex tasks.
+   - **Complex Tasks (>8 files or Security/Auth/Sync)**: You MUST follow the **Enhanced Workflow**:
+     1. **Plan**: Analyze requirements & implementation options.
+     2. **Challenge**: Pre-mortem your plan (What could go wrong? Security risks? Performance?).
+     3. **Implement**: Write code with token efficiency (grep first, batch reads).
+     4. **Verify**: Post-mortem your code. Run specific tests (`npm run test:encryption`).
+   - **Token Efficiency**: Don't dump full files if unnecessary. Use `grep` to find relevant sections.
+
+## Directory Structure
+- `apps/mobile/src/features/` - Feature-based logic (screens, components, hooks).
+- `apps/mobile/src/contexts/` - Global state (Auth, Database, Sync).
+- `apps/mobile/src/utils/` - Shared utilities (Encryption, Logger).
+
+## Commands
+- Test Encryption: `cd apps/mobile && npm run test:encryption`
+- Type Check: `cd apps/mobile && npx tsc --noEmit`
