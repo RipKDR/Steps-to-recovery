@@ -1,10 +1,10 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { ScrollView, StyleSheet, View, KeyboardAvoidingView, Platform, Animated, ActivityIndicator } from 'react-native';
+import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
+import { FlatList, StyleSheet, View, KeyboardAvoidingView, Platform, Animated, ActivityIndicator, TouchableOpacity, type ListRenderItemInfo, type ViewToken } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRoute, type RouteProp } from '@react-navigation/native';
 import { MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { STEP_PROMPTS, type StepPrompt } from '@recovery/shared/constants';
+import { STEP_PROMPTS, type StepPrompt, type StepSection } from '@recovery/shared/constants';
 import { useStepWork, useSaveStepAnswer } from '../hooks/useStepWork';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useTheme, Card, Button, TextArea, ProgressBar, Badge, Toast, Divider, Text } from '../../../design-system';
@@ -15,6 +15,25 @@ type RouteParams = {
   };
 };
 
+interface QuestionItem {
+  type: 'question';
+  questionNumber: number;
+  prompt: string;
+  sectionTitle?: string;
+}
+
+interface SectionHeaderItem {
+  type: 'section';
+  title: string;
+  questionRange: string;
+}
+
+interface FooterItem {
+  type: 'footer';
+}
+
+type ListItem = QuestionItem | SectionHeaderItem | FooterItem;
+
 export function StepDetailScreen(): React.ReactElement {
   const route = useRoute<RouteProp<RouteParams, 'StepDetail'>>();
   const { stepNumber } = route.params;
@@ -24,19 +43,85 @@ export function StepDetailScreen(): React.ReactElement {
 
   const stepData = STEP_PROMPTS.find((s: StepPrompt) => s.step === stepNumber);
   const { questions, progress, isLoading } = useStepWork(userId, stepNumber);
-  const { saveAnswer, isPending } = useSaveStepAnswer(userId);
+  const { saveAnswer } = useSaveStepAnswer(userId);
 
   const [answers, setAnswers] = useState<Record<number, string>>({});
   const [savingQuestion, setSavingQuestion] = useState<number | null>(null);
+  const [currentVisibleQuestion, setCurrentVisibleQuestion] = useState(1);
 
   // Toast state
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [toastVariant, setToastVariant] = useState<'success' | 'error' | 'info' | 'warning'>('success');
 
-  // Entrance animations
+  // Refs
+  const flatListRef = useRef<FlatList<ListItem>>(null);
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
+
+  // Get total question count
+  const totalQuestions = stepData?.prompts.length ?? 0;
+
+  // Find first unanswered question
+  const firstUnansweredQuestion = useMemo(() => {
+    if (!stepData) return 1;
+    for (let i = 0; i < stepData.prompts.length; i++) {
+      const questionNumber = i + 1;
+      const answered = questions.find(q => q.question_number === questionNumber && q.is_complete);
+      if (!answered) {
+        return questionNumber;
+      }
+    }
+    return stepData.prompts.length; // All answered, go to last
+  }, [stepData, questions]);
+
+  // Build list items with section headers
+  const listItems = useMemo((): ListItem[] => {
+    if (!stepData) return [];
+
+    const items: ListItem[] = [];
+
+    if (stepData.sections && stepData.sections.length > 0) {
+      // Build items with section headers
+      let questionIndex = 0;
+      stepData.sections.forEach((section: StepSection) => {
+        const sectionStart = questionIndex + 1;
+        const sectionEnd = questionIndex + section.prompts.length;
+
+        // Add section header
+        items.push({
+          type: 'section',
+          title: section.title,
+          questionRange: `Questions ${sectionStart}-${sectionEnd}`,
+        });
+
+        // Add questions for this section
+        section.prompts.forEach((prompt: string) => {
+          questionIndex++;
+          items.push({
+            type: 'question',
+            questionNumber: questionIndex,
+            prompt,
+            sectionTitle: section.title,
+          });
+        });
+      });
+    } else {
+      // No sections, just add all prompts
+      stepData.prompts.forEach((prompt: string, index: number) => {
+        items.push({
+          type: 'question',
+          questionNumber: index + 1,
+          prompt,
+        });
+      });
+    }
+
+    // Add footer
+    items.push({ type: 'footer' });
+
+    return items;
+  }, [stepData]);
 
   useEffect(() => {
     Animated.parallel([
@@ -90,6 +175,146 @@ export function StepDetailScreen(): React.ReactElement {
     }
   }, [answers, saveAnswer, stepNumber]);
 
+  // Scroll to first unanswered question
+  const scrollToFirstUnanswered = useCallback(() => {
+    if (!flatListRef.current || !stepData) return;
+
+    // Find the index in listItems that corresponds to the first unanswered question
+    const targetIndex = listItems.findIndex(
+      item => item.type === 'question' && item.questionNumber === firstUnansweredQuestion
+    );
+
+    if (targetIndex !== -1) {
+      flatListRef.current.scrollToIndex({
+        index: targetIndex,
+        animated: true,
+        viewPosition: 0,
+      });
+
+      // Haptic feedback
+      if (Platform.OS !== 'web') {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      }
+    }
+  }, [listItems, firstUnansweredQuestion, stepData]);
+
+  // Track visible question for counter
+  const onViewableItemsChanged = useCallback(({ viewableItems }: { viewableItems: ViewToken[] }) => {
+    const questionItems = viewableItems.filter(
+      item => item.item?.type === 'question'
+    );
+    if (questionItems.length > 0) {
+      const firstVisible = questionItems[0].item as QuestionItem;
+      setCurrentVisibleQuestion(firstVisible.questionNumber);
+    }
+  }, []);
+
+  const viewabilityConfig = useMemo(() => ({
+    itemVisiblePercentThreshold: 50,
+  }), []);
+
+  const renderItem = useCallback(({ item }: ListRenderItemInfo<ListItem>) => {
+    if (item.type === 'section') {
+      return (
+        <View style={[styles.sectionHeader, { backgroundColor: theme.colors.primary + '10' }]}>
+          <MaterialCommunityIcons
+            name="bookmark-outline"
+            size={20}
+            color={theme.colors.primary}
+          />
+          <View style={styles.sectionHeaderContent}>
+            <Text style={[theme.typography.h3, { color: theme.colors.primary, fontWeight: '600' }]}>
+              {item.title}
+            </Text>
+            <Text style={[theme.typography.caption, { color: theme.colors.textSecondary }]}>
+              {item.questionRange}
+            </Text>
+          </View>
+        </View>
+      );
+    }
+
+    if (item.type === 'footer') {
+      return (
+        <Card variant="outlined" style={[styles.infoCard, { borderColor: theme.colors.success }]}>
+          <View style={styles.infoContent}>
+            <MaterialCommunityIcons name="lock" size={24} color={theme.colors.success} />
+            <Text style={[theme.typography.caption, { color: theme.colors.textSecondary, marginLeft: 12, flex: 1, lineHeight: 18 }]}>
+              Your answers are encrypted and stored securely on your device. Only you can read them. Your progress is private and safe.
+            </Text>
+          </View>
+        </Card>
+      );
+    }
+
+    // Question item
+    const questionNumber = item.questionNumber;
+    const isAnswered = questions.find(q => q.question_number === questionNumber && q.is_complete);
+    const isSaving = savingQuestion === questionNumber;
+
+    return (
+      <Card variant="elevated" style={styles.questionCard}>
+        <View style={styles.questionHeader}>
+          <View
+            style={[
+              styles.questionNumber,
+              isAnswered
+                ? { backgroundColor: theme.colors.success }
+                : { backgroundColor: theme.colors.surface, borderWidth: 2, borderColor: theme.colors.border },
+            ]}
+          >
+            {isAnswered ? (
+              <MaterialCommunityIcons name="check" size={20} color="#FFFFFF" />
+            ) : (
+              <Text style={[theme.typography.body, { color: theme.colors.textSecondary, fontWeight: '600' }]}>
+                {questionNumber}
+              </Text>
+            )}
+          </View>
+          <Text style={[theme.typography.h3, { color: theme.colors.text, flex: 1, lineHeight: 24 }]}>
+            {item.prompt}
+          </Text>
+        </View>
+
+        <Divider style={styles.questionDivider} />
+
+        <TextArea
+          label=""
+          value={answers[questionNumber] || ''}
+          onChangeText={(text) => setAnswers(prev => ({ ...prev, [questionNumber]: text }))}
+          placeholder="Take your time to reflect and write your answer here. Remember, this is a private space for your personal growth."
+          containerStyle={styles.answerTextArea}
+          minHeight={150}
+          maxLength={2000}
+          showCharacterCount
+          editable={!isSaving}
+          accessibilityLabel={`Answer for question ${questionNumber} of ${totalQuestions}`}
+        />
+
+        <Button
+          title={isSaving ? 'Saving...' : isAnswered ? 'Update Answer' : 'Save Answer'}
+          onPress={() => handleSaveAnswer(questionNumber)}
+          disabled={!answers[questionNumber]?.trim() || isSaving}
+          loading={isSaving}
+          variant="primary"
+          fullWidth
+        />
+      </Card>
+    );
+  }, [questions, savingQuestion, answers, theme, handleSaveAnswer, totalQuestions]);
+
+  const keyExtractor = useCallback((item: ListItem, index: number) => {
+    if (item.type === 'section') return `section-${item.title}`;
+    if (item.type === 'footer') return 'footer';
+    return `question-${item.questionNumber}`;
+  }, []);
+
+  const getItemLayout = useCallback((data: ArrayLike<ListItem> | null | undefined, index: number) => ({
+    length: 350, // Approximate height
+    offset: 350 * index,
+    index,
+  }), []);
+
   if (!stepData) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
@@ -115,6 +340,9 @@ export function StepDetailScreen(): React.ReactElement {
       </SafeAreaView>
     );
   }
+
+  const answeredCount = questions.filter(q => q.is_complete).length;
+  const hasUnanswered = answeredCount < totalQuestions;
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]} edges={['bottom']}>
@@ -149,9 +377,14 @@ export function StepDetailScreen(): React.ReactElement {
                 <Text style={[theme.typography.h2, { color: theme.colors.text, fontWeight: '600' }]}>
                   Step {stepNumber}: {stepData.title}
                 </Text>
-                <Badge variant="primary" size="medium" style={styles.principleBadge}>
-                  {stepData.principle}
-                </Badge>
+                <View style={styles.badgeRow}>
+                  <Badge variant="primary" size="medium" style={styles.principleBadge}>
+                    {stepData.principle}
+                  </Badge>
+                  <Text style={[theme.typography.caption, { color: theme.colors.textSecondary, marginLeft: 8 }]}>
+                    {totalQuestions} questions
+                  </Text>
+                </View>
               </View>
             </View>
 
@@ -159,7 +392,7 @@ export function StepDetailScreen(): React.ReactElement {
             <View style={styles.progressSection}>
               <View style={styles.progressHeader}>
                 <Text style={[theme.typography.label, { color: theme.colors.textSecondary }]}>
-                  Your Progress
+                  Your Progress ({answeredCount}/{totalQuestions})
                 </Text>
                 <Text style={[theme.typography.h3, { color: theme.colors.primary, fontWeight: '600' }]}>
                   {Math.round(progress)}%
@@ -167,6 +400,21 @@ export function StepDetailScreen(): React.ReactElement {
               </View>
               <ProgressBar progress={progress / 100} style={styles.progressBar} />
             </View>
+
+            {/* Continue Button */}
+            {hasUnanswered && answeredCount > 0 && (
+              <TouchableOpacity
+                style={[styles.continueButton, { backgroundColor: theme.colors.primary + '15' }]}
+                onPress={scrollToFirstUnanswered}
+                accessibilityLabel={`Continue at question ${firstUnansweredQuestion}`}
+                accessibilityRole="button"
+              >
+                <MaterialCommunityIcons name="play-circle-outline" size={20} color={theme.colors.primary} />
+                <Text style={[theme.typography.body, { color: theme.colors.primary, marginLeft: 8, fontWeight: '600' }]}>
+                  Continue at Question {firstUnansweredQuestion}
+                </Text>
+              </TouchableOpacity>
+            )}
           </Card>
 
           {/* Description */}
@@ -182,77 +430,39 @@ export function StepDetailScreen(): React.ReactElement {
             </Text>
           </Card>
 
-          <ScrollView
-            style={styles.scrollView}
+          {/* Question Counter */}
+          <View style={[styles.questionCounter, { backgroundColor: theme.colors.surface }]}>
+            <Text style={[theme.typography.label, { color: theme.colors.textSecondary }]}>
+              Question {currentVisibleQuestion} of {totalQuestions}
+            </Text>
+          </View>
+
+          {/* Questions List */}
+          <FlatList
+            ref={flatListRef}
+            data={listItems}
+            renderItem={renderItem}
+            keyExtractor={keyExtractor}
             contentContainerStyle={styles.contentContainer}
             keyboardShouldPersistTaps="handled"
-          >
-            {/* Questions */}
-            {stepData.prompts.map((prompt: string, index: number) => {
-              const questionNumber = index + 1;
-              const isAnswered = questions.find(q => q.question_number === questionNumber && q.is_complete);
-              const isSaving = savingQuestion === questionNumber;
-
-              return (
-                <Card key={questionNumber} variant="elevated" style={styles.questionCard}>
-                  <View style={styles.questionHeader}>
-                    <View
-                      style={[
-                        styles.questionNumber,
-                        isAnswered
-                          ? { backgroundColor: theme.colors.success }
-                          : { backgroundColor: theme.colors.surface, borderWidth: 2, borderColor: theme.colors.border },
-                      ]}
-                    >
-                      {isAnswered ? (
-                        <MaterialCommunityIcons name="check" size={20} color="#FFFFFF" />
-                      ) : (
-                        <Text style={[theme.typography.body, { color: theme.colors.textSecondary, fontWeight: '600' }]}>
-                          {questionNumber}
-                        </Text>
-                      )}
-                    </View>
-                    <Text style={[theme.typography.h3, { color: theme.colors.text, flex: 1, lineHeight: 24 }]}>
-                      {prompt}
-                    </Text>
-                  </View>
-
-                  <Divider style={styles.questionDivider} />
-
-                  <TextArea
-                    label=""
-                    value={answers[questionNumber] || ''}
-                    onChangeText={(text) => setAnswers(prev => ({ ...prev, [questionNumber]: text }))}
-                    placeholder="Take your time to reflect and write your answer here. Remember, this is a private space for your personal growth."
-                    containerStyle={styles.answerTextArea}
-                    minHeight={150}
-                    maxLength={2000}
-                    showCharacterCount
-                    editable={!isSaving}
-                    accessibilityLabel={`Answer for question ${questionNumber}`}
-                  />
-
-                  <Button
-                    title={isSaving ? 'Saving...' : isAnswered ? 'Update Answer' : 'Save Answer'}
-                    onPress={() => handleSaveAnswer(questionNumber)}
-                    disabled={!answers[questionNumber]?.trim() || isSaving}
-                    loading={isSaving}
-                    variant="primary"
-                    fullWidth
-                  />
-                </Card>
-              );
-            })}
-
-            <Card variant="outlined" style={[styles.infoCard, { borderColor: theme.colors.success }]}>
-              <View style={styles.infoContent}>
-                <MaterialCommunityIcons name="lock" size={24} color={theme.colors.success} />
-                <Text style={[theme.typography.caption, { color: theme.colors.textSecondary, marginLeft: 12, flex: 1, lineHeight: 18 }]}>
-                  Your answers are encrypted and stored securely on your device. Only you can read them. Your progress is private and safe.
-                </Text>
-              </View>
-            </Card>
-          </ScrollView>
+            onViewableItemsChanged={onViewableItemsChanged}
+            viewabilityConfig={viewabilityConfig}
+            getItemLayout={getItemLayout}
+            initialNumToRender={5}
+            maxToRenderPerBatch={5}
+            windowSize={5}
+            removeClippedSubviews={Platform.OS !== 'web'}
+            showsVerticalScrollIndicator={true}
+            onScrollToIndexFailed={(info) => {
+              // Fallback for scroll failure
+              setTimeout(() => {
+                flatListRef.current?.scrollToOffset({
+                  offset: info.averageItemLength * info.index,
+                  animated: true,
+                });
+              }, 100);
+            }}
+          />
         </Animated.View>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -306,8 +516,12 @@ const styles = StyleSheet.create({
   headerContent: {
     flex: 1,
   },
-  principleBadge: {
+  badgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginTop: 8,
+  },
+  principleBadge: {
     alignSelf: 'flex-start',
   },
   progressSection: {
@@ -324,22 +538,47 @@ const styles = StyleSheet.create({
   progressBar: {
     height: 8,
   },
+  continueButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    marginTop: 12,
+  },
   descriptionCard: {
     marginHorizontal: 16,
-    marginBottom: 16,
+    marginBottom: 8,
   },
   descriptionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 12,
   },
-  scrollView: {
-    flex: 1,
+  questionCounter: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    marginHorizontal: 16,
+    marginBottom: 8,
+    borderRadius: 8,
+    alignItems: 'center',
   },
   contentContainer: {
     padding: 16,
     paddingTop: 0,
     paddingBottom: 32,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    marginBottom: 12,
+    borderRadius: 8,
+  },
+  sectionHeaderContent: {
+    marginLeft: 12,
+    flex: 1,
   },
   questionCard: {
     marginBottom: 16,

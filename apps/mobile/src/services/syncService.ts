@@ -178,6 +178,38 @@ interface LocalFavoriteMeeting {
 }
 
 /**
+ * Reading reflection from local SQLite
+ */
+interface LocalReadingReflection {
+  id: string;
+  user_id: string;
+  reading_id: string;
+  reading_date: string;
+  encrypted_reflection: string;
+  word_count: number;
+  created_at: string;
+  updated_at: string;
+  sync_status: string;
+  supabase_id: string | null;
+}
+
+/**
+ * Reading reflection from local SQLite
+ */
+interface LocalReadingReflection {
+  id: string;
+  user_id: string;
+  reading_id: string;
+  reading_date: string;
+  encrypted_reflection: string;
+  word_count: number;
+  created_at: string;
+  updated_at: string;
+  sync_status: string;
+  supabase_id: string | null;
+}
+
+/**
  * Generate a UUID v4
  */
 function generateUUID(): string {
@@ -504,6 +536,80 @@ export async function syncFavoriteMeeting(
 }
 
 /**
+ * Sync a single reading reflection to Supabase
+ * Maps local encrypted fields to Supabase schema
+ */
+export async function syncReadingReflection(
+  db: StorageAdapter,
+  reflectionId: string,
+  userId: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    // Get the reflection from local database
+    const reflection = await db.getFirstAsync<LocalReadingReflection>(
+      `SELECT id, user_id, reading_id, reading_date, encrypted_reflection, 
+       word_count, created_at, updated_at, sync_status, supabase_id 
+       FROM reading_reflections WHERE id = ? AND user_id = ?`,
+      [reflectionId, userId]
+    );
+
+    if (!reflection) {
+      return {
+        success: false,
+        error: `Reading reflection not found: ${reflectionId}`,
+      };
+    }
+
+    // Generate Supabase ID if needed
+    const supabaseId = reflection.supabase_id || generateUUID();
+
+    // Prepare data for Supabase (using established schema patterns)
+    const supabaseData = {
+      id: supabaseId,
+      user_id: reflection.user_id,
+      reading_id: reflection.reading_id,
+      reading_date: reflection.reading_date,
+      encrypted_reflection: reflection.encrypted_reflection,
+      word_count: reflection.word_count,
+      created_at: reflection.created_at,
+      updated_at: reflection.updated_at,
+    };
+
+    // Upsert to Supabase (insert or update) with timeout
+    const response = await withTimeout(
+      Promise.resolve(supabase
+        .from('reading_reflections')
+        .upsert(supabaseData, {
+          onConflict: 'id',
+        })),
+      NETWORK_TIMEOUT_MS,
+      'Reading reflection upsert'
+    );
+    const supabaseError = (response as { error: { message: string } | null }).error;
+
+    if (supabaseError) {
+      logger.error('Supabase upsert failed for reading reflection', supabaseError);
+      return { success: false, error: supabaseError.message };
+    }
+
+    // Update local record with supabase_id and mark as synced
+    await db.runAsync(
+      `UPDATE reading_reflections
+       SET supabase_id = ?, sync_status = 'synced'
+       WHERE id = ?`,
+      [supabaseId, reflectionId]
+    );
+
+    logger.info('Reading reflection synced successfully', { reflectionId, supabaseId });
+    return { success: true };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    logger.error('Failed to sync reading reflection', { reflectionId, error });
+    return { success: false, error: errorMessage };
+  }
+}
+
+/**
  * Delete a record from Supabase
  */
 async function deleteFromSupabase(
@@ -571,6 +677,8 @@ async function processSyncItem(
       return syncDailyCheckIn(db, item.record_id, userId);
     case 'favorite_meetings':
       return syncFavoriteMeeting(db, item.record_id, userId);
+    case 'reading_reflections':
+      return syncReadingReflection(db, item.record_id, userId);
     default:
       return {
         success: false,

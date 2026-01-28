@@ -89,7 +89,7 @@ export async function getRegularMeetings(): Promise<RegularMeeting[]> {
     'SELECT * FROM regular_meetings ORDER BY day_of_week, time'
   );
 
-  return rows.map((row) => ({
+  return rows.map((row: DbRegularMeeting) => ({
     id: row.id,
     name: row.name,
     location: row.location || undefined,

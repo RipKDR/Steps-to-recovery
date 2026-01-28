@@ -1,5 +1,3 @@
-// @ts-nocheck
-// TODO: Phase 3 - This hook needs to be aligned with RegularMeetingStore interface
 /**
  * useRegularMeetings Hook
  * Convenient hook for accessing regular meetings functionality

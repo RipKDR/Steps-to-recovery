@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useDatabase } from '../../../contexts/DatabaseContext';
 import { decryptContent, encryptContent } from '../../../utils/encryption';
 import { logger } from '../../../utils/logger';
-import { addToSyncQueue } from '../../../services/syncService';
+import { addToSyncQueue, addDeleteToSyncQueue } from '../../../services/syncService';
 import type { DailyCheckIn, DailyCheckInDecrypted, CheckInType } from '@recovery/shared/types';
 
 /**
@@ -120,6 +120,116 @@ export function useCreateCheckIn(userId: string): {
 
   return {
     createCheckIn: mutation.mutateAsync,
+    isPending: mutation.isPending,
+  };
+}
+
+/**
+ * Hook to update an existing check-in
+ */
+export function useUpdateCheckIn(userId: string): {
+  updateCheckIn: (id: string, data: { intention?: string; reflection?: string; mood?: number; craving?: number }) => Promise<void>;
+  isPending: boolean;
+} {
+  const { db } = useDatabase();
+  const queryClient = useQueryClient();
+
+  const mutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: { intention?: string; reflection?: string; mood?: number; craving?: number } }) => {
+      if (!db) throw new Error('Database not initialized');
+
+      try {
+        const now = new Date().toISOString();
+        const updates: string[] = [];
+        const values: (string | null)[] = [];
+
+        if (data.intention !== undefined) {
+          updates.push('encrypted_intention = ?');
+          values.push(data.intention ? await encryptContent(data.intention) : null);
+        }
+        if (data.reflection !== undefined) {
+          updates.push('encrypted_reflection = ?');
+          values.push(data.reflection ? await encryptContent(data.reflection) : null);
+        }
+        if (data.mood !== undefined) {
+          updates.push('encrypted_mood = ?');
+          values.push(await encryptContent(data.mood.toString()));
+        }
+        if (data.craving !== undefined) {
+          updates.push('encrypted_craving = ?');
+          values.push(await encryptContent(data.craving.toString()));
+        }
+
+        updates.push('updated_at = ?');
+        values.push(now);
+        updates.push('sync_status = ?');
+        values.push('pending');
+
+        values.push(id);
+        values.push(userId);
+
+        await db.runAsync(
+          `UPDATE daily_checkins SET ${updates.join(', ')} WHERE id = ? AND user_id = ?`,
+          values
+        );
+
+        // Add to sync queue for cloud backup
+        await addToSyncQueue(db, 'daily_checkins', id, 'update');
+
+        logger.info('Check-in updated', { id });
+      } catch (err) {
+        logger.error('Failed to update check-in', err);
+        throw err;
+      }
+    },
+    onSuccess: () => {
+      const today = new Date().toISOString().split('T')[0];
+      queryClient.invalidateQueries({ queryKey: ['daily_checkins', userId, today] });
+      queryClient.invalidateQueries({ queryKey: ['streak', userId] });
+    },
+  });
+
+  return {
+    updateCheckIn: (id, data) => mutation.mutateAsync({ id, data }),
+    isPending: mutation.isPending,
+  };
+}
+
+/**
+ * Hook to delete a check-in
+ */
+export function useDeleteCheckIn(userId: string): {
+  deleteCheckIn: (id: string) => Promise<void>;
+  isPending: boolean;
+} {
+  const { db } = useDatabase();
+  const queryClient = useQueryClient();
+
+  const mutation = useMutation({
+    mutationFn: async (id: string) => {
+      if (!db) throw new Error('Database not initialized');
+
+      try {
+        // Capture supabase_id and add to sync queue BEFORE deleting
+        // This ensures we can delete from Supabase even after local deletion
+        await addDeleteToSyncQueue(db, 'daily_checkins', id, userId);
+
+        await db.runAsync('DELETE FROM daily_checkins WHERE id = ? AND user_id = ?', [id, userId]);
+        logger.info('Check-in deleted', { id });
+      } catch (err) {
+        logger.error('Failed to delete check-in', err);
+        throw err;
+      }
+    },
+    onSuccess: () => {
+      const today = new Date().toISOString().split('T')[0];
+      queryClient.invalidateQueries({ queryKey: ['daily_checkins', userId, today] });
+      queryClient.invalidateQueries({ queryKey: ['streak', userId] });
+    },
+  });
+
+  return {
+    deleteCheckIn: mutation.mutateAsync,
     isPending: mutation.isPending,
   };
 }

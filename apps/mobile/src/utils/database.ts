@@ -31,7 +31,7 @@ const initPromises = new Map<string, Promise<void>>();
  * Increment this when adding new migrations. Migrations are applied
  * sequentially from the current version to this target version.
  */
-const CURRENT_SCHEMA_VERSION = 4;
+const CURRENT_SCHEMA_VERSION = 5;
 
 /**
  * Initialize database with schema for offline-first storage
@@ -166,6 +166,32 @@ export async function initDatabase(db: StorageAdapter): Promise<void> {
         failed_at TEXT,
         UNIQUE(table_name, record_id, operation)
       );`,
+      `CREATE TABLE IF NOT EXISTS daily_readings (
+        id TEXT PRIMARY KEY,
+        day_of_year INTEGER NOT NULL UNIQUE CHECK(day_of_year >= 1 AND day_of_year <= 366),
+        month INTEGER NOT NULL CHECK(month >= 1 AND month <= 12),
+        day INTEGER NOT NULL CHECK(day >= 1 AND day <= 31),
+        title TEXT NOT NULL,
+        content TEXT NOT NULL,
+        source TEXT NOT NULL,
+        reflection_prompt TEXT NOT NULL,
+        created_at TEXT NOT NULL
+      );`,
+      `CREATE TABLE IF NOT EXISTS reading_reflections (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        reading_id TEXT NOT NULL,
+        reading_date TEXT NOT NULL,
+        encrypted_reflection TEXT NOT NULL,
+        word_count INTEGER DEFAULT 0,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        sync_status TEXT DEFAULT 'pending',
+        supabase_id TEXT,
+        UNIQUE(user_id, reading_date),
+        FOREIGN KEY (user_id) REFERENCES user_profile(id),
+        FOREIGN KEY (reading_id) REFERENCES daily_readings(id)
+      );`,
       `CREATE TABLE IF NOT EXISTS schema_migrations (
         version INTEGER PRIMARY KEY,
         applied_at TEXT NOT NULL
@@ -179,6 +205,9 @@ export async function initDatabase(db: StorageAdapter): Promise<void> {
       `CREATE INDEX IF NOT EXISTS idx_step_supabase_id ON step_work(supabase_id);`,
       `CREATE INDEX IF NOT EXISTS idx_achievement_user ON achievements(user_id);`,
       `CREATE INDEX IF NOT EXISTS idx_sync_queue_table ON sync_queue(table_name);`,
+      `CREATE INDEX IF NOT EXISTS idx_daily_readings_day ON daily_readings(day_of_year);`,
+      `CREATE INDEX IF NOT EXISTS idx_reading_reflections_user ON reading_reflections(user_id);`,
+      `CREATE INDEX IF NOT EXISTS idx_reading_reflections_date ON reading_reflections(reading_date);`,
     ];
 
     for (const sql of statements) {
@@ -427,6 +456,56 @@ async function runMigrations(db: StorageAdapter): Promise<void> {
     logger.info('Migration v4 completed');
   }
 
+  // Migration version 5: Add daily readings and reading reflections tables
+  if (currentVersion < 5) {
+    logger.info('Running migration v5: Adding daily readings and reflections tables');
+    const v5Migrations = [
+      // Daily readings table (static content, no encryption needed)
+      `CREATE TABLE IF NOT EXISTS daily_readings (
+        id TEXT PRIMARY KEY,
+        day_of_year INTEGER NOT NULL UNIQUE CHECK(day_of_year >= 1 AND day_of_year <= 366),
+        month INTEGER NOT NULL CHECK(month >= 1 AND month <= 12),
+        day INTEGER NOT NULL CHECK(day >= 1 AND day <= 31),
+        title TEXT NOT NULL,
+        content TEXT NOT NULL,
+        source TEXT NOT NULL,
+        reflection_prompt TEXT NOT NULL,
+        created_at TEXT NOT NULL
+      );`,
+      // Reading reflections table (user-generated content, encrypted)
+      `CREATE TABLE IF NOT EXISTS reading_reflections (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        reading_id TEXT NOT NULL,
+        reading_date TEXT NOT NULL,
+        encrypted_reflection TEXT NOT NULL,
+        word_count INTEGER DEFAULT 0,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        sync_status TEXT DEFAULT 'pending',
+        supabase_id TEXT,
+        UNIQUE(user_id, reading_date),
+        FOREIGN KEY (user_id) REFERENCES user_profile(id),
+        FOREIGN KEY (reading_id) REFERENCES daily_readings(id)
+      );`,
+      // Indexes for performance
+      `CREATE INDEX IF NOT EXISTS idx_daily_readings_day ON daily_readings(day_of_year);`,
+      `CREATE INDEX IF NOT EXISTS idx_reading_reflections_user ON reading_reflections(user_id);`,
+      `CREATE INDEX IF NOT EXISTS idx_reading_reflections_date ON reading_reflections(reading_date);`,
+    ];
+
+    for (const migration of v5Migrations) {
+      try {
+        await db.execAsync(migration);
+      } catch (error) {
+        logger.warn('Migration v5 step failed (may be already applied)', error);
+      }
+    }
+
+    await recordMigration(db, 5);
+    logger.info('Migration v5 completed');
+  }
+
   logger.info('All migrations completed', { newVersion: CURRENT_SCHEMA_VERSION });
 }
 
@@ -452,6 +531,8 @@ export async function clearDatabase(db: StorageAdapter): Promise<void> {
     DELETE FROM favorite_meetings;
     DELETE FROM meeting_search_cache;
     DELETE FROM cached_meetings;
+    DELETE FROM reading_reflections;
+    DELETE FROM daily_readings;
     DELETE FROM achievements;
     DELETE FROM step_work;
     DELETE FROM daily_checkins;

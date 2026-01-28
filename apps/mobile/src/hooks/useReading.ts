@@ -1,5 +1,3 @@
-// @ts-nocheck
-// TODO: Phase 3 - This hook needs to be aligned with ReadingStore interface
 /**
  * Daily Reading Hook
  * Provides daily reading data and actions for UI components

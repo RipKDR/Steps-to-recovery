@@ -98,6 +98,13 @@
           "locationAlwaysAndWhenInUsePermission": "We use your location to notify you when you're near saved meeting locations to provide timely support.",
           "locationWhenInUsePermission": "We use your location to help you save meeting locations for geofencing support."
         }
+      ],
+      [
+        "@sentry/react-native/expo",
+        {
+          "organization": "steps-to-recovery",
+          "project": "mobile"
+        }
       ]
     ],
     "updates": {

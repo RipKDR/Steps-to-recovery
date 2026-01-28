@@ -63,6 +63,10 @@ const config = {
     'lib/**/*.{js,jsx,ts,tsx}',
     'components/**/*.{js,jsx,ts,tsx}',
     'app/**/*.{js,jsx,ts,tsx}',
+    'src/contexts/**/*.{ts,tsx}',
+    'src/features/**/hooks/**/*.{ts,tsx}',
+    'src/services/**/*.{ts,tsx}',
+    'src/utils/**/*.{ts,tsx}',
     '!**/*.d.ts',
     '!**/node_modules/**',
   ],
@@ -84,6 +88,19 @@ const config = {
       lines: 90,
     },
     './src/services/syncService.ts': {
+      statements: 70,
+      branches: 60,
+      functions: 70,
+      lines: 70,
+    },
+    // Context coverage thresholds
+    './src/contexts/AuthContext.tsx': {
+      statements: 70,
+      branches: 60,
+      functions: 70,
+      lines: 70,
+    },
+    './src/contexts/SyncContext.tsx': {
       statements: 70,
       branches: 60,
       functions: 70,

@@ -1,6 +1,7 @@
 import React, { Component, ReactNode } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { logger } from '../utils/logger';
+import { captureException } from '../lib/sentry';
 
 interface Props {
   children: ReactNode;
@@ -42,6 +43,11 @@ export class ErrorBoundary extends Component<Props, State> {
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo): void {
     // Pass error to sanitized logger - it will automatically redact sensitive data
     logger.error('React Error Boundary caught error', error);
+
+    // Report to Sentry (production only, with sanitization)
+    captureException(error, {
+      componentStack: errorInfo.componentStack ? '[Component stack captured]' : undefined,
+    });
 
     // Note: logger will sanitize error.message, error.stack, and exclude sensitive fields
     // Component stack is intentionally NOT logged to prevent data leaks

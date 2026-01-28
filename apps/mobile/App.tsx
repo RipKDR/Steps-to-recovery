@@ -1,6 +1,10 @@
 // CRITICAL: Import polyfills FIRST before any other code
 import './polyfills';
 
+// Initialize Sentry early for crash reporting
+import { initSentry, wrap as sentryWrap } from './src/lib/sentry';
+initSentry();
+
 import React, { Suspense, useState, useMemo, useCallback } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { View, ActivityIndicator } from 'react-native';
@@ -34,7 +38,7 @@ function LoadingFallback(): React.ReactElement {
   );
 }
 
-export default function App(): React.ReactElement {
+function App(): React.ReactElement {
   // Key used to force a full remount of the app tree on error recovery
   const [resetKey, setResetKey] = useState(0);
 
@@ -70,3 +74,6 @@ export default function App(): React.ReactElement {
     </ErrorBoundary>
   );
 }
+
+// Wrap with Sentry for automatic error tracking
+export default sentryWrap(App);

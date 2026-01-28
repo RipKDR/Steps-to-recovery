@@ -53,7 +53,11 @@ export {
 export {
   STEP_PROMPTS,
   type StepPrompt,
+  type StepSection,
   getStepPrompts,
+  getStepSection,
+  getStepQuestionCount,
+  getTotalQuestionCount,
   isValidStepNumber,
   getAllStepNumbers
 } from '../constants';
