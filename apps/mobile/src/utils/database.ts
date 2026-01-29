@@ -31,7 +31,7 @@ const initPromises = new Map<string, Promise<void>>();
  * Increment this when adding new migrations. Migrations are applied
  * sequentially from the current version to this target version.
  */
-const CURRENT_SCHEMA_VERSION = 5;
+const CURRENT_SCHEMA_VERSION = 6;
 
 /**
  * Initialize database with schema for offline-first storage
@@ -504,6 +504,22 @@ async function runMigrations(db: StorageAdapter): Promise<void> {
 
     await recordMigration(db, 5);
     logger.info('Migration v5 completed');
+  }
+
+  // Migration version 6: Add gratitude field to daily_checkins
+  if (currentVersion < 6) {
+    logger.info('Running migration v6: Adding gratitude field to daily_checkins');
+
+    if (!(await columnExists(db, 'daily_checkins', 'encrypted_gratitude'))) {
+      try {
+        await db.execAsync(`ALTER TABLE daily_checkins ADD COLUMN encrypted_gratitude TEXT;`);
+      } catch (error) {
+        logger.warn('Migration v6: Failed to add daily_checkins.encrypted_gratitude', error);
+      }
+    }
+
+    await recordMigration(db, 6);
+    logger.info('Migration v6 completed');
   }
 
   logger.info('All migrations completed', { newVersion: CURRENT_SCHEMA_VERSION });

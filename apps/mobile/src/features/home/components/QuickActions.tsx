@@ -21,6 +21,18 @@ interface QuickAction {
 // Colors will be theme-based, defined inside component
 const QUICK_ACTIONS_BASE: Omit<QuickAction, 'color'>[] = [
   {
+    id: 'reading',
+    title: 'Daily Reading',
+    icon: 'book-open-page-variant',
+    screen: 'DailyReading',
+  },
+  {
+    id: 'progress',
+    title: 'My Progress',
+    icon: 'chart-line',
+    screen: 'ProgressDashboard',
+  },
+  {
     id: 'journal',
     title: 'Journal',
     icon: 'book-open-variant',
@@ -39,10 +51,10 @@ const QUICK_ACTIONS_BASE: Omit<QuickAction, 'color'>[] = [
     screen: 'Emergency',
   },
   {
-    id: 'resources',
-    title: 'Resources',
-    icon: 'book-heart',
-    screen: 'Resources',
+    id: 'meetings',
+    title: 'Meetings',
+    icon: 'map-marker-multiple',
+    screen: 'MeetingFinder',
   },
 ];
 
@@ -52,10 +64,12 @@ export function QuickActions({ userId }: QuickActionsProps): React.ReactElement 
 
   // Map colors to theme
   const actionColors = [
-    theme.colors.primary,      // Journal - blue
+    theme.colors.warning,        // Daily Reading - orange (spiritual)
+    theme.colors.success,        // My Progress - green (growth)
+    theme.colors.primary,        // Journal - blue
     categoryColors['self-care'], // Step Work - purple
-    theme.colors.danger,       // Emergency - red
-    theme.colors.warning,      // Resources - orange
+    theme.colors.danger,         // Emergency - red
+    theme.colors.secondary,      // Meetings - teal
   ];
 
   const QUICK_ACTIONS: QuickAction[] = QUICK_ACTIONS_BASE.map((action, index) => ({

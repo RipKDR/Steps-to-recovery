@@ -31,6 +31,7 @@ export function EveningPulseScreen({ userId }: EveningPulseScreenProps): React.R
   const { morning } = useTodayCheckIns(userId);
 
   const [reflection, setReflection] = useState('');
+  const [gratitude, setGratitude] = useState('');
   const [mood, setMood] = useState(3);
   const [craving, setCraving] = useState(0);
   const [showToast, setShowToast] = useState(false);
@@ -71,6 +72,7 @@ export function EveningPulseScreen({ userId }: EveningPulseScreenProps): React.R
       await createCheckIn({
         type: 'evening',
         reflection: reflection.trim(),
+        gratitude: gratitude.trim() || undefined,
         mood,
         craving,
       });
@@ -178,6 +180,49 @@ export function EveningPulseScreen({ userId }: EveningPulseScreenProps): React.R
             accessibilityLabel="Daily reflection"
             accessibilityHint="Reflect on your day"
           />
+        </Animated.View>
+
+        {/* Gratitude Section */}
+        <Animated.View entering={FadeInDown.delay(250).springify()}>
+          <Card
+            variant="flat"
+            style={[
+              styles.gratitudeCard,
+              { backgroundColor: theme.colors.successLight },
+            ]}
+          >
+            <View style={styles.gratitudeHeader}>
+              <Text style={styles.gratitudeEmoji}>🙏</Text>
+              <Text
+                style={[
+                  theme.typography.title3,
+                  { color: theme.colors.text },
+                ]}
+              >
+                Gratitude
+              </Text>
+            </View>
+            <Text
+              style={[
+                theme.typography.caption,
+                { color: theme.colors.textSecondary, marginBottom: 12 },
+              ]}
+            >
+              What are you grateful for today? (optional)
+            </Text>
+            <TextArea
+              label=""
+              value={gratitude}
+              onChangeText={setGratitude}
+              placeholder="Today I'm grateful for..."
+              minHeight={80}
+              maxLength={300}
+              showCharacterCount
+              containerStyle={styles.gratitudeInput}
+              accessibilityLabel="Gratitude entry"
+              accessibilityHint="Write what you are grateful for today"
+            />
+          </Card>
         </Animated.View>
 
         {/* Mood Section */}
@@ -392,6 +437,22 @@ const styles = StyleSheet.create({
   intentionCard: {
     marginBottom: 24,
     padding: 16,
+  },
+  gratitudeCard: {
+    marginBottom: 24,
+    padding: 16,
+  },
+  gratitudeHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+    gap: 8,
+  },
+  gratitudeEmoji: {
+    fontSize: 24,
+  },
+  gratitudeInput: {
+    marginBottom: 0,
   },
   sectionCard: {
     marginBottom: 24,

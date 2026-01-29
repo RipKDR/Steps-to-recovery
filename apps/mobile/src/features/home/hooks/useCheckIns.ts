@@ -5,14 +5,24 @@ import { logger } from '../../../utils/logger';
 import { addToSyncQueue, addDeleteToSyncQueue } from '../../../services/syncService';
 import type { DailyCheckIn, DailyCheckInDecrypted, CheckInType } from '@recovery/shared/types';
 
+// Extended types to include gratitude
+interface DailyCheckInWithGratitude extends DailyCheckIn {
+  encrypted_gratitude?: string | null;
+}
+
+interface DailyCheckInDecryptedWithGratitude extends DailyCheckInDecrypted {
+  gratitude?: string | null;
+}
+
 /**
  * Decrypt a daily check-in from database format to UI format
  */
-async function decryptCheckIn(checkIn: DailyCheckIn): Promise<DailyCheckInDecrypted> {
+async function decryptCheckIn(checkIn: DailyCheckInWithGratitude): Promise<DailyCheckInDecryptedWithGratitude> {
   const intention = checkIn.encrypted_intention ? await decryptContent(checkIn.encrypted_intention) : null;
   const reflection = checkIn.encrypted_reflection ? await decryptContent(checkIn.encrypted_reflection) : null;
   const mood = checkIn.encrypted_mood ? parseInt(await decryptContent(checkIn.encrypted_mood), 10) : null;
   const craving = checkIn.encrypted_craving ? parseInt(await decryptContent(checkIn.encrypted_craving), 10) : null;
+  const gratitude = checkIn.encrypted_gratitude ? await decryptContent(checkIn.encrypted_gratitude) : null;
 
   return {
     id: checkIn.id,
@@ -23,6 +33,7 @@ async function decryptCheckIn(checkIn: DailyCheckIn): Promise<DailyCheckInDecryp
     reflection,
     mood,
     craving,
+    gratitude,
     created_at: checkIn.created_at,
     sync_status: checkIn.sync_status,
   };
@@ -32,8 +43,8 @@ async function decryptCheckIn(checkIn: DailyCheckIn): Promise<DailyCheckInDecryp
  * Hook to get today's check-ins
  */
 export function useTodayCheckIns(userId: string): {
-  morning: DailyCheckInDecrypted | null;
-  evening: DailyCheckInDecrypted | null;
+  morning: DailyCheckInDecryptedWithGratitude | null;
+  evening: DailyCheckInDecryptedWithGratitude | null;
   isLoading: boolean;
   error: Error | null;
 } {
@@ -47,7 +58,7 @@ export function useTodayCheckIns(userId: string): {
         throw new Error('Database not ready');
       }
       try {
-        const result = await db.getAllAsync<DailyCheckIn>(
+        const result = await db.getAllAsync<DailyCheckInWithGratitude>(
           'SELECT * FROM daily_checkins WHERE user_id = ? AND check_in_date = ?',
           [userId, today]
         );
@@ -77,14 +88,14 @@ export function useTodayCheckIns(userId: string): {
  * Hook to create a check-in
  */
 export function useCreateCheckIn(userId: string): {
-  createCheckIn: (data: { type: CheckInType; intention?: string; reflection?: string; mood?: number; craving?: number }) => Promise<void>;
+  createCheckIn: (data: { type: CheckInType; intention?: string; reflection?: string; mood?: number; craving?: number; gratitude?: string }) => Promise<void>;
   isPending: boolean;
 } {
   const { db, isReady } = useDatabase();
   const queryClient = useQueryClient();
 
   const mutation = useMutation({
-    mutationFn: async (data: { type: CheckInType; intention?: string; reflection?: string; mood?: number; craving?: number }) => {
+    mutationFn: async (data: { type: CheckInType; intention?: string; reflection?: string; mood?: number; craving?: number; gratitude?: string }) => {
       if (!db) throw new Error('Database not initialized');
 
       try {
@@ -96,11 +107,12 @@ export function useCreateCheckIn(userId: string): {
         const encrypted_reflection = data.reflection ? await encryptContent(data.reflection) : null;
         const encrypted_mood = data.mood !== undefined ? await encryptContent(data.mood.toString()) : null;
         const encrypted_craving = data.craving !== undefined ? await encryptContent(data.craving.toString()) : null;
+        const encrypted_gratitude = data.gratitude ? await encryptContent(data.gratitude) : null;
 
         await db.runAsync(
-          `INSERT INTO daily_checkins (id, user_id, check_in_type, check_in_date, encrypted_intention, encrypted_reflection, encrypted_mood, encrypted_craving, created_at, sync_status)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [id, userId, data.type, today, encrypted_intention, encrypted_reflection, encrypted_mood, encrypted_craving, now, 'pending']
+          `INSERT INTO daily_checkins (id, user_id, check_in_type, check_in_date, encrypted_intention, encrypted_reflection, encrypted_mood, encrypted_craving, encrypted_gratitude, created_at, sync_status)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [id, userId, data.type, today, encrypted_intention, encrypted_reflection, encrypted_mood, encrypted_craving, encrypted_gratitude, now, 'pending']
         );
 
         // Add to sync queue for cloud backup
