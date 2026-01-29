@@ -22,6 +22,7 @@
 
 import 'react-native-url-polyfill/auto';
 import { createClient } from '@supabase/supabase-js';
+import type { Session, User } from '@supabase/supabase-js';
 import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -183,9 +184,13 @@ export async function testSupabaseConnection(): Promise<{connected: boolean, err
 /**
  * Gets current session information for debugging
  *
- * @returns Promise<{session: any, user: any, error?: string}>
+ * @returns Promise with session info or null
  */
-export async function getSupabaseSessionInfo(): Promise<{session: any, user: any, error?: string}> {
+export async function getSupabaseSessionInfo(): Promise<{
+  session: { access_token: string; refresh_token: string; expires_at?: number; user: string } | null;
+  user: { id: string; email?: string; role?: string } | null;
+  error?: string;
+}> {
   try {
     const { data: { session }, error } = await supabase.auth.getSession();
 

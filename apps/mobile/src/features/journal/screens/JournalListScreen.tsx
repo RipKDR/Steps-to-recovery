@@ -21,6 +21,7 @@ import {
 } from '../../../design-system';
 import type { SwipeAction, ContextMenuItem } from '../../../design-system';
 import { hapticSuccess } from '../../../utils/haptics';
+import { logger } from '../../../utils/logger';
 
 interface JournalListScreenProps {
   userId: string;
@@ -65,7 +66,7 @@ export function JournalListScreen({ userId }: JournalListScreenProps): React.Rea
 
   const handleShareEntry = useCallback((entry: JournalEntryDecrypted): void => {
     // TODO: Implement share with sponsor
-    console.log('Share entry:', entry.id);
+    logger.info('Share entry requested', { entryId: entry.id });
   }, []);
 
   // Swipe actions for each item

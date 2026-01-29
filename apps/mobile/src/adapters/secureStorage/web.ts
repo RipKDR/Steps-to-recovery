@@ -2,8 +2,37 @@
  * Web secure storage adapter
  * Uses Web Crypto API for encryption + localStorage for persistence
  *
- * NOTE: Less secure than native keystores, but best available on web
- * Keys are encrypted with a master password derived from user session
+ * ⚠️ SECURITY LIMITATIONS ON WEB PLATFORM:
+ * 
+ * 1. **No Hardware-Backed Keystore**: Unlike native platforms (iOS Keychain, Android Keystore),
+ *    the web has no access to hardware-backed secure storage. All encryption keys must be
+ *    stored in browser storage (localStorage/IndexedDB).
+ * 
+ * 2. **Salt Storage**: The encryption salt is stored in localStorage alongside encrypted data.
+ *    While this reduces security compared to truly separate storage, it's the best available
+ *    option on web. The salt is still valuable as it prevents rainbow table attacks.
+ * 
+ * 3. **Session Token Derivation**: Master key is derived from the session token, meaning
+ *    anyone with access to the session can decrypt stored data. This is acceptable because:
+ *    - Session tokens are already sensitive and protected
+ *    - Web apps fundamentally cannot hide secrets from client-side code
+ *    - RLS (Row Level Security) on Supabase provides server-side protection
+ * 
+ * 4. **XSS Vulnerability**: If an attacker gains XSS access, they can read localStorage
+ *    and decrypt data. This is an inherent limitation of web security.
+ * 
+ * **RECOMMENDATION**: For maximum security, use native mobile apps. Web version should
+ * be considered a convenience feature with reduced security guarantees.
+ * 
+ * **What This Implementation Provides**:
+ * - Protection against casual browsing of localStorage (data is encrypted)
+ * - Defense against database dumps (encrypted at rest)
+ * - Per-user encryption keys (users can't decrypt each other's data)
+ * 
+ * **What It Cannot Provide**:
+ * - Protection against sophisticated XSS attacks
+ * - Hardware-backed key storage
+ * - Protection if session token is compromised
  */
 
 import type { SecureStorageAdapter } from './types';
@@ -54,7 +83,14 @@ export class WebSecureStorageAdapter implements SecureStorageAdapter {
 
   /**
    * Get or generate a random salt for key derivation
-   * Salt is stored in localStorage and reused for the same user
+   * 
+   * Salt is stored in localStorage alongside encrypted data. While this means
+   * an attacker with localStorage access also has the salt, it still provides
+   * value by preventing rainbow table attacks and ensuring each user has unique
+   * key derivation.
+   * 
+   * NOTE: This is a necessary trade-off for web platform - there is no separate
+   * secure storage available in browsers.
    */
   private async getSalt(): Promise<Uint8Array> {
     if (!this.userId) {
