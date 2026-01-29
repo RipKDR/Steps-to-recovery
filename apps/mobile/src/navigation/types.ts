@@ -22,6 +22,8 @@ export type HomeStackParamList = {
     MorningIntention: undefined;
     EveningPulse: undefined;
     Emergency: undefined;
+    DailyReading: undefined;
+    ProgressDashboard: undefined;
 };
 
 // Journal Stack

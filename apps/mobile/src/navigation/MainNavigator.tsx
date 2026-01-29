@@ -22,6 +22,8 @@ import {
   MeetingDetailScreen,
   FavoriteMeetingsScreen,
 } from '../features/meetings/screens';
+import { DailyReadingScreen } from '../features/readings/screens';
+import { ProgressDashboardScreen } from '../features/progress/screens';
 import type {
   MainTabParamList,
   HomeStackParamList,
@@ -67,6 +69,18 @@ function HomeStackNavigator(): React.ReactElement {
         options={{ title: 'Emergency Support', headerBackTitle: 'Back', presentation: 'modal' }}
       >
         {() => <EmergencyScreen userId={userId} />}
+      </HomeStack.Screen>
+      <HomeStack.Screen
+        name="DailyReading"
+        options={{ title: "Today's Reading", headerBackTitle: 'Back' }}
+      >
+        {() => <DailyReadingScreen userId={userId} />}
+      </HomeStack.Screen>
+      <HomeStack.Screen
+        name="ProgressDashboard"
+        options={{ title: 'My Progress', headerBackTitle: 'Back' }}
+      >
+        {() => <ProgressDashboardScreen userId={userId} />}
       </HomeStack.Screen>
     </HomeStack.Navigator>
   );
