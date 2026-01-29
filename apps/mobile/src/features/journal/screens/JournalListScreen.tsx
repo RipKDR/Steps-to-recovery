@@ -6,7 +6,7 @@ import { MaterialIcons, Feather } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { JournalCard } from '../components/JournalCard';
 import { useJournalEntries, useDeleteJournalEntry } from '../hooks/useJournalEntries';
-import type { JournalEntryDecrypted } from '@recovery/shared/types';
+import type { JournalEntryDecrypted } from '@recovery/shared/src/types/models';
 import {
   useTheme,
   FloatingActionButton,

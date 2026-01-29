@@ -11,12 +11,15 @@ import {
   ViewStyle,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
+import type { ComponentProps } from 'react';
 import { useTheme } from '../hooks/useTheme';
 import { Button } from './Button';
 import type { ButtonProps } from './Button';
 
+type MaterialIconName = ComponentProps<typeof MaterialIcons>['name'];
+
 export interface EmptyStateProps {
-  icon?: string;
+  icon?: MaterialIconName;
   title: string;
   description?: string;
   actionLabel?: string;
@@ -50,7 +53,7 @@ export function EmptyState({
         ]}
       >
         <MaterialIcons
-          name={icon as any}
+          name={icon}
           size={48}
           color={theme.colors.textSecondary}
         />

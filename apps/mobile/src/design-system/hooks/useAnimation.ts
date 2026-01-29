@@ -15,7 +15,7 @@ import {
   runOnJS,
   Easing as ReanimatedEasing,
 } from 'react-native-reanimated';
-import { springConfigs, timingDurations, easingCurves } from '../tokens/animations';
+import { springConfigs, easingCurves } from '../tokens/animations';
 import { hapticError } from '../../utils/haptics';
 
 /**
@@ -39,11 +39,6 @@ interface FadeAndScaleReturn {
 interface ShakeAnimationReturn {
   animatedStyle: ReturnType<typeof useAnimatedStyle>;
   shake: (withHaptic?: boolean) => void;
-}
-
-interface CountUpReturn {
-  value: number;
-  animatedStyle: ReturnType<typeof useAnimatedStyle>;
 }
 
 /**

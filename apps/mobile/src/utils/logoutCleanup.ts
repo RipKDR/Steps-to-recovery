@@ -1,18 +1,18 @@
 /**
  * Logout Cleanup Utility
- * 
+ *
  * Centralized utility for performing complete logout cleanup.
  * Ensures all sensitive data is removed when a user logs out.
- * 
+ *
  * **Cleanup Operations**:
  * 1. Deletes encryption keys from secure storage
  * 2. Clears web secure storage session (web only)
  * 3. Clears all local database data
  * 4. Clears shared database data (native only)
- * 
+ *
  * **Security**: This MUST be called before signing out to prevent
  * data leaks. All operations are logged and errors are handled gracefully.
- * 
+ *
  * @module utils/logoutCleanup
  */
 
@@ -22,7 +22,6 @@ import { clearDatabase } from './database';
 import { secureStorage } from '../adapters/secureStorage';
 import type { StorageAdapter } from '../adapters/storage';
 import { logger } from './logger';
-import { Platform } from 'react-native';
 
 export interface LogoutCleanupOptions {
   /**
@@ -33,10 +32,10 @@ export interface LogoutCleanupOptions {
 
 /**
  * Perform complete logout cleanup
- * 
+ *
  * **Critical**: This MUST be called before signing out to prevent data leaks.
  * All sensitive data (encryption keys, local database, shared database, session) is cleared.
- * 
+ *
  * @param options - Cleanup options
  * @param options.db - Database instance (required for mobile, optional for web)
  * @returns Promise that resolves when cleanup is complete

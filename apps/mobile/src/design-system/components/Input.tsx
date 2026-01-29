@@ -11,7 +11,6 @@ import {
   StyleSheet,
   TextInputProps,
   ViewStyle,
-  Animated,
   TouchableOpacity,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';

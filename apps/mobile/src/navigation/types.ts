@@ -45,6 +45,7 @@ export type ProfileStackParamList = {
     Sponsor: undefined;
     InviteSponsor: undefined;
     SharedEntries: { connectionId: string };
+    ShareEntries: { entryId?: string } | undefined;
     NotificationSettings: undefined;
 };
 

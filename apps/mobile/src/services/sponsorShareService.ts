@@ -6,7 +6,7 @@
  */
 
 import CryptoJS from 'crypto-js';
-import type { JournalEntryDecrypted } from '@recovery/shared/types';
+import type { JournalEntryDecrypted } from '@recovery/shared/src/types/models';
 
 const SHARE_PREFIX = 'RCENTRY:';
 

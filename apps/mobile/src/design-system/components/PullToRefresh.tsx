@@ -12,7 +12,6 @@ import Animated, {
   useAnimatedStyle,
   withTiming,
   withRepeat,
-  withSequence,
   interpolate,
   Extrapolation,
   runOnJS,

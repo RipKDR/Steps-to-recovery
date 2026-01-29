@@ -4,7 +4,8 @@ import { decryptContent, encryptContent } from '../../../utils/encryption';
 import { logger } from '../../../utils/logger';
 import { generateId } from '../../../utils/id';
 import { addToSyncQueue, addDeleteToSyncQueue } from '../../../services/syncService';
-import type { DailyCheckIn, DailyCheckInDecrypted, CheckInType } from '@recovery/shared/types';
+import type { DailyCheckIn, CheckInType } from '@recovery/shared/src/types/database';
+import type { DailyCheckInDecrypted } from '@recovery/shared/src/types/models';
 
 // Extended types to include gratitude
 interface DailyCheckInWithGratitude extends DailyCheckIn {

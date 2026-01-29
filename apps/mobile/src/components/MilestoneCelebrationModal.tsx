@@ -26,7 +26,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import ConfettiCannon from 'react-native-confetti-cannon';
 import { BlurView } from 'expo-blur';
-import type { Milestone } from '@recovery/shared/types';
+import type { MilestoneDefinition as Milestone } from '@recovery/shared/src/types/models';
 import { useTheme } from '../design-system/hooks/useTheme';
 import { hapticCelebration } from '../utils/haptics';
 

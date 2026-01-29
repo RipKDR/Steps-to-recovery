@@ -124,10 +124,12 @@ export class WebSecureStorageAdapter implements SecureStorageAdapter {
     }
 
     const seed = await this.getKeySeed();
+    // Convert Uint8Array to ArrayBuffer for importKey
+    const seedBuffer = seed.buffer.slice(seed.byteOffset, seed.byteOffset + seed.byteLength) as ArrayBuffer;
     // Import per-user seed as key material
     const keyMaterial = await window.crypto.subtle.importKey(
       'raw',
-      seed,
+      seedBuffer,
       { name: 'PBKDF2' },
       false,
       ['deriveKey']
@@ -135,7 +137,7 @@ export class WebSecureStorageAdapter implements SecureStorageAdapter {
 
     // Use random salt (generated once per user, then stored)
     const saltArray = await this.getSalt();
-    const salt = saltArray.buffer as ArrayBuffer;
+    const salt = saltArray.buffer.slice(saltArray.byteOffset, saltArray.byteOffset + saltArray.byteLength) as ArrayBuffer;
 
     this.masterKey = await window.crypto.subtle.deriveKey(
       {
