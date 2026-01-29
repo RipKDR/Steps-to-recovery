@@ -12,9 +12,6 @@ const { width: screenWidth } = Dimensions.get('window');
 
 interface SobrietyCounterProps {
   days: number;
-  hours?: number;
-  minutes?: number;
-  showDetailed?: boolean;
   className?: string;
 }
 
@@ -91,7 +88,7 @@ function StatItem({
 
 export const SobrietyCounter = memo(function SobrietyCounter({
   days,
-  className = '',
+  className: _className = '',
 }: SobrietyCounterProps) {
   // Calculate time units
   const { weeks, months } = useMemo(() => {

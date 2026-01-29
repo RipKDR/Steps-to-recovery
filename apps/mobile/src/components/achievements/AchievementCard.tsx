@@ -57,6 +57,7 @@ export const AchievementCard = memo(function AchievementCard({
   achievement,
   onPress,
   showProgress = true,
+  className: _className = '',
 }: AchievementCardProps) {
   const theme = useTheme();
 
