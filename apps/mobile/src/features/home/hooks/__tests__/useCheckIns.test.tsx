@@ -72,11 +72,7 @@ describe('useCheckIns', () => {
   // Wrapper component with QueryClient
   const createWrapper = () => {
     return function Wrapper({ children }: { children: React.ReactNode }) {
-      return (
-        <QueryClientProvider client={queryClient}>
-          {children}
-        </QueryClientProvider>
-      );
+      return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
     };
   };
 
@@ -98,10 +94,10 @@ describe('useCheckIns', () => {
 
     // Default mock implementations
     mockEncryptContent.mockImplementation((content: string) =>
-      Promise.resolve(`encrypted_${content}`)
+      Promise.resolve(`encrypted_${content}`),
     );
     mockDecryptContent.mockImplementation((content: string) =>
-      Promise.resolve(content.replace('encrypted_', ''))
+      Promise.resolve(content.replace('encrypted_', '')),
     );
     mockAddToSyncQueue.mockResolvedValue(undefined);
     mockAddDeleteToSyncQueue.mockResolvedValue(undefined);
@@ -289,13 +285,13 @@ describe('useCheckIns', () => {
           null, // encrypted_craving
           expect.any(String), // created_at
           'pending', // sync_status
-        ])
+        ]),
       );
       expect(mockAddToSyncQueue).toHaveBeenCalledWith(
         mockDb,
         'daily_checkins',
         expect.any(String),
-        'insert'
+        'insert',
       );
     });
 
@@ -320,7 +316,7 @@ describe('useCheckIns', () => {
       expect(mockAddToSyncQueue).toHaveBeenCalled();
       expect(mockLogger.info).toHaveBeenCalledWith(
         'Check-in created',
-        expect.objectContaining({ type: 'evening' })
+        expect.objectContaining({ type: 'evening' }),
       );
     });
 
@@ -349,18 +345,17 @@ describe('useCheckIns', () => {
         wrapper: createWrapper(),
       });
 
-      await expect(act(async () => {
-        await result.current.createCheckIn({
-          type: 'morning',
-          intention: 'Test',
-          mood: 4,
-        });
-      })).rejects.toThrow('Database error');
+      await expect(
+        act(async () => {
+          await result.current.createCheckIn({
+            type: 'morning',
+            intention: 'Test',
+            mood: 4,
+          });
+        }),
+      ).rejects.toThrow('Database error');
 
-      expect(mockLogger.error).toHaveBeenCalledWith(
-        'Failed to create check-in',
-        expect.any(Error)
-      );
+      expect(mockLogger.error).toHaveBeenCalledWith('Failed to create check-in', expect.any(Error));
     });
 
     it('should invalidate queries after successful creation', async () => {
@@ -401,13 +396,13 @@ describe('useCheckIns', () => {
       expect(mockEncryptContent).toHaveBeenCalledWith('5');
       expect(mockDb.runAsync).toHaveBeenCalledWith(
         expect.stringContaining('UPDATE daily_checkins'),
-        expect.any(Array)
+        expect.any(Array),
       );
       expect(mockAddToSyncQueue).toHaveBeenCalledWith(
         mockDb,
         'daily_checkins',
         'checkin-123',
-        'update'
+        'update',
       );
     });
 
@@ -451,16 +446,15 @@ describe('useCheckIns', () => {
         wrapper: createWrapper(),
       });
 
-      await expect(act(async () => {
-        await result.current.updateCheckIn('checkin-123', {
-          mood: 5,
-        });
-      })).rejects.toThrow('Update failed');
+      await expect(
+        act(async () => {
+          await result.current.updateCheckIn('checkin-123', {
+            mood: 5,
+          });
+        }),
+      ).rejects.toThrow('Update failed');
 
-      expect(mockLogger.error).toHaveBeenCalledWith(
-        'Failed to update check-in',
-        expect.any(Error)
-      );
+      expect(mockLogger.error).toHaveBeenCalledWith('Failed to update check-in', expect.any(Error));
     });
   });
 
@@ -479,19 +473,16 @@ describe('useCheckIns', () => {
         mockDb,
         'daily_checkins',
         'checkin-123',
-        testUserId
+        testUserId,
       );
 
       // Then delete locally
       expect(mockDb.runAsync).toHaveBeenCalledWith(
         'DELETE FROM daily_checkins WHERE id = ? AND user_id = ?',
-        ['checkin-123', testUserId]
+        ['checkin-123', testUserId],
       );
 
-      expect(mockLogger.info).toHaveBeenCalledWith(
-        'Check-in deleted',
-        { id: 'checkin-123' }
-      );
+      expect(mockLogger.info).toHaveBeenCalledWith('Check-in deleted', { id: 'checkin-123' });
     });
 
     it('should handle delete errors', async () => {
@@ -501,14 +492,13 @@ describe('useCheckIns', () => {
         wrapper: createWrapper(),
       });
 
-      await expect(act(async () => {
-        await result.current.deleteCheckIn('checkin-123');
-      })).rejects.toThrow('Delete failed');
+      await expect(
+        act(async () => {
+          await result.current.deleteCheckIn('checkin-123');
+        }),
+      ).rejects.toThrow('Delete failed');
 
-      expect(mockLogger.error).toHaveBeenCalledWith(
-        'Failed to delete check-in',
-        expect.any(Error)
-      );
+      expect(mockLogger.error).toHaveBeenCalledWith('Failed to delete check-in', expect.any(Error));
     });
 
     it('should invalidate streak query after deletion', async () => {
@@ -604,9 +594,7 @@ describe('useCheckIns', () => {
       const today = new Date();
       // Current streak: today only
       // Longest streak: 5 days from a week ago
-      const dates = [
-        { check_in_date: today.toISOString().split('T')[0] },
-      ];
+      const dates = [{ check_in_date: today.toISOString().split('T')[0] }];
 
       for (let i = 7; i <= 11; i++) {
         const pastDate = new Date(today);
@@ -653,7 +641,7 @@ describe('useCheckIns', () => {
 
     it('should handle encryption of special characters', async () => {
       mockEncryptContent.mockImplementation((content: string) =>
-        Promise.resolve(`encrypted_${content}`)
+        Promise.resolve(`encrypted_${content}`),
       );
 
       const { result } = renderHook(() => useCreateCheckIn(testUserId), {
@@ -669,7 +657,7 @@ describe('useCheckIns', () => {
       });
 
       expect(mockEncryptContent).toHaveBeenCalledWith(
-        'Special chars: "quotes" & <tags> \' apostrophe'
+        'Special chars: "quotes" & <tags> \' apostrophe',
       );
     });
 
@@ -686,9 +674,7 @@ describe('useCheckIns', () => {
         });
       });
 
-      expect(mockEncryptContent).toHaveBeenCalledWith(
-        'Great day! 🎉 Feeling blessed 🙏'
-      );
+      expect(mockEncryptContent).toHaveBeenCalledWith('Great day! 🎉 Feeling blessed 🙏');
     });
 
     it('should handle very long content', async () => {

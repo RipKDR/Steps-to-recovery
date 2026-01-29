@@ -14,7 +14,6 @@ import Animated, {
   interpolate,
   Easing,
   FadeIn,
-  FadeOut,
 } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 
@@ -55,7 +54,7 @@ function useShimmerAnimation(delay: number = 0) {
           easing: Easing.linear,
         }),
         -1,
-        false
+        false,
       );
     }, delay);
 
@@ -63,12 +62,7 @@ function useShimmerAnimation(delay: number = 0) {
   }, [delay]);
 
   const animatedStyle = useAnimatedStyle(() => {
-    const translateXValue = interpolate(
-      translateX.value,
-      [-1, 1],
-      [-200, 200],
-      'clamp'
-    );
+    const translateXValue = interpolate(translateX.value, [-1, 1], [-200, 200], 'clamp');
 
     return {
       transform: [{ translateX: translateXValue }],
@@ -135,9 +129,7 @@ export const LoadingState = memo(function LoadingState({
         className={`flex-row items-center justify-center py-4 ${className}`}
       >
         <ActivityIndicator size={size} color={PRIMARY_COLOR} />
-        {message && (
-          <Text className="text-surface-500 ml-3 text-sm">{message}</Text>
-        )}
+        {message && <Text className="text-surface-500 ml-3 text-sm">{message}</Text>}
       </Animated.View>
     );
   }
@@ -199,24 +191,10 @@ export const SkeletonCard = memo(function SkeletonCard({
     >
       {/* Header skeleton */}
       <View className="flex-row items-center mb-3">
-        <ShimmerBar
-          width={40}
-          height={40}
-          className="rounded-full"
-          delay={delay}
-        />
+        <ShimmerBar width={40} height={40} className="rounded-full" delay={delay} />
         <View className="flex-1 ml-3">
-          <ShimmerBar
-            width="w-24"
-            height={16}
-            className="mb-1"
-            delay={delay + STAGGER_DELAY}
-          />
-          <ShimmerBar
-            width="w-16"
-            height={12}
-            delay={delay + STAGGER_DELAY * 2}
-          />
+          <ShimmerBar width="w-24" height={16} className="mb-1" delay={delay + STAGGER_DELAY} />
+          <ShimmerBar width="w-16" height={12} delay={delay + STAGGER_DELAY * 2} />
         </View>
       </View>
 
@@ -242,15 +220,10 @@ export const SkeletonList = memo(function SkeletonList({
   return (
     <View>
       {Array.from({ length: count }).map((_, i) => (
-        <SkeletonCard
-          key={i}
-          lines={lines}
-          delay={i * STAGGER_DELAY}
-        />
+        <SkeletonCard key={i} lines={lines} delay={i * STAGGER_DELAY} />
       ))}
     </View>
   );
 });
 
 export default LoadingState;
-

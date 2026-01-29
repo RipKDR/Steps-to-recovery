@@ -13,6 +13,7 @@
 
 import * as Sentry from '@sentry/react-native';
 import Constants from 'expo-constants';
+import { logger } from '../utils/logger';
 
 /**
  * List of sensitive keys that should never appear in Sentry data
@@ -45,7 +46,7 @@ const SENSITIVE_KEYS = [
  */
 function mightContainSensitiveData(str: string): boolean {
   const lowerStr = str.toLowerCase();
-  return SENSITIVE_KEYS.some(key => lowerStr.includes(key));
+  return SENSITIVE_KEYS.some((key) => lowerStr.includes(key));
 }
 
 /**
@@ -87,13 +88,13 @@ export function initSentry(): void {
   // Only initialize if DSN is configured and not in development
   if (!dsn) {
     if (__DEV__) {
-      console.log('[Sentry] Skipping initialization: No DSN configured');
+      logger.info('[Sentry] Skipping initialization: No DSN configured');
     }
     return;
   }
 
   if (__DEV__) {
-    console.log('[Sentry] Skipping initialization: Development mode');
+    logger.info('[Sentry] Skipping initialization: Development mode');
     return;
   }
 
@@ -142,9 +143,7 @@ export function initSentry(): void {
     },
 
     // Integrations
-    integrations: [
-      Sentry.reactNativeTracingIntegration(),
-    ],
+    integrations: [Sentry.reactNativeTracingIntegration()],
   });
 }
 
@@ -167,10 +166,7 @@ export function setSentryUser(userId: string | null): void {
  * @param error - The error to capture
  * @param context - Optional context (will be sanitized)
  */
-export function captureException(
-  error: unknown,
-  context?: Record<string, unknown>
-): void {
+export function captureException(error: unknown, context?: Record<string, unknown>): void {
   // Sanitize context before sending
   const sanitizedContext: Record<string, unknown> = {};
   if (context) {
@@ -200,7 +196,7 @@ export function captureException(
 export function addBreadcrumb(
   category: string,
   message: string,
-  data?: Record<string, unknown>
+  data?: Record<string, unknown>,
 ): void {
   const breadcrumb: Sentry.Breadcrumb = {
     category,
