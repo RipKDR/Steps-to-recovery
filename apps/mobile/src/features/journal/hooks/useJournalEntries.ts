@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useDatabase } from '../../../contexts/DatabaseContext';
 import { decryptContent, encryptContent } from '../../../utils/encryption';
 import { logger } from '../../../utils/logger';
+import { generateId } from '../../../utils/id';
 import { addToSyncQueue, addDeleteToSyncQueue } from '../../../services/syncService';
 import type { JournalEntry, JournalEntryDecrypted } from '@recovery/shared/types';
 
@@ -85,7 +86,7 @@ export function useCreateJournalEntry(userId: string): {
   const mutation = useMutation({
     mutationFn: async (entry: Omit<JournalEntryDecrypted, 'id' | 'user_id' | 'created_at' | 'updated_at' | 'sync_status' | 'supabase_id'>) => {
       try {
-        const id = `journal_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+        const id = generateId('journal');
         const now = new Date().toISOString();
 
         const encrypted_title = entry.title ? await encryptContent(entry.title) : null;

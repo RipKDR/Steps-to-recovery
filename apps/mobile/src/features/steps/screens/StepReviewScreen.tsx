@@ -168,14 +168,14 @@ function buildStepWorkHtml(params: {
       </head>
       <body>
         <h1>Step ${stepData.step} Review</h1>
-        <div class="meta">${escapeHtml(stepData.title)} • ${escapeHtml(stepData.principle)}</div>
+        <div class="meta">${escapeHtml(stepData.title)} - ${escapeHtml(stepData.principle)}</div>
         <div class="meta">Exported ${escapeHtml(exportedAt)}</div>
         <div class="summary">
           <strong>${answeredCount} of ${totalQuestions} questions answered</strong><br />
           Keep this file private. It contains sensitive personal reflections.
         </div>
         ${sectionsHtml}
-        <div class="footer">Steps to Recovery • Private &amp; Confidential</div>
+        <div class="footer">Steps to Recovery - Private &amp; Confidential</div>
       </body>
     </html>
   `;
@@ -425,7 +425,7 @@ export function StepReviewScreen(): React.ReactElement {
         <View style={styles.centered}>
           <MaterialCommunityIcons name="alert-circle" size={32} color={theme.colors.danger} />
           <Text variant="body" style={{ marginTop: theme.spacing.sm }}>
-            We couldn’t load your answers. Please try again.
+            We couldn't load your answers. Please try again.
           </Text>
         </View>
       </SafeAreaView>
@@ -449,12 +449,12 @@ export function StepReviewScreen(): React.ReactElement {
         renderItem={renderItem}
         contentContainerStyle={[styles.content, { paddingBottom: theme.spacing.xl }]}
         ListHeaderComponent={() => (
-          <View style={[styles.header, { paddingHorizontal: theme.spacing.lg }]}>
+          <View style={styles.header}>
             <Text variant="title2" style={{ color: theme.colors.text }}>
               Step {stepNumber} Review
             </Text>
             <Text variant="bodySmall" color="textSecondary" style={{ marginTop: theme.spacing.xs }}>
-              Review your answers and export them when you’re ready.
+              Review your answers and export them when you're ready.
             </Text>
 
             <Card variant="elevated" style={{ marginTop: theme.spacing.lg }}>

@@ -35,7 +35,7 @@
         "./src/design-system/*"
       ],
       "@recovery/shared/*": [
-        "../../packages/shared/src/*"
+        "../../packages/shared/*"
       ],
       "@recovery/shared": [
         "../../packages/shared/src/index.ts"

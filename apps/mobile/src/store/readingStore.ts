@@ -7,15 +7,7 @@ import { create } from 'zustand';
 import type { DailyReading, DailyReadingReflection } from '../types';
 import { encryptContent, decryptContent } from '../utils/encryption';
 import { logger } from '../utils/logger';
-
-// Generate simple UUID for local use
-function generateSimpleUUID(): string {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-    const r = Math.random() * 16 | 0;
-    const v = c === 'x' ? r : (r & 0x3 | 0x8);
-    return v.toString(16);
-  });
-}
+import { generateId } from '../utils/id';
 
 interface ReadingStore {
   // State
@@ -116,7 +108,7 @@ export const useReadingStore = create<ReadingStore>((set, get) => ({
       const encryptedReflection = await encryptContent(reflection);
       
       const newReflection: DailyReadingReflection = {
-        id: generateSimpleUUID(),
+        id: generateId('reflection'),
         reading_id: todayReading.id,
         readingDate: dateKey,
         user_id: '', // Will be set when saving to database

@@ -6,6 +6,7 @@
 import { create } from 'zustand';
 import type { RegularMeeting, RegularMeetingType } from '../types';
 import { logger } from '../utils/logger';
+import { generateId } from '../utils/id';
 
 interface RegularMeetingStore {
   // State
@@ -64,15 +65,6 @@ interface RegularMeetingStore {
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 const SHORT_DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-// Generate simple UUID for local use
-function generateSimpleUUID(): string {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-    const r = Math.random() * 16 | 0;
-    const v = c === 'x' ? r : (r & 0x3 | 0x8);
-    return v.toString(16);
-  });
-}
-
 export const useRegularMeetingStore = create<RegularMeetingStore>((set, get) => ({
   // State
   meetings: [],
@@ -123,7 +115,7 @@ export const useRegularMeetingStore = create<RegularMeetingStore>((set, get) => 
     }
   ): Promise<RegularMeeting> => {
     try {
-      const meetingId = generateSimpleUUID();
+      const meetingId = generateId('meeting');
       const now = new Date().toISOString();
       
       let encryptedNotes: string | undefined;

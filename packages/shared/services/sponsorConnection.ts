@@ -91,7 +91,7 @@ export async function generateSponsorCode(): Promise<ConnectionCode> {
   const characters = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Excluding similar chars (0/O, 1/I)
   let randomPart = '';
   for (let i = 0; i < 6; i++) {
-    randomPart += characters.charAt(Math.floor(Math.random() * characters.length));
+    randomPart += characters.charAt(getSecureRandomIndex(characters.length));
   }
   
   const code = `RC-${randomPart}`;
@@ -109,6 +109,18 @@ export async function generateSponsorCode(): Promise<ConnectionCode> {
     expiresAt,
     isExpired: false,
   };
+}
+
+function getSecureRandomIndex(max: number): number {
+  const cryptoObj = (globalThis as {
+    crypto?: { getRandomValues?: (array: Uint32Array) => Uint32Array };
+  }).crypto;
+  if (cryptoObj?.getRandomValues) {
+    const array = new Uint32Array(1);
+    cryptoObj.getRandomValues(array);
+    return array[0] % max;
+  }
+  return Math.floor(Math.random() * max);
 }
 
 /**
@@ -254,7 +266,7 @@ export async function generateShareData(
 export async function encodeShareData(data: SponsorShareData): Promise<string> {
   const json = JSON.stringify(data);
   // Simple base64 encoding for sharing
-  const encoded = Buffer.from(json).toString('base64');
+  const encoded = base64Encode(json);
   return `RCSHARE:${encoded}`;
 }
 
@@ -268,12 +280,34 @@ export function decodeShareData(encoded: string): SponsorShareData | null {
     }
     
     const base64 = encoded.substring(8); // Remove 'RCSHARE:' prefix
-    const json = Buffer.from(base64, 'base64').toString('utf-8');
+    const json = base64Decode(base64);
     return JSON.parse(json) as SponsorShareData;
   } catch (error) {
     console.error('Failed to decode share data:', error);
     return null;
   }
+}
+
+function base64Encode(value: string): string {
+  const btoaFn = (globalThis as { btoa?: (input: string) => string }).btoa;
+  if (btoaFn) {
+    return btoaFn(value);
+  }
+  if (typeof Buffer !== 'undefined') {
+    return Buffer.from(value, 'utf-8').toString('base64');
+  }
+  throw new Error('Base64 encoding is unavailable');
+}
+
+function base64Decode(value: string): string {
+  const atobFn = (globalThis as { atob?: (input: string) => string }).atob;
+  if (atobFn) {
+    return atobFn(value);
+  }
+  if (typeof Buffer !== 'undefined') {
+    return Buffer.from(value, 'base64').toString('utf-8');
+  }
+  throw new Error('Base64 decoding is unavailable');
 }
 
 /**
@@ -330,4 +364,3 @@ export function isValidCodeFormat(code: string): boolean {
   const pattern = /^RC-[A-Z2-9]{6}$/;
   return pattern.test(code.toUpperCase());
 }
-

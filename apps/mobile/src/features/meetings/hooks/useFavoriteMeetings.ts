@@ -11,18 +11,8 @@ import { useAuth } from '../../../contexts/AuthContext';
 import { logger } from '../../../utils/logger';
 import { encryptContent, decryptContent } from '../../../utils/encryption';
 import { addToSyncQueue } from '../../../services/syncService';
+import { generateId } from '../../../utils/id';
 import type { FavoriteMeeting, MeetingWithDetails } from '../types/meeting';
-
-/**
- * Generate a UUID v4
- */
-function generateUUID(): string {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-    const r = (Math.random() * 16) | 0;
-    const v = c === 'x' ? r : (r & 0x3) | 0x8;
-    return v.toString(16);
-  });
-}
 
 export interface UseFavoriteMeetingsReturn {
   favoriteMeetings: FavoriteMeeting[];
@@ -93,7 +83,7 @@ export function useFavoriteMeetings(): UseFavoriteMeetingsReturn {
         throw new Error('Meeting already favorited');
       }
 
-      const id = generateUUID();
+      const id = generateId('favorite');
       const now = new Date().toISOString();
 
       // Encrypt notes if provided
@@ -154,7 +144,7 @@ export function useFavoriteMeetings(): UseFavoriteMeetingsReturn {
            VALUES (?, ?, ?, ?, ?, ?, ?)
            ON CONFLICT (table_name, record_id, operation) DO UPDATE SET supabase_id = excluded.supabase_id`,
           [
-            generateUUID(),
+            generateId('sync'),
             'favorite_meetings',
             favorite.id,
             'delete',

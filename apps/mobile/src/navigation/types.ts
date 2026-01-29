@@ -35,7 +35,8 @@ export type JournalStackParamList = {
 // Steps Stack
 export type StepsStackParamList = {
     StepsOverview: undefined;
-    StepDetail: { stepNumber: number };
+    StepDetail: { stepNumber: number; initialQuestion?: number };
+    StepReview: { stepNumber: number };
 };
 
 // Profile Stack

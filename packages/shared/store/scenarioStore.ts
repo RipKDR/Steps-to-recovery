@@ -4,6 +4,7 @@
  */
 
 import { create } from 'zustand';
+import { v4 as uuidv4 } from 'uuid';
 import { getDatabase } from '../db/client';
 import { encryptContent, decryptContent } from '../encryption';
 import type { ScenarioPractice, DbScenarioPractice } from '../types';
@@ -23,7 +24,7 @@ interface ScenarioState {
 }
 
 function generateId(): string {
-  return `practice_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  return `practice_${uuidv4()}`;
 }
 
 async function dbToPractice(row: DbScenarioPractice): Promise<ScenarioPractice> {
@@ -127,4 +128,3 @@ export const useScenarioStore = create<ScenarioState>((set, get) => ({
     return Math.round((healthyChoices.length / practices.length) * 100);
   },
 }));
-

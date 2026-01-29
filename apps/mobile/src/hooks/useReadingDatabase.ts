@@ -11,17 +11,9 @@ import { useDatabase } from '../contexts/DatabaseContext';
 import { useReadingStore } from '../store/readingStore';
 import { addToSyncQueue } from '../services/syncService';
 import { logger } from '../utils/logger';
+import { generateId } from '../utils/id';
 import { generateFullYearReadings } from '../data/dailyReadings';
 import type { DailyReading, DailyReadingReflection } from '../types';
-
-// Generate simple UUID for local use
-function generateSimpleUUID(): string {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-    const r = Math.random() * 16 | 0;
-    const v = c === 'x' ? r : (r & 0x3 | 0x8);
-    return v.toString(16);
-  });
-}
 
 // Helper function to get day of year (1-366)
 function getDayOfYear(date: Date): number {
@@ -162,7 +154,7 @@ export function useReadingDatabase() {
       const { encryptContent } = await import('../utils/encryption');
       const encryptedReflection = await encryptContent(reflectionText);
       
-      const reflectionId = generateSimpleUUID();
+      const reflectionId = generateId('reflection');
       
       const reflection: DailyReadingReflection = {
         id: reflectionId,

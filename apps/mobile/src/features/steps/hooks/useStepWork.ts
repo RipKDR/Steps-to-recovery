@@ -2,7 +2,9 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useDatabase } from '../../../contexts/DatabaseContext';
 import { decryptContent, encryptContent } from '../../../utils/encryption';
 import { logger } from '../../../utils/logger';
+import { generateId } from '../../../utils/id';
 import { addToSyncQueue } from '../../../services/syncService';
+import { STEP_PROMPTS } from '@recovery/shared/constants';
 import type { StepWork, StepWorkDecrypted } from '@recovery/shared/types';
 
 /**
@@ -106,7 +108,7 @@ export function useSaveStepAnswer(userId: string): {
           await addToSyncQueue(db, 'step_work', existing.id, 'update');
         } else {
           // Create new answer
-          const id = `step_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+          const id = generateId('step');
           await db.runAsync(
             'INSERT INTO step_work (id, user_id, step_number, question_number, encrypted_answer, is_complete, completed_at, created_at, updated_at, sync_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
             [id, userId, stepNumber, questionNumber, encrypted_answer, isComplete ? 1 : 0, isComplete ? now : null, now, now, 'pending']
@@ -141,6 +143,7 @@ export function useStepProgress(userId: string): {
   stepsCompleted: number[];
   currentStep: number;
   overallProgress: number;
+  stepDetails: Array<{ stepNumber: number; answered: number; total: number; percent: number }>;
   isLoading: boolean;
 } {
   const { db } = useDatabase();
@@ -148,31 +151,47 @@ export function useStepProgress(userId: string): {
   const { data, isLoading } = useQuery({
     queryKey: ['step_progress', userId],
     queryFn: async () => {
-      if (!db) return { stepsCompleted: [], currentStep: 1, overallProgress: 0 };
+      if (!db) return { stepsCompleted: [], currentStep: 1, overallProgress: 0, stepDetails: [] };
 
       try {
-        const result = await db.getAllAsync<{ step_number: number; total: number; completed: number; }>(
+        const result = await db.getAllAsync<{ step_number: number; answered: number }>(
           `SELECT
             step_number,
-            COUNT(*) as total,
-            SUM(is_complete) as completed
+            SUM(CASE WHEN is_complete = 1 THEN 1 ELSE 0 END) as answered
            FROM step_work
            WHERE user_id = ?
            GROUP BY step_number`,
           [userId]
         );
 
-        const stepsCompleted = result
-          .filter(r => r.total > 0 && r.completed === r.total)
-          .map(r => r.step_number);
+        const answeredMap = new Map<number, number>(
+          result.map(row => [row.step_number, row.answered || 0])
+        );
 
-        const currentStep = stepsCompleted.length > 0 ? Math.max(...stepsCompleted) + 1 : 1;
+        const stepDetails = STEP_PROMPTS.map(step => {
+          const answered = answeredMap.get(step.step) ?? 0;
+          const total = step.prompts.length;
+          const percent = total > 0 ? Math.round((answered / total) * 100) : 0;
+          return {
+            stepNumber: step.step,
+            answered,
+            total,
+            percent,
+          };
+        });
+
+        const stepsCompleted = stepDetails
+          .filter(detail => detail.total > 0 && detail.answered >= detail.total)
+          .map(detail => detail.stepNumber);
+
+        const currentStep =
+          stepDetails.find(detail => detail.answered < detail.total)?.stepNumber ?? 1;
         const overallProgress = (stepsCompleted.length / 12) * 100;
 
-        return { stepsCompleted, currentStep, overallProgress };
+        return { stepsCompleted, currentStep, overallProgress, stepDetails };
       } catch (err) {
         logger.error('Failed to calculate step progress', err);
-        return { stepsCompleted: [], currentStep: 1, overallProgress: 0 };
+        return { stepsCompleted: [], currentStep: 1, overallProgress: 0, stepDetails: [] };
       }
     },
     enabled: !!db,
@@ -182,6 +201,7 @@ export function useStepProgress(userId: string): {
     stepsCompleted: data?.stepsCompleted ?? [],
     currentStep: data?.currentStep ?? 1,
     overallProgress: data?.overallProgress ?? 0,
+    stepDetails: data?.stepDetails ?? [],
     isLoading,
   };
 }

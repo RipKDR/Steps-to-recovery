@@ -6,7 +6,7 @@
  * Premium Animations: Staggered card entrances, pulse indicator for current step
  */
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, View, TouchableOpacity, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -25,8 +25,9 @@ import Animated, {
   Easing,
 } from 'react-native-reanimated';
 import type { StepsStackParamList } from '../../../navigation/types';
-import { useTheme, Card, ProgressBar, CircularProgress } from '../../../design-system';
+import { useTheme, Card, CircularProgress, Badge, Modal } from '../../../design-system';
 import { useStepProgress } from '../hooks/useStepWork';
+import { STEP_PROMPTS } from '@recovery/shared/constants';
 import { hapticSelection } from '../../../utils/haptics';
 
 type NavigationProp = NativeStackNavigationProp<StepsStackParamList>;
@@ -150,7 +151,16 @@ function PulseIndicator({ color }: { color: string }): React.ReactElement {
 export function StepsOverviewScreen({ userId }: StepsOverviewScreenProps): React.ReactElement {
   const navigation = useNavigation<NavigationProp>();
   const theme = useTheme();
-  const { stepsCompleted, currentStep, overallProgress } = useStepProgress(userId);
+  const { stepsCompleted, currentStep, overallProgress, stepDetails } = useStepProgress(userId);
+  const [lockedStep, setLockedStep] = useState<Step | null>(null);
+
+  const stepDetailMap = useMemo(() => {
+    return new Map(stepDetails.map(detail => [detail.stepNumber, detail]));
+  }, [stepDetails]);
+
+  const stepTotalsFallback = useMemo(() => {
+    return new Map(STEP_PROMPTS.map(step => [step.step, step.prompts.length]));
+  }, []);
 
   const isStepCompleted = (stepNumber: number): boolean => {
     return stepsCompleted.includes(stepNumber);
@@ -160,9 +170,13 @@ export function StepsOverviewScreen({ userId }: StepsOverviewScreenProps): React
     return stepNumber === currentStep;
   };
 
-  const handleStepPress = (stepNumber: number): void => {
+  const handleStepPress = (step: Step, isLocked: boolean): void => {
     hapticSelection();
-    navigation.navigate('StepDetail', { stepNumber });
+    if (isLocked) {
+      setLockedStep(step);
+      return;
+    }
+    navigation.navigate('StepDetail', { stepNumber: step.number });
   };
 
   return (
@@ -257,8 +271,12 @@ export function StepsOverviewScreen({ userId }: StepsOverviewScreenProps): React
         accessibilityLabel="12 Steps list"
       >
         {STEPS.map((step, index) => {
+          const detail = stepDetailMap.get(step.number);
+          const answeredCount = detail?.answered ?? 0;
+          const totalQuestions = detail?.total ?? (stepTotalsFallback.get(step.number) ?? 0);
           const completed = isStepCompleted(step.number);
-          const current = isStepCurrent(step.number);
+          const isLocked = step.number > 1;
+          const current = !isLocked && isStepCurrent(step.number) && !completed;
 
           return (
             <Animated.View
@@ -267,11 +285,15 @@ export function StepsOverviewScreen({ userId }: StepsOverviewScreenProps): React
               layout={Layout.springify()}
             >
               <TouchableOpacity
-                onPress={() => handleStepPress(step.number)}
+                onPress={() => handleStepPress(step, isLocked)}
                 activeOpacity={0.7}
                 accessibilityLabel={`Step ${step.number}: ${step.title}`}
                 accessibilityRole="button"
-                accessibilityHint="Tap to view step questions and add your answers"
+                accessibilityHint={
+                  isLocked
+                    ? 'Shows a preview. Full step work is coming soon.'
+                    : 'Tap to view step questions and add your answers'
+                }
                 accessibilityState={{ selected: current }}
               >
                 <Card
@@ -284,6 +306,11 @@ export function StepsOverviewScreen({ userId }: StepsOverviewScreenProps): React
                     current && {
                       borderWidth: 2,
                       borderColor: theme.colors.primary,
+                    },
+                    isLocked && {
+                      borderWidth: 1,
+                      borderColor: theme.colors.border,
+                      opacity: 0.8,
                     },
                   ]}
                 >
@@ -298,7 +325,9 @@ export function StepsOverviewScreen({ userId }: StepsOverviewScreenProps): React
                         style={[
                           styles.stepBadge,
                           {
-                            backgroundColor: completed
+                            backgroundColor: isLocked
+                              ? theme.colors.surfaceVariant
+                              : completed
                               ? theme.colors.success
                               : current
                               ? theme.colors.primary
@@ -309,7 +338,9 @@ export function StepsOverviewScreen({ userId }: StepsOverviewScreenProps): React
                           },
                         ]}
                       >
-                        {completed ? (
+                        {isLocked ? (
+                          <MaterialCommunityIcons name="lock" size={22} color={theme.colors.textSecondary} />
+                        ) : completed ? (
                           <MaterialCommunityIcons
                             name="check"
                             size={28}
@@ -343,7 +374,7 @@ export function StepsOverviewScreen({ userId }: StepsOverviewScreenProps): React
                           Step {step.number}: {step.title}
                         </Text>
                         <MaterialCommunityIcons
-                          name="chevron-right"
+                          name={isLocked ? 'lock-outline' : 'chevron-right'}
                           size={24}
                           color={theme.colors.textSecondary}
                           style={{ marginLeft: theme.spacing.xs }}
@@ -351,58 +382,37 @@ export function StepsOverviewScreen({ userId }: StepsOverviewScreenProps): React
                       </View>
 
                       {/* Current Step Badge */}
-                      {current && !completed && (
-                        <Animated.View
-                          entering={FadeIn.duration(300).delay(getStaggerDelay(index) + 200)}
-                          style={[
-                            styles.currentBadge,
-                            {
-                              backgroundColor: theme.colors.primary + '20',
-                              paddingHorizontal: theme.spacing.sm,
-                              paddingVertical: theme.spacing.xs,
-                              borderRadius: theme.radius.button,
-                              marginTop: theme.spacing.xs,
-                              alignSelf: 'flex-start',
-                            },
-                          ]}
-                        >
-                          <Text
-                            style={[
-                              theme.typography.caption,
-                              { color: theme.colors.primary, fontWeight: '600' },
-                            ]}
-                          >
+                      <View style={styles.badgeRow}>
+                        {current && !completed && !isLocked && (
+                          <Badge variant="primary" size="small">
                             Current Step
-                          </Text>
-                        </Animated.View>
-                      )}
-
-                      {/* Completed Badge */}
-                      {completed && (
-                        <Animated.View
-                          entering={FadeIn.duration(300).delay(getStaggerDelay(index) + 200)}
-                          style={[
-                            styles.currentBadge,
-                            {
-                              backgroundColor: theme.colors.success + '20',
-                              paddingHorizontal: theme.spacing.sm,
-                              paddingVertical: theme.spacing.xs,
-                              borderRadius: theme.radius.button,
-                              marginTop: theme.spacing.xs,
-                              alignSelf: 'flex-start',
-                            },
-                          ]}
-                        >
-                          <Text
-                            style={[
-                              theme.typography.caption,
-                              { color: theme.colors.success, fontWeight: '600' },
-                            ]}
-                          >
+                          </Badge>
+                        )}
+                        {completed && (
+                          <Badge variant="success" size="small">
                             Completed
-                          </Text>
-                        </Animated.View>
-                      )}
+                          </Badge>
+                        )}
+                        {completed && (
+                          <Badge variant="secondary" size="small">
+                            Achievement
+                          </Badge>
+                        )}
+                        {isLocked && (
+                          <Badge variant="muted" size="small">
+                            Locked
+                          </Badge>
+                        )}
+                      </View>
+
+                      <Text
+                        style={[
+                          theme.typography.caption,
+                          { color: theme.colors.textSecondary, marginTop: theme.spacing.xs },
+                        ]}
+                      >
+                        {totalQuestions > 0 ? `${totalQuestions} questions` : 'Question set coming soon'}
+                      </Text>
 
                       {/* Step Description */}
                       <Text
@@ -419,6 +429,17 @@ export function StepsOverviewScreen({ userId }: StepsOverviewScreenProps): React
                       >
                         {step.description}
                       </Text>
+
+                      {!isLocked && answeredCount > 0 && !completed && (
+                        <Text
+                          style={[
+                            theme.typography.caption,
+                            { color: theme.colors.primary, marginTop: theme.spacing.sm },
+                          ]}
+                        >
+                          {answeredCount} answered so far
+                        </Text>
+                      )}
                     </View>
                   </View>
                 </Card>
@@ -458,10 +479,39 @@ export function StepsOverviewScreen({ userId }: StepsOverviewScreenProps): React
               },
             ]}
           >
-            Tap on any step to begin your step work. Your progress is saved locally and encrypted for privacy.
+            Step 1 is available now. Steps 2-12 are preview-only and will unlock in a future update.
+            Your progress is saved locally and encrypted for privacy.
           </Text>
         </Animated.View>
       </ScrollView>
+
+      <Modal
+        visible={!!lockedStep}
+        onClose={() => setLockedStep(null)}
+        title={lockedStep ? `Step ${lockedStep.number} Coming Soon` : undefined}
+        message={
+          lockedStep
+            ? `${lockedStep.description}\n\nFull step work for Steps 2-12 is coming in the next update.`
+            : undefined
+        }
+        actions={[
+          {
+            title: 'Back to Step 1',
+            variant: 'primary',
+            onPress: () => {
+              setLockedStep(null);
+              navigation.navigate('StepDetail', { stepNumber: 1 });
+            },
+            accessibilityLabel: 'Back to Step 1',
+          },
+          {
+            title: 'Got it',
+            variant: 'outline',
+            onPress: () => setLockedStep(null),
+            accessibilityLabel: 'Close preview',
+          },
+        ]}
+      />
     </SafeAreaView>
   );
 }
@@ -550,6 +600,12 @@ const styles = StyleSheet.create({
   },
   currentBadge: {
     // Styles defined inline with theme
+  },
+  badgeRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: 6,
   },
   infoCard: {
     // Styles defined inline with theme

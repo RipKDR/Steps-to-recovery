@@ -1,19 +1,17 @@
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { FlatList, StyleSheet, View, KeyboardAvoidingView, Platform, Animated, TouchableOpacity, type ListRenderItemInfo, type ViewToken } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRoute, type RouteProp } from '@react-navigation/native';
+import { useRoute, useNavigation, type RouteProp } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { STEP_PROMPTS, type StepPrompt, type StepSection } from '@recovery/shared/constants';
 import { useStepWork, useSaveStepAnswer } from '../hooks/useStepWork';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useTheme, Card, Button, TextArea, ProgressBar, Badge, Toast, Divider, Text, Skeleton, CardSkeleton } from '../../../design-system';
+import type { StepsStackParamList } from '../../../navigation/types';
 
-type RouteParams = {
-  StepDetail: {
-    stepNumber: number;
-  };
-};
+type NavigationProp = NativeStackNavigationProp<StepsStackParamList>;
 
 interface QuestionItem {
   type: 'question';
@@ -35,15 +33,17 @@ interface FooterItem {
 type ListItem = QuestionItem | SectionHeaderItem | FooterItem;
 
 export function StepDetailScreen(): React.ReactElement {
-  const route = useRoute<RouteProp<RouteParams, 'StepDetail'>>();
-  const { stepNumber } = route.params;
+  const route = useRoute<RouteProp<StepsStackParamList, 'StepDetail'>>();
+  const navigation = useNavigation<NavigationProp>();
+  const { stepNumber, initialQuestion } = route.params;
   const { user } = useAuth();
   const userId = user?.id || '';
   const theme = useTheme();
 
   const stepData = STEP_PROMPTS.find((s: StepPrompt) => s.step === stepNumber);
-  const { questions, progress, isLoading } = useStepWork(userId, stepNumber);
+  const { questions, isLoading } = useStepWork(userId, stepNumber);
   const { saveAnswer } = useSaveStepAnswer(userId);
+  const isLocked = stepNumber > 1;
 
   const [answers, setAnswers] = useState<Record<number, string>>({});
   const [savingQuestion, setSavingQuestion] = useState<number | null>(null);
@@ -175,13 +175,11 @@ export function StepDetailScreen(): React.ReactElement {
     }
   }, [answers, saveAnswer, stepNumber]);
 
-  // Scroll to first unanswered question
-  const scrollToFirstUnanswered = useCallback(() => {
+  const scrollToQuestion = useCallback((questionNumber: number) => {
     if (!flatListRef.current || !stepData) return;
 
-    // Find the index in listItems that corresponds to the first unanswered question
     const targetIndex = listItems.findIndex(
-      item => item.type === 'question' && item.questionNumber === firstUnansweredQuestion
+      item => item.type === 'question' && item.questionNumber === questionNumber
     );
 
     if (targetIndex !== -1) {
@@ -191,12 +189,16 @@ export function StepDetailScreen(): React.ReactElement {
         viewPosition: 0,
       });
 
-      // Haptic feedback
       if (Platform.OS !== 'web') {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       }
     }
-  }, [listItems, firstUnansweredQuestion, stepData]);
+  }, [listItems, stepData]);
+
+  // Scroll to first unanswered question
+  const scrollToFirstUnanswered = useCallback(() => {
+    scrollToQuestion(firstUnansweredQuestion);
+  }, [firstUnansweredQuestion, scrollToQuestion]);
 
   // Track visible question for counter
   const onViewableItemsChanged = useCallback(({ viewableItems }: { viewableItems: ViewToken[] }) => {
@@ -212,6 +214,16 @@ export function StepDetailScreen(): React.ReactElement {
   const viewabilityConfig = useMemo(() => ({
     itemVisiblePercentThreshold: 50,
   }), []);
+
+  useEffect(() => {
+    if (!initialQuestion || !stepData) return;
+
+    const timer = setTimeout(() => {
+      scrollToQuestion(initialQuestion);
+    }, 350);
+
+    return () => clearTimeout(timer);
+  }, [initialQuestion, scrollToQuestion, stepData]);
 
   const renderItem = useCallback(({ item }: ListRenderItemInfo<ListItem>) => {
     if (item.type === 'section') {
@@ -328,6 +340,47 @@ export function StepDetailScreen(): React.ReactElement {
     );
   }
 
+  if (isLocked) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]} edges={['bottom']}>
+        <View style={styles.lockedContainer}>
+          <MaterialCommunityIcons name="lock" size={48} color={theme.colors.textSecondary} />
+          <Text style={[theme.typography.h2, { color: theme.colors.text, marginTop: 16 }]}>
+            Step {stepNumber} is coming soon
+          </Text>
+          <Text
+            style={[
+              theme.typography.body,
+              { color: theme.colors.textSecondary, textAlign: 'center', marginTop: 12 },
+            ]}
+          >
+            We're building the full Step {stepNumber} experience next. For now, keep focusing on Step 1.
+          </Text>
+          <View style={{ marginTop: theme.spacing.lg, width: '100%' }}>
+            <Button
+              title="Back to Step 1"
+              variant="primary"
+              size="large"
+              onPress={() => navigation.navigate('StepDetail', { stepNumber: 1 })}
+              accessibilityLabel="Back to Step 1"
+              accessibilityHint="Opens Step 1 questions"
+            />
+          </View>
+          <View style={{ marginTop: theme.spacing.sm, width: '100%' }}>
+            <Button
+              title="Back to Steps"
+              variant="outline"
+              size="large"
+              onPress={() => navigation.navigate('StepsOverview')}
+              accessibilityLabel="Back to steps overview"
+              accessibilityHint="Returns to the steps list"
+            />
+          </View>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   if (isLoading) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]} edges={['bottom']}>
@@ -367,6 +420,7 @@ export function StepDetailScreen(): React.ReactElement {
 
   const answeredCount = questions.filter(q => q.is_complete).length;
   const hasUnanswered = answeredCount < totalQuestions;
+  const progressPercent = totalQuestions > 0 ? Math.round((answeredCount / totalQuestions) * 100) : 0;
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]} edges={['bottom']}>
@@ -419,10 +473,10 @@ export function StepDetailScreen(): React.ReactElement {
                   Your Progress ({answeredCount}/{totalQuestions})
                 </Text>
                 <Text style={[theme.typography.h3, { color: theme.colors.primary, fontWeight: '600' }]}>
-                  {Math.round(progress)}%
+                  {progressPercent}%
                 </Text>
               </View>
-              <ProgressBar progress={progress / 100} style={styles.progressBar} />
+              <ProgressBar progress={progressPercent / 100} style={styles.progressBar} />
             </View>
 
             {/* Continue Button */}
@@ -439,6 +493,17 @@ export function StepDetailScreen(): React.ReactElement {
                 </Text>
               </TouchableOpacity>
             )}
+
+            <View style={{ marginTop: theme.spacing.sm }}>
+              <Button
+                title="Review answers"
+                variant="secondary"
+                size="small"
+                onPress={() => navigation.navigate('StepReview', { stepNumber })}
+                accessibilityLabel="Review all answers"
+                accessibilityHint="Opens the step review screen"
+              />
+            </View>
           </Card>
 
           {/* Description */}
@@ -508,6 +573,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 40,
+  },
+  lockedContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 32,
   },
   loadingContainer: {
     flex: 1,

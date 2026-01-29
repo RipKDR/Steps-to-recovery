@@ -22,6 +22,7 @@ import { clearDatabase } from './database';
 import { secureStorage } from '../adapters/secureStorage';
 import type { StorageAdapter } from '../adapters/storage';
 import { logger } from './logger';
+import { Platform } from 'react-native';
 
 export interface LogoutCleanupOptions {
   /**
@@ -79,6 +80,18 @@ export async function performLogoutCleanup(options: LogoutCleanupOptions = {}): 
   } catch (error) {
     logger.error('Failed to clear database during logout', error);
     errors.push(error instanceof Error ? error : new Error('Failed to clear database'));
+  }
+
+  try {
+    // Step 4: Clear shared database (legacy/shared store stack)
+    if (Platform.OS !== 'web') {
+      logger.info('Logout cleanup: Clearing shared database');
+      const { clearAllData } = await import('@recovery/shared/db/client');
+      await clearAllData();
+    }
+  } catch (error) {
+    logger.error('Failed to clear shared database during logout', error);
+    errors.push(error instanceof Error ? error : new Error('Failed to clear shared database'));
   }
 
   try {

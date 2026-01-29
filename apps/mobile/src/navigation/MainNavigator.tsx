@@ -12,6 +12,7 @@ import { EveningPulseScreen } from '../features/home/screens/EveningPulseScreen'
 import { EmergencyScreen } from '../features/emergency/screens/EmergencyScreen';
 import { StepsOverviewScreen } from '../features/steps/screens/StepsOverviewScreen';
 import { StepDetailScreen } from '../features/steps/screens/StepDetailScreen';
+import { StepReviewScreen } from '../features/steps/screens/StepReviewScreen';
 import { ProfileScreen } from '../features/profile/screens/ProfileScreen';
 import { NotificationSettingsScreen } from '../features/settings/screens/NotificationSettingsScreen';
 import { SponsorScreen } from '../features/sponsor/screens/SponsorScreen';
@@ -126,6 +127,14 @@ function StepsStackNavigator(): React.ReactElement {
         options={({ route }) => ({
           title: `Step ${(route.params as { stepNumber: number }).stepNumber}`,
           headerBackTitle: 'Steps',
+        })}
+      />
+      <StepsStack.Screen
+        name="StepReview"
+        component={StepReviewScreen}
+        options={({ route }) => ({
+          title: `Step ${(route.params as { stepNumber: number }).stepNumber} Review`,
+          headerBackTitle: 'Step',
         })}
       />
     </StepsStack.Navigator>

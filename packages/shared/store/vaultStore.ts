@@ -4,6 +4,7 @@
  */
 
 import { create } from 'zustand';
+import { v4 as uuidv4 } from 'uuid';
 import { getDatabase } from '../db/client';
 import { encryptContent, decryptContent } from '../encryption';
 import type { VaultItem, VaultItemType, DbVaultItem } from '../types';
@@ -29,7 +30,7 @@ interface VaultState {
 }
 
 function generateId(): string {
-  return `vault_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  return `vault_${uuidv4()}`;
 }
 
 function dbToVaultItem(row: DbVaultItem, decryptedContent: string): VaultItem {
@@ -243,4 +244,3 @@ export const useVaultStore = create<VaultState>((set, get) => ({
     return get().items.filter((item) => item.isFavorite);
   },
 }));
-
