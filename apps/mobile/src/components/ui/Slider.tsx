@@ -6,12 +6,7 @@
 
 import React, { useRef } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-  interpolate,
-} from 'react-native-reanimated';
+import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 
 interface SliderProps {
@@ -70,11 +65,7 @@ function StepButton({
       }}
       style={buttonStyle}
       className={`w-8 h-8 rounded-full items-center justify-center ${
-        isActive
-          ? 'bg-primary-500'
-          : isFilled
-          ? 'bg-primary-500/60'
-          : 'bg-surface-700/50'
+        isActive ? 'bg-primary-500' : isFilled ? 'bg-primary-500/60' : 'bg-surface-700/50'
       }`}
       accessibilityRole="button"
       accessibilityLabel={`Select ${stepValue}`}
@@ -83,9 +74,7 @@ function StepButton({
     >
       <Text
         className={`text-xs font-semibold ${
-          isActive || isFilled
-            ? 'text-white'
-            : 'text-surface-500'
+          isActive || isFilled ? 'text-white' : 'text-surface-500'
         }`}
       >
         {stepValue}
@@ -152,7 +141,7 @@ export function Slider({
   const accessibilityValue = `${value} out of ${max}`;
 
   return (
-    <View 
+    <View
       className={`${className}`}
       accessible
       accessibilityRole="adjustable"
@@ -186,16 +175,9 @@ export function Slider({
       {/* Label and Value */}
       {(label || showValue) && (
         <View className="flex-row justify-between items-center mb-2">
-          {label && (
-            <Text className="text-base font-medium text-surface-300">
-              {label}
-            </Text>
-          )}
+          {label && <Text className="text-base font-medium text-surface-300">{label}</Text>}
           {showValue && (
-            <Text 
-              className="text-lg font-bold text-primary-400"
-              accessibilityElementsHidden
-            >
+            <Text className="text-lg font-bold text-primary-400" accessibilityElementsHidden>
               {value}
             </Text>
           )}
@@ -206,7 +188,7 @@ export function Slider({
       <View className="relative h-8 mb-2">
         {/* Background Track */}
         <View className="absolute top-3 left-0 right-0 h-2 bg-surface-700/50 rounded-full" />
-        
+
         {/* Filled Track - Animated */}
         <AnimatedView
           className="absolute top-3 left-0 h-2 bg-primary-500 rounded-full"
@@ -220,7 +202,7 @@ export function Slider({
           {steps.map((stepValue) => {
             const isActive = stepValue === value;
             const isFilled = stepValue <= value;
-            
+
             return (
               <StepButton
                 key={stepValue}

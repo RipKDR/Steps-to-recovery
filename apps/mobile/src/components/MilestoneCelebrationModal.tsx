@@ -36,7 +36,7 @@ interface MilestoneCelebrationModalProps {
   onClose: () => void;
 }
 
-const { width, height } = Dimensions.get('window');
+const { width } = Dimensions.get('window');
 
 export function MilestoneCelebrationModal({
   visible,
@@ -74,14 +74,14 @@ export function MilestoneCelebrationModal({
           if (finished) {
             runOnJS(triggerHaptic)();
           }
-        })
+        }),
       );
       badgeScale.value = withDelay(
         400,
         withSequence(
           withSpring(1.2, { damping: 8, stiffness: 200 }),
-          withSpring(1, { damping: 10, stiffness: 150 })
-        )
+          withSpring(1, { damping: 10, stiffness: 150 }),
+        ),
       );
       buttonOpacity.value = withDelay(600, withTiming(1, { duration: 300 }));
 
@@ -184,55 +184,28 @@ export function MilestoneCelebrationModal({
           </View>
 
           {/* Celebration Message */}
-          <Text
-            style={[
-              styles.title,
-              { color: theme.colors.text },
-              theme.typography.h1,
-            ]}
-          >
+          <Text style={[styles.title, { color: theme.colors.text }, theme.typography.h1]}>
             {milestone.title}
           </Text>
           <Text
-            style={[
-              styles.subtitle,
-              { color: theme.colors.textSecondary },
-              theme.typography.body,
-            ]}
+            style={[styles.subtitle, { color: theme.colors.textSecondary }, theme.typography.body]}
           >
             {milestone.description}
           </Text>
 
           {/* Days Badge */}
           <Animated.View
-            style={[
-              styles.badge,
-              { backgroundColor: theme.colors.success },
-              badgeAnimatedStyle,
-            ]}
+            style={[styles.badge, { backgroundColor: theme.colors.success }, badgeAnimatedStyle]}
           >
-            <Text style={[styles.badgeText, theme.typography.h1]}>
-              {milestone.days}
-            </Text>
+            <Text style={[styles.badgeText, theme.typography.h1]}>{milestone.days}</Text>
             <Text style={[styles.badgeLabel, theme.typography.label]}>
               {milestone.days === 1 ? 'Day' : 'Days'} Clean
             </Text>
           </Animated.View>
 
           {/* Encouragement Message */}
-          <View
-            style={[
-              styles.messageContainer,
-              { backgroundColor: `${theme.colors.primary}10` },
-            ]}
-          >
-            <Text
-              style={[
-                styles.message,
-                { color: theme.colors.text },
-                theme.typography.body,
-              ]}
-            >
+          <View style={[styles.messageContainer, { backgroundColor: `${theme.colors.primary}10` }]}>
+            <Text style={[styles.message, { color: theme.colors.text }, theme.typography.body]}>
               {getEncouragementMessage(milestone.days)}
             </Text>
           </View>
@@ -249,19 +222,13 @@ export function MilestoneCelebrationModal({
               accessibilityLabel="Continue your recovery journey"
               accessibilityRole="button"
             >
-              <Text style={[styles.buttonText, theme.typography.label]}>
-                Continue Journey
-              </Text>
+              <Text style={[styles.buttonText, theme.typography.label]}>Continue Journey</Text>
             </TouchableOpacity>
           </Animated.View>
 
           {/* Quote */}
           <Text
-            style={[
-              styles.quote,
-              { color: theme.colors.textTertiary },
-              theme.typography.caption,
-            ]}
+            style={[styles.quote, { color: theme.colors.textTertiary }, theme.typography.caption]}
           >
             "Progress, not perfection"
           </Text>

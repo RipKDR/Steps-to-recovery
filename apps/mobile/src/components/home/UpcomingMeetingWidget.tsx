@@ -14,7 +14,6 @@ interface UpcomingMeetingWidgetProps {
 }
 
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-const SHORT_DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 function formatTime(time: string): string {
   const [hours, minutes] = time.split(':').map(Number);
@@ -25,14 +24,8 @@ function formatTime(time: string): string {
 
 export function UpcomingMeetingWidget({ className = '' }: UpcomingMeetingWidgetProps) {
   const router = useRouterCompat();
-  const {
-    nextMeeting,
-    todayMeetings,
-    meetings,
-    isLoading,
-    loadMeetings,
-    getDaysUntil,
-  } = useRegularMeetings();
+  const { nextMeeting, todayMeetings, meetings, isLoading, loadMeetings, getDaysUntil } =
+    useRegularMeetings();
 
   useEffect(() => {
     if (meetings.length === 0 && !isLoading) {
@@ -56,7 +49,7 @@ export function UpcomingMeetingWidget({ className = '' }: UpcomingMeetingWidgetP
   // Show today's meetings if any
   if (todayMeetings.length > 0) {
     const nextTodayMeeting = todayMeetings[0];
-    
+
     return (
       <Card
         variant="default"
@@ -70,9 +63,7 @@ export function UpcomingMeetingWidget({ className = '' }: UpcomingMeetingWidgetP
             </Text>
           </View>
           <TouchableOpacity onPress={handleViewAll}>
-            <Text className="text-sm text-green-600 dark:text-green-400">
-              All Meetings →
-            </Text>
+            <Text className="text-sm text-green-600 dark:text-green-400">All Meetings →</Text>
           </TouchableOpacity>
         </View>
 
@@ -95,9 +86,7 @@ export function UpcomingMeetingWidget({ className = '' }: UpcomingMeetingWidgetP
               </Text>
             </View>
             <View className="bg-green-100 dark:bg-green-900/30 px-3 py-1.5 rounded-full">
-              <Text className="text-sm font-medium text-green-700 dark:text-green-300">
-                Today
-              </Text>
+              <Text className="text-sm font-medium text-green-700 dark:text-green-300">Today</Text>
             </View>
           </View>
         </View>
@@ -115,9 +104,7 @@ export function UpcomingMeetingWidget({ className = '' }: UpcomingMeetingWidgetP
             onPress={handlePrepareShare}
             className="flex-1 bg-green-600 dark:bg-green-700 py-2.5 rounded-lg"
           >
-            <Text className="text-white font-medium text-center text-sm">
-              ✍️ Prepare to Share
-            </Text>
+            <Text className="text-white font-medium text-center text-sm">✍️ Prepare to Share</Text>
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => router.push('/meetings/new')}
@@ -135,7 +122,7 @@ export function UpcomingMeetingWidget({ className = '' }: UpcomingMeetingWidgetP
   // Show next upcoming meeting
   if (nextMeeting) {
     const daysUntil = getDaysUntil(nextMeeting);
-    
+
     return (
       <Card variant="default" className={className}>
         <View className="flex-row items-center justify-between mb-3">
@@ -146,9 +133,7 @@ export function UpcomingMeetingWidget({ className = '' }: UpcomingMeetingWidgetP
             </Text>
           </View>
           <TouchableOpacity onPress={handleViewAll}>
-            <Text className="text-sm text-primary-600 dark:text-primary-400">
-              All Meetings →
-            </Text>
+            <Text className="text-sm text-primary-600 dark:text-primary-400">All Meetings →</Text>
           </TouchableOpacity>
         </View>
 
@@ -186,4 +171,3 @@ export function UpcomingMeetingWidget({ className = '' }: UpcomingMeetingWidgetP
 
   return null;
 }
-

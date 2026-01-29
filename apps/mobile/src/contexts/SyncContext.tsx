@@ -6,7 +6,6 @@ import { useAuth } from './AuthContext';
 import { useDatabase } from './DatabaseContext';
 import { clearDatabase } from '../utils/database';
 import { logger } from '../utils/logger';
-import type { StorageAdapter } from '../adapters/storage';
 
 interface SyncState {
   isSyncing: boolean;
@@ -61,7 +60,7 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
 
     try {
       const result = await db.getFirstAsync<{ count: number }>(
-        'SELECT COUNT(*) as count FROM sync_queue WHERE retry_count < 3'
+        'SELECT COUNT(*) as count FROM sync_queue WHERE retry_count < 3',
       );
       setState((prev) => ({ ...prev, pendingCount: result?.count || 0 }));
     } catch (error) {
@@ -193,7 +192,9 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
           isInternetReachable,
         });
 
-        setState((prev) => (prev.isOnline === nextOnline ? prev : { ...prev, isOnline: nextOnline }));
+        setState((prev) =>
+          prev.isOnline === nextOnline ? prev : { ...prev, isOnline: nextOnline },
+        );
 
         // Trigger sync only on offline -> online transitions
         if (nextOnline && !prevOnline && userIdRef.current) {
