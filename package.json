@@ -12,7 +12,7 @@
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "react-native": "0.81.5",
-    "@sentry/react-native": "~7.2.0"
+    "@sentry/react-native": "^7.11.0"
   },
   "scripts": {
     "dev": "turbo run dev",
@@ -49,7 +49,7 @@
     "node": ">=20.0.0"
   },
   "dependencies": {
-    "@sentry/react-native": "~7.2.0",
+    "@sentry/react-native": "^7.11.0",
     "react": "19.1.0",
     "react-native": "0.81.5"
   }

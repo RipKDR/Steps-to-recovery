@@ -1,58 +1,82 @@
 /**
  * Invite Sponsor Screen
- * Send sponsor connection request via email
+ * Local-only pairing via shareable payloads
  */
 
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  Share,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
-import { useSponsorships } from '../hooks';
+import * as Clipboard from 'expo-clipboard';
+import { useAuth } from '../../../contexts/AuthContext';
+import { useSponsorConnections } from '../hooks';
 import { useTheme } from '../../../design-system/hooks/useTheme';
-import { Input, Button, Card, Modal, Toast } from '../../../design-system/components';
+import { Input, Button, Card, Modal, Toast, TextArea } from '../../../design-system/components';
 import type { ModalAction } from '../../../design-system/components';
 import type { Theme } from '../../../design-system/context/ThemeContext';
 
 export function InviteSponsorScreen(): React.ReactElement {
   const navigation = useNavigation();
   const theme = useTheme();
-  const { sendRequest } = useSponsorships();
+  const { user } = useAuth();
+  const userId = user?.id ?? '';
+  const { createInvite, confirmInvite, pendingInvites } = useSponsorConnections(userId);
 
-  const [email, setEmail] = useState('');
-  const [emailError, setEmailError] = useState('');
+  const [displayName, setDisplayName] = useState('');
+  const [invitePayload, setInvitePayload] = useState('');
+  const [inviteCode, setInviteCode] = useState('');
+  const [confirmationPayload, setConfirmationPayload] = useState('');
   const [loading, setLoading] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [showErrorModal, setShowErrorModal] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
-  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  const validateEmail = (emailAddress: string): boolean => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(emailAddress);
+  const handleGenerateInvite = async (): Promise<void> => {
+    setLoading(true);
+    try {
+      const result = await createInvite(displayName.trim() || undefined);
+      setInvitePayload(result.payload);
+      setInviteCode(result.code);
+      setToastMessage('Invite created. Share the payload with your sponsor.');
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : 'Failed to create invite');
+      setShowErrorModal(true);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleSendRequest = async (): Promise<void> => {
-    // Validation
-    if (!email.trim()) {
-      setEmailError('Email address is required');
-      return;
-    }
+  const handleCopyInvite = async (): Promise<void> => {
+    if (!invitePayload) return;
+    await Clipboard.setStringAsync(invitePayload);
+    setToastMessage('Invite payload copied');
+  };
 
-    if (!validateEmail(email.trim())) {
-      setEmailError('Please enter a valid email address');
-      return;
-    }
+  const handleShareInvite = async (): Promise<void> => {
+    if (!invitePayload) return;
+    await Share.share({
+      message: invitePayload,
+    });
+  };
 
-    setEmailError('');
+  const handleConfirmSponsor = async (): Promise<void> => {
+    if (!confirmationPayload.trim()) return;
     setLoading(true);
-
     try {
-      await sendRequest(email.trim().toLowerCase());
+      await confirmInvite(confirmationPayload.trim());
       setShowSuccessModal(true);
-      setEmail(''); // Clear form
+      setConfirmationPayload('');
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to send request';
-      setErrorMessage(message);
+      setErrorMessage(error instanceof Error ? error.message : 'Failed to confirm sponsor');
       setShowErrorModal(true);
     } finally {
       setLoading(false);
@@ -95,7 +119,6 @@ export function InviteSponsorScreen(): React.ReactElement {
           contentContainerStyle={styles.contentContainer}
           showsVerticalScrollIndicator={false}
         >
-          {/* Header */}
           <View style={styles.header}>
             <Text
               style={[
@@ -103,7 +126,7 @@ export function InviteSponsorScreen(): React.ReactElement {
                 { color: theme.colors.text, marginBottom: 8 },
               ]}
             >
-              Find a Sponsor
+              Invite a Sponsor
             </Text>
             <Text
               style={[
@@ -111,93 +134,132 @@ export function InviteSponsorScreen(): React.ReactElement {
                 { color: theme.colors.textSecondary, lineHeight: 22 },
               ]}
             >
-              Enter your sponsor's email address to send them a connection request.
-              They'll need to have an account in the app.
+              Create a private invite payload and share it with your sponsor. They will reply with a
+              confirmation payload to complete the connection.
             </Text>
           </View>
 
-          {/* Email Input */}
           <Input
-            label="Sponsor's Email"
-            value={email}
-            onChangeText={(text) => {
-              setEmail(text);
-              setEmailError(''); // Clear error on change
-            }}
-            error={emailError}
-            placeholder="sponsor@example.com"
-            keyboardType="email-address"
-            autoCapitalize="none"
-            autoComplete="email"
-            autoCorrect={false}
-            editable={!loading}
-            accessibilityLabel="Sponsor email input"
-            accessibilityHint="Enter your sponsor's email address"
+            label="Your name (optional)"
+            value={displayName}
+            onChangeText={setDisplayName}
+            placeholder="Name shown to your sponsor"
+            autoCapitalize="words"
+            accessibilityLabel="Your display name"
           />
 
-          {/* Action Buttons */}
           <View style={styles.buttonContainer}>
             <Button
               variant="primary"
               size="large"
-              onPress={handleSendRequest}
+              onPress={handleGenerateInvite}
               disabled={loading}
               loading={loading}
-              accessibilityLabel="Send sponsor request"
+              accessibilityLabel="Generate sponsor invite payload"
               style={styles.button}
             >
-              Send Request
-            </Button>
-
-            <Button
-              variant="secondary"
-              size="large"
-              onPress={() => navigation.goBack()}
-              disabled={loading}
-              accessibilityLabel="Cancel"
-              style={styles.button}
-            >
-              Cancel
+              Generate Invite
             </Button>
           </View>
 
-          {/* Info Card */}
-          <Card
-            variant="flat"
-            style={[
-              styles.infoCard,
-              { backgroundColor: theme.colors.primaryLight },
-            ]}
-          >
-            <Text
-              style={[
-                theme.typography.title3,
-                { color: theme.colors.primary, marginBottom: 12 },
-              ]}
-            >
-              How it works:
+          {invitePayload ? (
+            <Card variant="elevated" style={styles.payloadCard}>
+              <Text style={[theme.typography.title3, { color: theme.colors.text }]}>
+                Invite Payload
+              </Text>
+              <Text style={[theme.typography.caption, { color: theme.colors.textSecondary }]}>
+                Share this exact payload with your sponsor.
+              </Text>
+              <TextArea
+                label=""
+                value={invitePayload}
+                editable={false}
+                minHeight={140}
+                accessibilityLabel="Invite payload"
+              />
+              <View style={styles.payloadActions}>
+                <Button
+                  title="Copy"
+                  onPress={handleCopyInvite}
+                  variant="outline"
+                  size="small"
+                  accessibilityLabel="Copy invite payload"
+                />
+                <Button
+                  title="Share"
+                  onPress={handleShareInvite}
+                  variant="secondary"
+                  size="small"
+                  accessibilityLabel="Share invite payload"
+                />
+              </View>
+              {inviteCode && (
+                <Text style={[theme.typography.caption, { color: theme.colors.textSecondary }]}>
+                  Invite code: {inviteCode}
+                </Text>
+              )}
+            </Card>
+          ) : (
+            pendingInvites.length > 0 && (
+              <Card variant="outlined" style={styles.payloadCard}>
+                <Text style={[theme.typography.bodySmall, { color: theme.colors.textSecondary }]}>
+                  You already have a pending invite: {pendingInvites[0].invite_code}. Generate a new
+                  invite if you need to start over.
+                </Text>
+              </Card>
+            )
+          )}
+
+          <Card variant="flat" style={styles.infoCard}>
+            <Text style={[theme.typography.title3, { color: theme.colors.primary, marginBottom: 12 }]}>
+              How it works
             </Text>
             <View style={styles.infoList}>
-              <InfoItem theme={theme} text="Enter your sponsor's email" />
-              <InfoItem theme={theme} text="They'll receive your request" />
-              <InfoItem theme={theme} text="Once accepted, you can share journal entries" />
-              <InfoItem theme={theme} text="Only you control what gets shared" />
+              <InfoItem theme={theme} text="Generate your private invite payload" />
+              <InfoItem theme={theme} text="Sponsor enters it on their device" />
+              <InfoItem theme={theme} text="You receive a confirmation payload" />
+              <InfoItem theme={theme} text="Paste it below to connect" />
             </View>
+          </Card>
+
+          <Card variant="elevated" style={styles.confirmCard}>
+            <Text style={[theme.typography.title3, { color: theme.colors.text }]}>
+              Confirm Sponsor
+            </Text>
+            <Text style={[theme.typography.bodySmall, { color: theme.colors.textSecondary }]}>
+              Paste the confirmation payload from your sponsor to complete the connection.
+            </Text>
+            <TextArea
+              label="Confirmation payload"
+              value={confirmationPayload}
+              onChangeText={setConfirmationPayload}
+              placeholder="Paste RCCONFIRM payload here"
+              minHeight={140}
+              accessibilityLabel="Sponsor confirmation payload input"
+            />
+            <Button
+              title="Confirm Sponsor"
+              onPress={handleConfirmSponsor}
+              variant="primary"
+              size="large"
+              disabled={loading || !confirmationPayload.trim()}
+              loading={loading}
+              style={styles.button}
+              accessibilityLabel="Confirm sponsor connection"
+            />
           </Card>
         </ScrollView>
       </KeyboardAvoidingView>
 
-      {/* Success Modal */}
       <Modal
         visible={showSuccessModal}
-        title="Request Sent!"
-        message="Your sponsor request has been sent. They'll receive a notification to accept your request."
+        title="Sponsor Connected"
+        message="Your sponsor connection is active. You can now share journal entries."
         actions={successActions}
         variant="center"
         onClose={handleSuccessModalClose}
       />
 
-      {/* Error Modal */}
       <Modal
         visible={showErrorModal}
         title="Error"
@@ -207,30 +269,21 @@ export function InviteSponsorScreen(): React.ReactElement {
         onClose={() => setShowErrorModal(false)}
       />
 
-      {/* Toast (for non-critical feedback) */}
       <Toast
-        visible={showToast}
-        message="Request sent successfully"
+        visible={Boolean(toastMessage)}
+        message={toastMessage ?? ''}
         variant="success"
         duration={2000}
-        onDismiss={() => setShowToast(false)}
+        onDismiss={() => setToastMessage(null)}
       />
     </SafeAreaView>
   );
 }
 
-// Info List Item Component
 function InfoItem({ theme, text }: { theme: Theme; text: string }): React.ReactElement {
   return (
     <View style={styles.infoItem}>
-      <Text
-        style={[
-          theme.typography.body,
-          { color: theme.colors.primary },
-        ]}
-      >
-        • {text}
-      </Text>
+      <Text style={[theme.typography.body, { color: theme.colors.primary }]}>• {text}</Text>
     </View>
   );
 }
@@ -247,24 +300,39 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     padding: 20,
+    paddingBottom: 40,
   },
   header: {
-    marginBottom: 32,
-  },
-  buttonContainer: {
-    marginTop: 8,
     marginBottom: 24,
   },
+  buttonContainer: {
+    marginTop: 16,
+  },
   button: {
-    marginBottom: 12,
+    marginTop: 16,
+  },
+  payloadCard: {
+    marginTop: 20,
+    padding: 16,
+  },
+  payloadActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 12,
   },
   infoCard: {
-    padding: 20,
+    marginTop: 24,
+    padding: 16,
+    backgroundColor: 'transparent',
   },
   infoList: {
     gap: 8,
   },
   infoItem: {
-    paddingVertical: 4,
+    flexDirection: 'row',
+  },
+  confirmCard: {
+    marginTop: 24,
+    padding: 16,
   },
 });

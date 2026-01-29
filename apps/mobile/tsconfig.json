@@ -1,15 +1,14 @@
 {
+  "extends": "expo/tsconfig.base",
   "compilerOptions": {
+    "ignoreDeprecations": "6.0",
     "baseUrl": ".",
     "strict": true,
     "noEmit": true,
     "forceConsistentCasingInFileNames": true,
     "allowJs": false,
     "target": "es2020",
-    "lib": [
-      "es2020",
-      "dom"
-    ],
+    "lib": ["es2020", "dom"],
     "module": "esnext",
     "moduleResolution": "bundler",
     "resolveJsonModule": true,
@@ -19,27 +18,13 @@
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "paths": {
-      "@/*": [
-        "./src/*"
-      ],
-      "@/components/*": [
-        "./src/components/*"
-      ],
-      "@/lib/*": [
-        "./src/lib/*"
-      ],
-      "@/design-system": [
-        "./src/design-system/index.ts"
-      ],
-      "@/design-system/*": [
-        "./src/design-system/*"
-      ],
-      "@recovery/shared/*": [
-        "../../packages/shared/*"
-      ],
-      "@recovery/shared": [
-        "../../packages/shared/src/index.ts"
-      ]
+      "@/*": ["./src/*"],
+      "@/components/*": ["./src/components/*"],
+      "@/lib/*": ["./src/lib/*"],
+      "@/design-system": ["./src/design-system/index.ts"],
+      "@/design-system/*": ["./src/design-system/*"],
+      "@recovery/shared/*": ["../../packages/shared/*"],
+      "@recovery/shared": ["../../packages/shared/src/index.ts"]
     }
   },
   "include": [
@@ -60,7 +45,5 @@
     "**/*.test.ts",
     "**/*.test.tsx",
     "../../_bmad-output"
-  ],
-  "types": [],
-  "extends": "expo/tsconfig.base"
+  ]
 }

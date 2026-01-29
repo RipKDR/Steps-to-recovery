@@ -61,7 +61,7 @@ export interface NotificationParams {
   stepNumber?: number;
 
   // Shared entries parameters
-  sponseeId?: string;
+  connectionId?: string;
 
   // Milestone parameters
   days?: number;

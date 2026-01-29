@@ -35,6 +35,51 @@ export interface ConnectionCode {
   isExpired: boolean;
 }
 
+export interface SponsorKeyPair {
+  publicKey: string; // base64
+  privateKey: string; // base64 (pkcs8)
+}
+
+export interface EncryptedPayload {
+  iv: string; // base64
+  ciphertext: string; // base64
+}
+
+export interface SponsorInvitePayload {
+  version: 1;
+  code: string;
+  sponseeName?: string;
+  publicKey: string;
+  createdAt: string;
+  expiresAt: string;
+}
+
+export interface SponsorConfirmPayload {
+  version: 1;
+  code: string;
+  sponsorName?: string;
+  publicKey: string;
+  confirmedAt: string;
+}
+
+export interface EntrySharePayload {
+  version: 1;
+  code: string;
+  entryId: string;
+  encrypted: EncryptedPayload;
+  senderName?: string;
+  createdAt: string;
+}
+
+export interface CommentSharePayload {
+  version: 1;
+  code: string;
+  entryId: string;
+  encrypted: EncryptedPayload;
+  senderName?: string;
+  createdAt: string;
+}
+
 /**
  * Sponsee connection info (for sponsors)
  */
@@ -121,6 +166,202 @@ function getSecureRandomIndex(max: number): number {
     return array[0] % max;
   }
   return Math.floor(Math.random() * max);
+}
+
+function assertWebCryptoAvailable(): asserts globalThis is {
+  crypto: {
+    subtle: SubtleCrypto;
+    getRandomValues: (array: Uint8Array) => Uint8Array;
+  };
+} {
+  const cryptoObj = globalThis.crypto as { subtle?: SubtleCrypto; getRandomValues?: (array: Uint8Array) => Uint8Array } | undefined;
+  if (!cryptoObj?.subtle || !cryptoObj.getRandomValues) {
+    throw new Error('WebCrypto is unavailable. Ensure expo-standard-web-crypto is loaded.');
+  }
+}
+
+function stringToBytes(value: string): Uint8Array {
+  return new TextEncoder().encode(value);
+}
+
+function bytesToString(value: Uint8Array): string {
+  return new TextDecoder().decode(value);
+}
+
+function bytesToBase64(bytes: Uint8Array): string {
+  let binary = '';
+  for (let i = 0; i < bytes.length; i += 1) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return base64Encode(binary);
+}
+
+function base64ToBytes(value: string): Uint8Array {
+  const binary = base64Decode(value);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i += 1) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes;
+}
+
+function toArrayBuffer(bytes: Uint8Array): ArrayBuffer {
+  const copy = new Uint8Array(bytes.length);
+  copy.set(bytes);
+  return copy.buffer;
+}
+
+async function importPrivateKey(privateKeyBase64: string): Promise<CryptoKey> {
+  assertWebCryptoAvailable();
+  const keyBytes = base64ToBytes(privateKeyBase64);
+  return await crypto.subtle.importKey(
+    'pkcs8',
+    toArrayBuffer(keyBytes),
+    { name: 'ECDH', namedCurve: 'P-256' },
+    false,
+    ['deriveBits']
+  );
+}
+
+async function importPublicKey(publicKeyBase64: string): Promise<CryptoKey> {
+  assertWebCryptoAvailable();
+  const keyBytes = base64ToBytes(publicKeyBase64);
+  return await crypto.subtle.importKey(
+    'raw',
+    toArrayBuffer(keyBytes),
+    { name: 'ECDH', namedCurve: 'P-256' },
+    false,
+    []
+  );
+}
+
+export async function generateSponsorKeyPair(): Promise<SponsorKeyPair> {
+  assertWebCryptoAvailable();
+  const keyPair = await crypto.subtle.generateKey(
+    { name: 'ECDH', namedCurve: 'P-256' },
+    true,
+    ['deriveBits']
+  );
+
+  const publicKeyRaw = await crypto.subtle.exportKey('raw', keyPair.publicKey);
+  const privateKeyRaw = await crypto.subtle.exportKey('pkcs8', keyPair.privateKey);
+
+  return {
+    publicKey: bytesToBase64(new Uint8Array(publicKeyRaw)),
+    privateKey: bytesToBase64(new Uint8Array(privateKeyRaw)),
+  };
+}
+
+export async function deriveSharedKeyBase64(
+  privateKeyBase64: string,
+  peerPublicKeyBase64: string
+): Promise<string> {
+  assertWebCryptoAvailable();
+  const privateKey = await importPrivateKey(privateKeyBase64);
+  const publicKey = await importPublicKey(peerPublicKeyBase64);
+  const sharedBits = await crypto.subtle.deriveBits(
+    { name: 'ECDH', public: publicKey },
+    privateKey,
+    256
+  );
+  return bytesToBase64(new Uint8Array(sharedBits));
+}
+
+export async function encryptWithSharedKey(
+  sharedKeyBase64: string,
+  plaintext: string
+): Promise<EncryptedPayload> {
+  assertWebCryptoAvailable();
+  const keyBytes = base64ToBytes(sharedKeyBase64);
+  const cryptoKey = await crypto.subtle.importKey(
+    'raw',
+    toArrayBuffer(keyBytes),
+    { name: 'AES-GCM', length: 256 },
+    false,
+    ['encrypt']
+  );
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ciphertext = await crypto.subtle.encrypt(
+    { name: 'AES-GCM', iv },
+    cryptoKey,
+    toArrayBuffer(stringToBytes(plaintext))
+  );
+  return {
+    iv: bytesToBase64(iv),
+    ciphertext: bytesToBase64(new Uint8Array(ciphertext)),
+  };
+}
+
+export async function decryptWithSharedKey(
+  sharedKeyBase64: string,
+  encrypted: EncryptedPayload
+): Promise<string> {
+  assertWebCryptoAvailable();
+  const keyBytes = base64ToBytes(sharedKeyBase64);
+  const cryptoKey = await crypto.subtle.importKey(
+    'raw',
+    toArrayBuffer(keyBytes),
+    { name: 'AES-GCM', length: 256 },
+    false,
+    ['decrypt']
+  );
+  const iv = base64ToBytes(encrypted.iv);
+  const ciphertext = base64ToBytes(encrypted.ciphertext);
+  const decrypted = await crypto.subtle.decrypt(
+    { name: 'AES-GCM', iv },
+    cryptoKey,
+    toArrayBuffer(ciphertext)
+  );
+  return bytesToString(new Uint8Array(decrypted));
+}
+
+function encodePayload(prefix: string, payload: object): string {
+  return `${prefix}:${base64Encode(JSON.stringify(payload))}`;
+}
+
+function decodePayload<T>(prefix: string, value: string): T | null {
+  if (!value.startsWith(`${prefix}:`)) {
+    return null;
+  }
+  try {
+    const raw = value.substring(prefix.length + 1);
+    const json = base64Decode(raw);
+    return JSON.parse(json) as T;
+  } catch {
+    return null;
+  }
+}
+
+export function createInvitePayload(data: SponsorInvitePayload): string {
+  return encodePayload('RCINVITE', data);
+}
+
+export function parseInvitePayload(value: string): SponsorInvitePayload | null {
+  return decodePayload<SponsorInvitePayload>('RCINVITE', value);
+}
+
+export function createConfirmPayload(data: SponsorConfirmPayload): string {
+  return encodePayload('RCCONFIRM', data);
+}
+
+export function parseConfirmPayload(value: string): SponsorConfirmPayload | null {
+  return decodePayload<SponsorConfirmPayload>('RCCONFIRM', value);
+}
+
+export function createEntrySharePayload(data: EntrySharePayload): string {
+  return encodePayload('RCSHARE', data);
+}
+
+export function parseEntrySharePayload(value: string): EntrySharePayload | null {
+  return decodePayload<EntrySharePayload>('RCSHARE', value);
+}
+
+export function createCommentSharePayload(data: CommentSharePayload): string {
+  return encodePayload('RCCOMMENT', data);
+}
+
+export function parseCommentSharePayload(value: string): CommentSharePayload | null {
+  return decodePayload<CommentSharePayload>('RCCOMMENT', value);
 }
 
 /**
@@ -216,6 +457,25 @@ export async function getSponseeConnections(): Promise<SponseeConnection[]> {
 }
 
 /**
+ * Get a single sponsee connection by id
+ */
+export async function getSponseeConnectionById(id: string): Promise<SponseeConnection | null> {
+  const connections = await getSponseeConnections();
+  return connections.find((connection) => connection.id === id) || null;
+}
+
+/**
+ * Update a sponsee connection name
+ */
+export async function updateSponseeConnectionName(id: string, name: string): Promise<void> {
+  const connections = await getSponseeConnections();
+  const updated = connections.map((connection) =>
+    connection.id === id ? { ...connection, name } : connection
+  );
+  await SecureStore.setItemAsync(SPONSEE_CODES_KEY, JSON.stringify(updated));
+}
+
+/**
  * Remove a sponsee connection
  */
 export async function removeSponseeConnection(id: string): Promise<void> {
@@ -294,7 +554,7 @@ function base64Encode(value: string): string {
     return btoaFn(value);
   }
   if (typeof Buffer !== 'undefined') {
-    return Buffer.from(value, 'utf-8').toString('base64');
+    return Buffer.from(value, 'binary').toString('base64');
   }
   throw new Error('Base64 encoding is unavailable');
 }
@@ -305,7 +565,7 @@ function base64Decode(value: string): string {
     return atobFn(value);
   }
   if (typeof Buffer !== 'undefined') {
-    return Buffer.from(value, 'base64').toString('utf-8');
+    return Buffer.from(value, 'base64').toString('binary');
   }
   throw new Error('Base64 decoding is unavailable');
 }

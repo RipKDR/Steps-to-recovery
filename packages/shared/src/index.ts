@@ -108,3 +108,4 @@ export * from '../jitai';
 export * from '../notifications';
 export * from '../animations';
 export * from '../export';
+export * from './services/sponsorConnection';
