@@ -1,14 +1,14 @@
 /**
  * Sponsor Connection Service
- * 
+ *
  * Handles code generation and sponsor pairing for limited data sharing.
  * Provides a privacy-focused way for sponsees to share recovery progress
  * with their sponsors without exposing sensitive details.
- * 
+ *
  * **Note**: This is a local-only implementation. The connection codes are
  * designed to be shared manually (text/email) and enable limited
  * one-way data sharing from sponsee to sponsor.
- * 
+ *
  * @module services/sponsorConnection
  */
 
@@ -100,30 +100,30 @@ export interface SponsorShareData {
   displayName?: string;
   soberDays: number;
   programType: string;
-  
+
   // Recent activity summary (no details)
   lastCheckinDate?: string;
   checkinStreak: number;
   currentStep: number;
-  
+
   // Meeting attendance
   meetingsThisWeek: number;
   lastMeetingDate?: string;
-  
+
   // Mood trend (aggregated, not individual entries)
   averageMoodLast7Days?: number;
   averageCravingLast7Days?: number;
-  
+
   // Timestamps
   generatedAt: string;
 }
 
 /**
  * Generate a new sponsor connection code
- * 
+ *
  * Creates a unique connection code that can be shared with a sponsor.
  * Codes expire after 7 days for security. Format: RC-XXXXXX (6 alphanumeric characters).
- * 
+ *
  * @returns Promise resolving to connection code object with expiry information
  * @example
  * ```ts
@@ -138,16 +138,16 @@ export async function generateSponsorCode(): Promise<ConnectionCode> {
   for (let i = 0; i < 6; i++) {
     randomPart += characters.charAt(getSecureRandomIndex(characters.length));
   }
-  
+
   const code = `RC-${randomPart}`;
   const now = new Date();
   const expiresAt = new Date(now);
   expiresAt.setDate(expiresAt.getDate() + CODE_VALIDITY_DAYS);
-  
+
   // Store the code securely
   await SecureStore.setItemAsync(SPONSOR_CODE_KEY, code);
   await SecureStore.setItemAsync(SPONSOR_CODE_EXPIRY_KEY, expiresAt.toISOString());
-  
+
   return {
     code,
     createdAt: now,
@@ -168,13 +168,7 @@ function getSecureRandomIndex(max: number): number {
   return Math.floor(Math.random() * max);
 }
 
-<<<<<<< Updated upstream
-function assertWebCryptoAvailable(): asserts globalThis is {
-  crypto: {
-    subtle: SubtleCrypto;
-    getRandomValues: (array: Uint8Array) => Uint8Array;
-  };
-} {
+function assertWebCryptoAvailable(): void {
   const cryptoObj = globalThis.crypto as { subtle?: SubtleCrypto; getRandomValues?: (array: Uint8Array) => Uint8Array } | undefined;
   if (!cryptoObj?.subtle || !cryptoObj.getRandomValues) {
     throw new Error('WebCrypto is unavailable. Ensure expo-standard-web-crypto is loaded.');
@@ -283,7 +277,7 @@ export async function encryptWithSharedKey(
   );
   const iv = crypto.getRandomValues(new Uint8Array(12));
   const ciphertext = await crypto.subtle.encrypt(
-    { name: 'AES-GCM', iv },
+    { name: 'AES-GCM', iv: toArrayBuffer(iv) },
     cryptoKey,
     toArrayBuffer(stringToBytes(plaintext))
   );
@@ -309,7 +303,7 @@ export async function decryptWithSharedKey(
   const iv = base64ToBytes(encrypted.iv);
   const ciphertext = base64ToBytes(encrypted.ciphertext);
   const decrypted = await crypto.subtle.decrypt(
-    { name: 'AES-GCM', iv },
+    { name: 'AES-GCM', iv: toArrayBuffer(iv) },
     cryptoKey,
     toArrayBuffer(ciphertext)
   );
@@ -365,13 +359,11 @@ export function parseCommentSharePayload(value: string): CommentSharePayload | n
   return decodePayload<CommentSharePayload>('RCCOMMENT', value);
 }
 
-=======
->>>>>>> Stashed changes
 /**
  * Get the current sponsor connection code (if exists and valid)
- * 
+ *
  * Retrieves the active connection code if one exists and hasn't expired.
- * 
+ *
  * @returns Promise resolving to connection code or null if none exists/expired
  * @example
  * ```ts
@@ -385,13 +377,13 @@ export async function getCurrentSponsorCode(): Promise<ConnectionCode | null> {
   try {
     const code = await SecureStore.getItemAsync(SPONSOR_CODE_KEY);
     const expiryStr = await SecureStore.getItemAsync(SPONSOR_CODE_EXPIRY_KEY);
-    
+
     if (!code || !expiryStr) return null;
-    
+
     const expiresAt = new Date(expiryStr);
     const now = new Date();
     const isExpired = now > expiresAt;
-    
+
     return {
       code,
       createdAt: new Date(expiresAt.getTime() - CODE_VALIDITY_DAYS * 24 * 60 * 60 * 1000),
@@ -425,17 +417,17 @@ export async function addSponseeConnection(
     name,
     connectedAt: new Date(),
   };
-  
+
   // Get existing connections
   const existingStr = await SecureStore.getItemAsync(SPONSEE_CODES_KEY);
   const existing: SponseeConnection[] = existingStr ? JSON.parse(existingStr) : [];
-  
+
   // Add new connection
   existing.push(connection);
-  
+
   // Store updated list
   await SecureStore.setItemAsync(SPONSEE_CODES_KEY, JSON.stringify(existing));
-  
+
   return connection;
 }
 
@@ -446,7 +438,7 @@ export async function getSponseeConnections(): Promise<SponseeConnection[]> {
   try {
     const connectionsStr = await SecureStore.getItemAsync(SPONSEE_CODES_KEY);
     if (!connectionsStr) return [];
-    
+
     const connections: SponseeConnection[] = JSON.parse(connectionsStr);
     return connections.map(c => ({
       ...c,
@@ -541,7 +533,7 @@ export function decodeShareData(encoded: string): SponsorShareData | null {
     if (!encoded.startsWith('RCSHARE:')) {
       return null;
     }
-    
+
     const base64 = encoded.substring(8); // Remove 'RCSHARE:' prefix
     const json = base64Decode(base64);
     return JSON.parse(json) as SponsorShareData;
@@ -557,11 +549,7 @@ function base64Encode(value: string): string {
     return btoaFn(value);
   }
   if (typeof Buffer !== 'undefined') {
-<<<<<<< Updated upstream
     return Buffer.from(value, 'binary').toString('base64');
-=======
-    return Buffer.from(value, 'utf-8').toString('base64');
->>>>>>> Stashed changes
   }
   throw new Error('Base64 encoding is unavailable');
 }
@@ -572,11 +560,7 @@ function base64Decode(value: string): string {
     return atobFn(value);
   }
   if (typeof Buffer !== 'undefined') {
-<<<<<<< Updated upstream
     return Buffer.from(value, 'base64').toString('binary');
-=======
-    return Buffer.from(value, 'base64').toString('utf-8');
->>>>>>> Stashed changes
   }
   throw new Error('Base64 decoding is unavailable');
 }
@@ -593,31 +577,31 @@ export function generateShareMessage(data: SponsorShareData): string {
     `📖 Working on Step: ${data.currentStep}`,
     `🤝 Meetings this week: ${data.meetingsThisWeek}`,
   ];
-  
+
   if (data.averageMoodLast7Days !== undefined) {
     lines.push(`😊 Avg Mood (7 days): ${data.averageMoodLast7Days.toFixed(1)}/10`);
   }
-  
+
   if (data.averageCravingLast7Days !== undefined) {
     lines.push(`💪 Avg Craving (7 days): ${data.averageCravingLast7Days.toFixed(1)}/10`);
   }
-  
+
   if (data.lastCheckinDate) {
     lines.push(`📅 Last check-in: ${data.lastCheckinDate}`);
   }
-  
+
   lines.push('');
   lines.push(`Generated: ${new Date(data.generatedAt).toLocaleDateString()}`);
   lines.push('Sent from Recovery Companion');
-  
+
   return lines.join('\n');
 }
 
 /**
  * Validate a connection code format
- * 
+ *
  * Checks if a code string matches the expected format (RC-XXXXXX).
- * 
+ *
  * @param code - Code string to validate
  * @returns True if code format is valid
  * @example

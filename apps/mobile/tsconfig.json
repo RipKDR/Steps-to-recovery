@@ -45,10 +45,6 @@
     "**/*.test.ts",
     "**/*.test.tsx",
     "../../_bmad-output"
-<<<<<<< Updated upstream
-  ]
-=======
   ],
   "types": []
->>>>>>> Stashed changes
 }
