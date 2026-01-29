@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
-import { FlatList, StyleSheet, View, KeyboardAvoidingView, Platform, Animated, ActivityIndicator, TouchableOpacity, type ListRenderItemInfo, type ViewToken } from 'react-native';
+import { FlatList, StyleSheet, View, KeyboardAvoidingView, Platform, Animated, TouchableOpacity, type ListRenderItemInfo, type ViewToken } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRoute, type RouteProp } from '@react-navigation/native';
 import { MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
@@ -7,7 +7,7 @@ import * as Haptics from 'expo-haptics';
 import { STEP_PROMPTS, type StepPrompt, type StepSection } from '@recovery/shared/constants';
 import { useStepWork, useSaveStepAnswer } from '../hooks/useStepWork';
 import { useAuth } from '../../../contexts/AuthContext';
-import { useTheme, Card, Button, TextArea, ProgressBar, Badge, Toast, Divider, Text } from '../../../design-system';
+import { useTheme, Card, Button, TextArea, ProgressBar, Badge, Toast, Divider, Text, Skeleton, CardSkeleton } from '../../../design-system';
 
 type RouteParams = {
   StepDetail: {
@@ -330,12 +330,36 @@ export function StepDetailScreen(): React.ReactElement {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={theme.colors.primary} />
-          <Text style={[theme.typography.body, { color: theme.colors.textSecondary, marginTop: 16 }]}>
-            Loading step {stepNumber}...
-          </Text>
+      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]} edges={['bottom']}>
+        <View style={styles.loadingSkeletonContainer}>
+          {/* Header skeleton */}
+          <Card variant="elevated" style={styles.headerCard}>
+            <View style={styles.header}>
+              <Skeleton variant="avatar" avatarSize={50} />
+              <View style={[styles.headerContent, { gap: 8 }]}>
+                <Skeleton variant="text" width="80%" height={20} />
+                <Skeleton variant="text" width="50%" height={14} />
+              </View>
+            </View>
+            <View style={styles.progressSection}>
+              <Skeleton variant="text" width="100%" height={8} borderRadius={4} />
+            </View>
+          </Card>
+
+          {/* Description skeleton */}
+          <Card variant="outlined" style={[styles.descriptionCard, { borderColor: theme.colors.border }]}>
+            <Skeleton variant="text" width="40%" height={12} />
+            <View style={{ height: 8 }} />
+            <Skeleton variant="text" width="100%" height={14} />
+            <View style={{ height: 4 }} />
+            <Skeleton variant="text" width="90%" height={14} />
+          </Card>
+
+          {/* Question cards skeleton */}
+          <View style={{ padding: 16, gap: 16 }}>
+            <CardSkeleton />
+            <CardSkeleton />
+          </View>
         </View>
       </SafeAreaView>
     );
@@ -489,6 +513,9 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  loadingSkeletonContainer: {
+    flex: 1,
   },
   headerCard: {
     marginHorizontal: 16,

@@ -1,9 +1,9 @@
 // Ensure critical polyfills (e.g., localStorage shim) are loaded before Metro parses the app.
 // CRITICAL: Must be CommonJS for Metro compatibility
-import './polyfills.cjs';
+require('./polyfills.cjs');
 
 /** @param {import('@babel/core').ConfigAPI} api */
-export default function (api) {
+module.exports = function (api) {
   api.cache.forever();
   return {
     presets: [

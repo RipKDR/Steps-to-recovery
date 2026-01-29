@@ -2,18 +2,32 @@
  * Steps Overview Screen
  * Displays all 12 steps with progress tracking
  * Design: iOS-style with interactive cards and clear visual hierarchy
+ *
+ * Premium Animations: Staggered card entrances, pulse indicator for current step
  */
 
-import React from 'react';
-import { ScrollView, StyleSheet, View, TouchableOpacity } from 'react-native';
+import React, { useEffect } from 'react';
+import { ScrollView, StyleSheet, View, TouchableOpacity, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import Animated, {
+  FadeIn,
+  FadeInDown,
+  FadeInRight,
+  Layout,
+  useSharedValue,
+  useAnimatedStyle,
+  withRepeat,
+  withTiming,
+  withSequence,
+  Easing,
+} from 'react-native-reanimated';
 import type { StepsStackParamList } from '../../../navigation/types';
-import { useTheme, Card, ProgressBar } from '../../../design-system';
+import { useTheme, Card, ProgressBar, CircularProgress } from '../../../design-system';
 import { useStepProgress } from '../hooks/useStepWork';
-import { Text } from 'react-native';
+import { hapticSelection } from '../../../utils/haptics';
 
 type NavigationProp = NativeStackNavigationProp<StepsStackParamList>;
 
@@ -90,6 +104,49 @@ const STEPS: Step[] = [
   },
 ];
 
+// Animation delay per item for stagger effect
+const getStaggerDelay = (index: number): number => 100 + index * 60;
+
+// Current step pulse indicator component
+function PulseIndicator({ color }: { color: string }): React.ReactElement {
+  const pulseScale = useSharedValue(1);
+  const pulseOpacity = useSharedValue(0.6);
+
+  useEffect(() => {
+    pulseScale.value = withRepeat(
+      withSequence(
+        withTiming(1.3, { duration: 1000, easing: Easing.inOut(Easing.ease) }),
+        withTiming(1, { duration: 1000, easing: Easing.inOut(Easing.ease) })
+      ),
+      -1,
+      false
+    );
+    pulseOpacity.value = withRepeat(
+      withSequence(
+        withTiming(0.2, { duration: 1000, easing: Easing.inOut(Easing.ease) }),
+        withTiming(0.6, { duration: 1000, easing: Easing.inOut(Easing.ease) })
+      ),
+      -1,
+      false
+    );
+  }, []);
+
+  const pulseStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: pulseScale.value }],
+    opacity: pulseOpacity.value,
+  }));
+
+  return (
+    <Animated.View
+      style={[
+        styles.pulseIndicator,
+        { backgroundColor: color },
+        pulseStyle,
+      ]}
+    />
+  );
+}
+
 export function StepsOverviewScreen({ userId }: StepsOverviewScreenProps): React.ReactElement {
   const navigation = useNavigation<NavigationProp>();
   const theme = useTheme();
@@ -104,6 +161,7 @@ export function StepsOverviewScreen({ userId }: StepsOverviewScreenProps): React
   };
 
   const handleStepPress = (stepNumber: number): void => {
+    hapticSelection();
     navigation.navigate('StepDetail', { stepNumber });
   };
 
@@ -113,7 +171,8 @@ export function StepsOverviewScreen({ userId }: StepsOverviewScreenProps): React
       edges={['bottom']}
     >
       {/* Header with Progress */}
-      <View
+      <Animated.View
+        entering={FadeInDown.duration(400).delay(100)}
         style={[
           styles.header,
           {
@@ -140,33 +199,51 @@ export function StepsOverviewScreen({ userId }: StepsOverviewScreenProps): React
           Your journey through recovery
         </Text>
 
-        <View style={{ marginTop: theme.spacing.md }}>
-          <View style={[styles.progressHeader, { marginBottom: theme.spacing.sm }]}>
-            <Text
-              style={[
-                theme.typography.label,
-                { color: theme.colors.textSecondary },
-              ]}
-            >
-              Overall Progress
-            </Text>
-            <Text
-              style={[
-                theme.typography.labelLarge,
-                { color: theme.colors.primary },
-              ]}
-            >
-              {Math.round(overallProgress)}%
-            </Text>
-          </View>
-          <ProgressBar
-            progress={overallProgress / 100}
-            color={theme.colors.success}
-            backgroundColor={theme.colors.disabled}
-            height={8}
+        {/* Circular Progress Display */}
+        <Animated.View
+          entering={FadeIn.duration(600).delay(300)}
+          style={styles.progressContainer}
+        >
+          <CircularProgress
+            progress={overallProgress}
+            size={100}
+            strokeWidth={8}
+            progressColor={theme.colors.success}
+            trackColor={theme.colors.surfaceVariant}
+            animated
+            duration={1000}
+            centerContent={
+              <View style={styles.progressCenter}>
+                <Text style={[styles.progressPercent, { color: theme.colors.success }]}>
+                  {Math.round(overallProgress)}%
+                </Text>
+                <Text style={[styles.progressLabel, { color: theme.colors.textSecondary }]}>
+                  Complete
+                </Text>
+              </View>
+            }
           />
-        </View>
-      </View>
+          <View style={styles.progressStats}>
+            <View style={styles.progressStat}>
+              <Text style={[styles.statNumber, { color: theme.colors.success }]}>
+                {stepsCompleted.length}
+              </Text>
+              <Text style={[styles.statLabel, { color: theme.colors.textSecondary }]}>
+                Steps Done
+              </Text>
+            </View>
+            <View style={[styles.statDivider, { backgroundColor: theme.colors.border }]} />
+            <View style={styles.progressStat}>
+              <Text style={[styles.statNumber, { color: theme.colors.primary }]}>
+                {12 - stepsCompleted.length}
+              </Text>
+              <Text style={[styles.statLabel, { color: theme.colors.textSecondary }]}>
+                Remaining
+              </Text>
+            </View>
+          </View>
+        </Animated.View>
+      </Animated.View>
 
       {/* Steps List */}
       <ScrollView
@@ -179,140 +256,180 @@ export function StepsOverviewScreen({ userId }: StepsOverviewScreenProps): React
         accessibilityRole="scrollbar"
         accessibilityLabel="12 Steps list"
       >
-        {STEPS.map((step) => {
+        {STEPS.map((step, index) => {
           const completed = isStepCompleted(step.number);
           const current = isStepCurrent(step.number);
 
           return (
-            <TouchableOpacity
+            <Animated.View
               key={step.number}
-              onPress={() => handleStepPress(step.number)}
-              activeOpacity={0.7}
-              accessibilityLabel={`Step ${step.number}: ${step.title}`}
-              accessibilityRole="button"
-              accessibilityHint="Tap to view step questions and add your answers"
-              accessibilityState={{ selected: current }}
+              entering={FadeInRight.duration(400).delay(getStaggerDelay(index)).springify()}
+              layout={Layout.springify()}
             >
-              <Card
-                variant="interactive"
-                style={[
-                  { marginBottom: theme.spacing.md },
-                  completed && {
-                    backgroundColor: theme.colors.success + '10',
-                  },
-                  current && {
-                    borderWidth: 2,
-                    borderColor: theme.colors.primary,
-                  },
-                ]}
+              <TouchableOpacity
+                onPress={() => handleStepPress(step.number)}
+                activeOpacity={0.7}
+                accessibilityLabel={`Step ${step.number}: ${step.title}`}
+                accessibilityRole="button"
+                accessibilityHint="Tap to view step questions and add your answers"
+                accessibilityState={{ selected: current }}
               >
-                <View style={styles.stepCard}>
-                  {/* Step Number Badge */}
-                  <View
-                    style={[
-                      styles.stepBadge,
-                      {
-                        backgroundColor: completed
-                          ? theme.colors.success
-                          : current
-                          ? theme.colors.primary
-                          : theme.colors.disabled,
-                        width: 52,
-                        height: 52,
-                        borderRadius: 26,
-                      },
-                    ]}
-                  >
-                    {completed ? (
-                      <MaterialCommunityIcons
-                        name="check"
-                        size={28}
-                        color="#FFFFFF"
-                      />
-                    ) : (
-                      <Text
+                <Card
+                  variant="interactive"
+                  style={[
+                    { marginBottom: theme.spacing.md },
+                    completed && {
+                      backgroundColor: theme.colors.success + '10',
+                    },
+                    current && {
+                      borderWidth: 2,
+                      borderColor: theme.colors.primary,
+                    },
+                  ]}
+                >
+                  <View style={styles.stepCard}>
+                    {/* Step Number Badge with Pulse for Current */}
+                    <View style={styles.badgeContainer}>
+                      {current && !completed && (
+                        <PulseIndicator color={theme.colors.primary} />
+                      )}
+                      <Animated.View
+                        entering={FadeIn.duration(300).delay(getStaggerDelay(index) + 100)}
                         style={[
-                          theme.typography.h2,
+                          styles.stepBadge,
                           {
-                            color: current ? '#FFFFFF' : theme.colors.textSecondary,
+                            backgroundColor: completed
+                              ? theme.colors.success
+                              : current
+                              ? theme.colors.primary
+                              : theme.colors.disabled,
+                            width: 52,
+                            height: 52,
+                            borderRadius: 26,
                           },
                         ]}
                       >
-                        {step.number}
-                      </Text>
-                    )}
-                  </View>
-
-                  {/* Step Content */}
-                  <View style={[styles.stepContent, { marginLeft: theme.spacing.md }]}>
-                    <View style={styles.stepHeader}>
-                      <Text
-                        style={[
-                          theme.typography.h3,
-                          { color: theme.colors.text, flex: 1 },
-                        ]}
-                        numberOfLines={2}
-                      >
-                        Step {step.number}: {step.title}
-                      </Text>
-                      <MaterialCommunityIcons
-                        name="chevron-right"
-                        size={24}
-                        color={theme.colors.textSecondary}
-                        style={{ marginLeft: theme.spacing.xs }}
-                      />
+                        {completed ? (
+                          <MaterialCommunityIcons
+                            name="check"
+                            size={28}
+                            color="#FFFFFF"
+                          />
+                        ) : (
+                          <Text
+                            style={[
+                              theme.typography.h2,
+                              {
+                                color: current ? '#FFFFFF' : theme.colors.textSecondary,
+                              },
+                            ]}
+                          >
+                            {step.number}
+                          </Text>
+                        )}
+                      </Animated.View>
                     </View>
 
-                    {/* Current Step Badge */}
-                    {current && !completed && (
-                      <View
-                        style={[
-                          styles.currentBadge,
-                          {
-                            backgroundColor: theme.colors.primary + '20',
-                            paddingHorizontal: theme.spacing.sm,
-                            paddingVertical: theme.spacing.xs,
-                            borderRadius: theme.radius.button,
-                            marginTop: theme.spacing.xs,
-                            alignSelf: 'flex-start',
-                          },
-                        ]}
-                      >
+                    {/* Step Content */}
+                    <View style={[styles.stepContent, { marginLeft: theme.spacing.md }]}>
+                      <View style={styles.stepHeader}>
                         <Text
                           style={[
-                            theme.typography.caption,
-                            { color: theme.colors.primary, fontWeight: '600' },
+                            theme.typography.h3,
+                            { color: theme.colors.text, flex: 1 },
+                          ]}
+                          numberOfLines={2}
+                        >
+                          Step {step.number}: {step.title}
+                        </Text>
+                        <MaterialCommunityIcons
+                          name="chevron-right"
+                          size={24}
+                          color={theme.colors.textSecondary}
+                          style={{ marginLeft: theme.spacing.xs }}
+                        />
+                      </View>
+
+                      {/* Current Step Badge */}
+                      {current && !completed && (
+                        <Animated.View
+                          entering={FadeIn.duration(300).delay(getStaggerDelay(index) + 200)}
+                          style={[
+                            styles.currentBadge,
+                            {
+                              backgroundColor: theme.colors.primary + '20',
+                              paddingHorizontal: theme.spacing.sm,
+                              paddingVertical: theme.spacing.xs,
+                              borderRadius: theme.radius.button,
+                              marginTop: theme.spacing.xs,
+                              alignSelf: 'flex-start',
+                            },
                           ]}
                         >
-                          Current Step
-                        </Text>
-                      </View>
-                    )}
+                          <Text
+                            style={[
+                              theme.typography.caption,
+                              { color: theme.colors.primary, fontWeight: '600' },
+                            ]}
+                          >
+                            Current Step
+                          </Text>
+                        </Animated.View>
+                      )}
 
-                    {/* Step Description */}
-                    <Text
-                      style={[
-                        theme.typography.bodySmall,
-                        {
-                          color: theme.colors.textSecondary,
-                          marginTop: theme.spacing.sm,
-                          fontStyle: 'italic',
-                          lineHeight: 20,
-                        },
-                      ]}
-                      numberOfLines={3}
-                    >
-                      {step.description}
-                    </Text>
+                      {/* Completed Badge */}
+                      {completed && (
+                        <Animated.View
+                          entering={FadeIn.duration(300).delay(getStaggerDelay(index) + 200)}
+                          style={[
+                            styles.currentBadge,
+                            {
+                              backgroundColor: theme.colors.success + '20',
+                              paddingHorizontal: theme.spacing.sm,
+                              paddingVertical: theme.spacing.xs,
+                              borderRadius: theme.radius.button,
+                              marginTop: theme.spacing.xs,
+                              alignSelf: 'flex-start',
+                            },
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              theme.typography.caption,
+                              { color: theme.colors.success, fontWeight: '600' },
+                            ]}
+                          >
+                            Completed
+                          </Text>
+                        </Animated.View>
+                      )}
+
+                      {/* Step Description */}
+                      <Text
+                        style={[
+                          theme.typography.bodySmall,
+                          {
+                            color: theme.colors.textSecondary,
+                            marginTop: theme.spacing.sm,
+                            fontStyle: 'italic',
+                            lineHeight: 20,
+                          },
+                        ]}
+                        numberOfLines={3}
+                      >
+                        {step.description}
+                      </Text>
+                    </View>
                   </View>
-                </View>
-              </Card>
-            </TouchableOpacity>
+                </Card>
+              </TouchableOpacity>
+            </Animated.View>
           );
         })}
 
         {/* Info Footer */}
-        <View
+        <Animated.View
+          entering={FadeIn.duration(400).delay(getStaggerDelay(12))}
           style={[
             styles.infoCard,
             {
@@ -343,7 +460,7 @@ export function StepsOverviewScreen({ userId }: StepsOverviewScreenProps): React
           >
             Tap on any step to begin your step work. Your progress is saved locally and encrypted for privacy.
           </Text>
-        </View>
+        </Animated.View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -356,10 +473,45 @@ const styles = StyleSheet.create({
   header: {
     // Styles defined inline with theme
   },
-  progressHeader: {
+  progressContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    marginTop: 20,
+  },
+  progressCenter: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  progressPercent: {
+    fontSize: 22,
+    fontWeight: '700',
+  },
+  progressLabel: {
+    fontSize: 10,
+    fontWeight: '500',
+    marginTop: 2,
+  },
+  progressStats: {
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    marginLeft: 20,
+  },
+  progressStat: {
+    alignItems: 'center',
+  },
+  statNumber: {
+    fontSize: 24,
+    fontWeight: '700',
+  },
+  statLabel: {
+    fontSize: 11,
+    marginTop: 2,
+  },
+  statDivider: {
+    width: 1,
+    height: 40,
   },
   scrollView: {
     flex: 1,
@@ -370,6 +522,19 @@ const styles = StyleSheet.create({
   stepCard: {
     flexDirection: 'row',
     alignItems: 'flex-start',
+  },
+  badgeContainer: {
+    position: 'relative',
+    width: 52,
+    height: 52,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  pulseIndicator: {
+    position: 'absolute',
+    width: 52,
+    height: 52,
+    borderRadius: 26,
   },
   stepBadge: {
     justifyContent: 'center',

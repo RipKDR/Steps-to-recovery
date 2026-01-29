@@ -10,7 +10,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../../../contexts/AuthContext';
-import { useTheme, Card, Button, Modal } from '../../../design-system';
+import { useTheme, Card, Button, Modal, ProfileSkeleton } from '../../../design-system';
 import { Text } from 'react-native';
 
 interface ListItemProps {
@@ -100,9 +100,12 @@ function Divider(): React.ReactElement {
 export function ProfileScreen(): React.ReactElement {
   const navigation = useNavigation<any>();
   const theme = useTheme();
-  const { user, signOut } = useAuth();
+  const { user, signOut, loading } = useAuth();
   const [signingOut, setSigningOut] = useState(false);
   const [showSignOutModal, setShowSignOutModal] = useState(false);
+
+  // Show skeleton while user data is loading
+  const isLoading = loading && !user;
 
   const handleSignOut = async (): Promise<void> => {
     setSigningOut(true);
@@ -133,33 +136,39 @@ export function ProfileScreen(): React.ReactElement {
           {/* User Profile Card */}
           <Card variant="elevated" style={{ marginBottom: theme.spacing.lg }}>
             <View style={styles.userProfile}>
-              <View
-                style={[
-                  styles.avatarContainer,
-                  {
-                    backgroundColor: theme.colors.primary + '20',
-                    width: 80,
-                    height: 80,
-                    borderRadius: 40,
-                    marginBottom: theme.spacing.md,
-                  },
-                ]}
-              >
-                <MaterialCommunityIcons
-                  name="account-circle"
-                  size={64}
-                  color={theme.colors.primary}
-                />
-              </View>
-              {user && (
-                <Text
-                  style={[
-                    theme.typography.body,
-                    { color: theme.colors.textSecondary, textAlign: 'center' },
-                  ]}
-                >
-                  {user.email}
-                </Text>
+              {isLoading ? (
+                <ProfileSkeleton />
+              ) : (
+                <>
+                  <View
+                    style={[
+                      styles.avatarContainer,
+                      {
+                        backgroundColor: theme.colors.primary + '20',
+                        width: 80,
+                        height: 80,
+                        borderRadius: 40,
+                        marginBottom: theme.spacing.md,
+                      },
+                    ]}
+                  >
+                    <MaterialCommunityIcons
+                      name="account-circle"
+                      size={64}
+                      color={theme.colors.primary}
+                    />
+                  </View>
+                  {user && (
+                    <Text
+                      style={[
+                        theme.typography.body,
+                        { color: theme.colors.textSecondary, textAlign: 'center' },
+                      ]}
+                    >
+                      {user.email}
+                    </Text>
+                  )}
+                </>
               )}
             </View>
           </Card>

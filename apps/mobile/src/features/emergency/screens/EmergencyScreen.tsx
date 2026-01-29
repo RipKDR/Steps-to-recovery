@@ -3,13 +3,22 @@
  * CRITICAL: This screen must be immediately accessible for users in crisis
  * Design: Calming, clear visual hierarchy, large touch targets (≥48x48dp)
  * Accessibility: WCAG AAA compliant, high contrast, clear labels
+ *
+ * Animations: Gentle, slow entrances to avoid jarring the user
  */
 
-import { ScrollView, StyleSheet, View, Linking } from 'react-native';
+import React, { useState, useCallback } from 'react';
+import { ScrollView, StyleSheet, View, Linking, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useTheme, Card, Button } from '../../../design-system';
-import { Text } from 'react-native';
+import Animated, {
+  FadeIn,
+  FadeInDown,
+  FadeInUp,
+  Layout,
+} from 'react-native-reanimated';
+import { useTheme, Card, Button, BreathingCircle } from '../../../design-system';
+import { hapticSelection } from '../../../utils/haptics';
 
 interface EmergencyScreenProps {
   userId: string;
@@ -43,13 +52,28 @@ const CRISIS_HOTLINES: CrisisHotline[] = [
   },
 ];
 
+// Gentle animation timing for crisis context
+const GENTLE_DURATION = 600;
+const getGentleDelay = (index: number): number => 150 + index * 100;
+
 export function EmergencyScreen({ userId: _userId }: EmergencyScreenProps): React.ReactElement {
   const theme = useTheme();
+  const [showBreathingExercise, setShowBreathingExercise] = useState(false);
 
-  const handleCall = (number: string): void => {
+  const handleCall = useCallback((number: string): void => {
+    hapticSelection();
     const phoneNumber = number.replace(/[^0-9]/g, '');
     Linking.openURL(`tel:${phoneNumber}`);
-  };
+  }, []);
+
+  const handleBreathingComplete = useCallback(() => {
+    // Optional: track completion for analytics
+  }, []);
+
+  const toggleBreathingExercise = useCallback(() => {
+    hapticSelection();
+    setShowBreathingExercise(prev => !prev);
+  }, []);
 
   return (
     <SafeAreaView
@@ -61,10 +85,15 @@ export function EmergencyScreen({ userId: _userId }: EmergencyScreenProps): Reac
         contentContainerStyle={styles.contentContainer}
         accessibilityRole="scrollbar"
         accessibilityLabel="Emergency support resources"
+        showsVerticalScrollIndicator={false}
       >
-        {/* Header Section */}
-        <View style={[styles.header, { paddingHorizontal: theme.spacing.lg }]}>
-          <View
+        {/* Header Section - Gentle fade in */}
+        <Animated.View
+          entering={FadeIn.duration(GENTLE_DURATION).delay(100)}
+          style={[styles.header, { paddingHorizontal: theme.spacing.lg }]}
+        >
+          <Animated.View
+            entering={FadeIn.duration(GENTLE_DURATION * 1.5).delay(200)}
             style={[
               styles.iconContainer,
               { backgroundColor: theme.colors.danger + '20' },
@@ -75,8 +104,9 @@ export function EmergencyScreen({ userId: _userId }: EmergencyScreenProps): Reac
               size={48}
               color={theme.colors.danger}
             />
-          </View>
-          <Text
+          </Animated.View>
+          <Animated.Text
+            entering={FadeInDown.duration(GENTLE_DURATION).delay(300)}
             style={[
               theme.typography.h1,
               { color: theme.colors.text, textAlign: 'center', marginTop: theme.spacing.md },
@@ -84,8 +114,9 @@ export function EmergencyScreen({ userId: _userId }: EmergencyScreenProps): Reac
             accessibilityRole="header"
           >
             Emergency Support
-          </Text>
-          <Text
+          </Animated.Text>
+          <Animated.Text
+            entering={FadeInDown.duration(GENTLE_DURATION).delay(400)}
             style={[
               theme.typography.body,
               {
@@ -96,11 +127,14 @@ export function EmergencyScreen({ userId: _userId }: EmergencyScreenProps): Reac
             ]}
           >
             You're not alone. Help is available 24/7.
-          </Text>
-        </View>
+          </Animated.Text>
+        </Animated.View>
 
         {/* Crisis Hotlines Section */}
-        <View style={[styles.section, { paddingHorizontal: theme.spacing.md }]}>
+        <Animated.View
+          entering={FadeInDown.duration(GENTLE_DURATION).delay(500)}
+          style={[styles.section, { paddingHorizontal: theme.spacing.md }]}
+        >
           <Text
             style={[
               theme.typography.h2,
@@ -112,54 +146,121 @@ export function EmergencyScreen({ userId: _userId }: EmergencyScreenProps): Reac
           </Text>
 
           {CRISIS_HOTLINES.map((hotline, index) => (
-            <Card
+            <Animated.View
               key={index}
-              variant="elevated"
-              style={{ marginBottom: theme.spacing.md }}
+              entering={FadeInDown.duration(GENTLE_DURATION).delay(getGentleDelay(index + 4))}
+              layout={Layout.springify()}
             >
-              <View style={styles.hotlineCard}>
-                <View style={styles.hotlineIcon}>
-                  <MaterialCommunityIcons
-                    name={hotline.icon}
-                    size={32}
-                    color={theme.colors.danger}
-                  />
+              <Card
+                variant="elevated"
+                style={{ marginBottom: theme.spacing.md }}
+              >
+                <View style={styles.hotlineCard}>
+                  <View style={styles.hotlineIcon}>
+                    <MaterialCommunityIcons
+                      name={hotline.icon}
+                      size={32}
+                      color={theme.colors.danger}
+                    />
+                  </View>
+                  <View style={styles.hotlineContent}>
+                    <Text
+                      style={[
+                        theme.typography.h3,
+                        { color: theme.colors.text, marginBottom: theme.spacing.xs },
+                      ]}
+                    >
+                      {hotline.name}
+                    </Text>
+                    <Text
+                      style={[
+                        theme.typography.bodySmall,
+                        { color: theme.colors.textSecondary, marginBottom: theme.spacing.md },
+                      ]}
+                    >
+                      {hotline.description}
+                    </Text>
+                    <Button
+                      title={hotline.number}
+                      onPress={() => handleCall(hotline.number)}
+                      variant="danger"
+                      size="large"
+                      fullWidth
+                      icon={<MaterialCommunityIcons name="phone" size={20} color="#FFFFFF" />}
+                      accessibilityLabel={`Call ${hotline.name} at ${hotline.number}`}
+                      accessibilityHint="Initiates a phone call to crisis support"
+                    />
+                  </View>
                 </View>
-                <View style={styles.hotlineContent}>
-                  <Text
-                    style={[
-                      theme.typography.h3,
-                      { color: theme.colors.text, marginBottom: theme.spacing.xs },
-                    ]}
-                  >
-                    {hotline.name}
-                  </Text>
-                  <Text
-                    style={[
-                      theme.typography.bodySmall,
-                      { color: theme.colors.textSecondary, marginBottom: theme.spacing.md },
-                    ]}
-                  >
-                    {hotline.description}
-                  </Text>
-                  <Button
-                    title={hotline.number}
-                    onPress={() => handleCall(hotline.number)}
-                    variant="danger"
-                    size="large"
-                    fullWidth
-                    icon={<MaterialCommunityIcons name="phone" size={20} color="#FFFFFF" />}
-                    accessibilityLabel={`Call ${hotline.name} at ${hotline.number}`}
-                    accessibilityHint="Initiates a phone call to crisis support"
-                  />
-                </View>
-              </View>
-            </Card>
+              </Card>
+            </Animated.View>
           ))}
-        </View>
+        </Animated.View>
+
+        {/* Box Breathing Section with Interactive Animation */}
+        <Animated.View
+          entering={FadeInDown.duration(GENTLE_DURATION).delay(800)}
+          style={[styles.section, { paddingHorizontal: theme.spacing.md }]}
+        >
+          <Text
+            style={[
+              theme.typography.h2,
+              { color: theme.colors.text, marginBottom: theme.spacing.md },
+            ]}
+            accessibilityRole="header"
+          >
+            Calming Exercise
+          </Text>
+
+          <Card variant="elevated" style={{ marginBottom: theme.spacing.md }}>
+            <View style={styles.breathingSection}>
+              <Text
+                style={[
+                  theme.typography.h3,
+                  { color: theme.colors.text, marginBottom: theme.spacing.xs, textAlign: 'center' },
+                ]}
+              >
+                Box Breathing
+              </Text>
+              <Text
+                style={[
+                  theme.typography.bodySmall,
+                  { color: theme.colors.textSecondary, marginBottom: theme.spacing.lg, textAlign: 'center' },
+                ]}
+              >
+                A simple technique to calm your nervous system
+              </Text>
+
+              {/* Interactive Breathing Circle */}
+              <View style={styles.breathingContainer}>
+                <BreathingCircle
+                  size={200}
+                  cycles={4}
+                  phaseDuration={4000}
+                  color={theme.colors.secondary}
+                  autoStart={false}
+                  onComplete={handleBreathingComplete}
+                  testID="emergency-breathing-circle"
+                />
+              </View>
+
+              <Text
+                style={[
+                  theme.typography.caption,
+                  { color: theme.colors.textSecondary, marginTop: theme.spacing.md, textAlign: 'center', fontStyle: 'italic' },
+                ]}
+              >
+                Tap the circle to start • 4 cycles recommended
+              </Text>
+            </View>
+          </Card>
+        </Animated.View>
 
         {/* Grounding Techniques Section */}
-        <View style={[styles.section, { paddingHorizontal: theme.spacing.md }]}>
+        <Animated.View
+          entering={FadeInDown.duration(GENTLE_DURATION).delay(900)}
+          style={[styles.section, { paddingHorizontal: theme.spacing.md }]}
+        >
           <Text
             style={[
               theme.typography.h2,
@@ -171,107 +272,72 @@ export function EmergencyScreen({ userId: _userId }: EmergencyScreenProps): Reac
           </Text>
 
           {/* 5-4-3-2-1 Grounding */}
-          <Card variant="elevated" style={{ marginBottom: theme.spacing.md }}>
-            <Text
-              style={[
-                theme.typography.h3,
-                { color: theme.colors.text, marginBottom: theme.spacing.sm },
-              ]}
-            >
-              5-4-3-2-1 Grounding
-            </Text>
-            <Text
-              style={[
-                theme.typography.bodySmall,
-                { color: theme.colors.textSecondary, marginBottom: theme.spacing.sm },
-              ]}
-            >
-              Use your senses to anchor yourself in the present moment:
-            </Text>
-            {[
-              { count: '5', sense: 'things you can see' },
-              { count: '4', sense: 'things you can touch' },
-              { count: '3', sense: 'things you can hear' },
-              { count: '2', sense: 'things you can smell' },
-              { count: '1', sense: 'thing you can taste' },
-            ].map((step, index) => (
-              <View key={index} style={styles.techniqueStep}>
-                <Text
-                  style={[
-                    theme.typography.labelLarge,
-                    { color: theme.colors.primary, width: 28 },
-                  ]}
+          <Animated.View
+            entering={FadeInDown.duration(GENTLE_DURATION).delay(950)}
+          >
+            <Card variant="elevated" style={{ marginBottom: theme.spacing.md }}>
+              <Text
+                style={[
+                  theme.typography.h3,
+                  { color: theme.colors.text, marginBottom: theme.spacing.sm },
+                ]}
+              >
+                5-4-3-2-1 Grounding
+              </Text>
+              <Text
+                style={[
+                  theme.typography.bodySmall,
+                  { color: theme.colors.textSecondary, marginBottom: theme.spacing.sm },
+                ]}
+              >
+                Use your senses to anchor yourself in the present moment:
+              </Text>
+              {[
+                { count: '5', sense: 'things you can see', color: theme.colors.primary },
+                { count: '4', sense: 'things you can touch', color: theme.colors.secondary },
+                { count: '3', sense: 'things you can hear', color: theme.colors.success },
+                { count: '2', sense: 'things you can smell', color: theme.colors.warning },
+                { count: '1', sense: 'thing you can taste', color: theme.colors.danger },
+              ].map((step, index) => (
+                <Animated.View
+                  key={index}
+                  entering={FadeIn.duration(400).delay(1000 + index * 80)}
+                  style={styles.techniqueStep}
                 >
-                  {step.count}
-                </Text>
-                <Text
-                  style={[
-                    theme.typography.body,
-                    { color: theme.colors.text, flex: 1 },
-                  ]}
-                >
-                  {step.sense}
-                </Text>
-              </View>
-            ))}
-          </Card>
-
-          {/* Box Breathing */}
-          <Card variant="elevated" style={{ marginBottom: theme.spacing.md }}>
-            <Text
-              style={[
-                theme.typography.h3,
-                { color: theme.colors.text, marginBottom: theme.spacing.sm },
-              ]}
-            >
-              Box Breathing
-            </Text>
-            <Text
-              style={[
-                theme.typography.bodySmall,
-                { color: theme.colors.textSecondary, marginBottom: theme.spacing.sm },
-              ]}
-            >
-              A simple breathing technique to calm your nervous system:
-            </Text>
-            {[
-              'Breathe in for 4 seconds',
-              'Hold for 4 seconds',
-              'Breathe out for 4 seconds',
-              'Hold for 4 seconds',
-            ].map((instruction, index) => (
-              <View key={index} style={styles.techniqueStep}>
-                <Text
-                  style={[
-                    theme.typography.labelLarge,
-                    { color: theme.colors.secondary, width: 28 },
-                  ]}
-                >
-                  {index + 1}.
-                </Text>
-                <Text
-                  style={[
-                    theme.typography.body,
-                    { color: theme.colors.text, flex: 1 },
-                  ]}
-                >
-                  {instruction}
-                </Text>
-              </View>
-            ))}
-            <Text
-              style={[
-                theme.typography.bodySmall,
-                { color: theme.colors.textSecondary, marginTop: theme.spacing.sm, fontStyle: 'italic' },
-              ]}
-            >
-              Repeat this cycle 4 times
-            </Text>
-          </Card>
-        </View>
+                  <View
+                    style={[
+                      styles.groundingBadge,
+                      { backgroundColor: step.color + '20' },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        theme.typography.labelLarge,
+                        { color: step.color },
+                      ]}
+                    >
+                      {step.count}
+                    </Text>
+                  </View>
+                  <Text
+                    style={[
+                      theme.typography.body,
+                      { color: theme.colors.text, flex: 1 },
+                    ]}
+                  >
+                    {step.sense}
+                  </Text>
+                </Animated.View>
+              ))}
+            </Card>
+          </Animated.View>
+        </Animated.View>
 
         {/* Immediate Actions Section */}
-        <View style={[styles.section, { paddingHorizontal: theme.spacing.md }]}>
+        <Animated.View
+          entering={FadeInDown.duration(GENTLE_DURATION).delay(1100)}
+          style={[styles.section, { paddingHorizontal: theme.spacing.md }]}
+        >
           <Text
             style={[
               theme.typography.h2,
@@ -299,7 +365,11 @@ export function EmergencyScreen({ userId: _userId }: EmergencyScreenProps): Reac
               'Practice deep breathing',
               'Remember: This feeling is temporary',
             ].map((action, index) => (
-              <View key={index} style={styles.actionItem}>
+              <Animated.View
+                key={index}
+                entering={FadeIn.duration(400).delay(1200 + index * 60)}
+                style={styles.actionItem}
+              >
                 <MaterialCommunityIcons
                   name="check-circle"
                   size={20}
@@ -314,42 +384,48 @@ export function EmergencyScreen({ userId: _userId }: EmergencyScreenProps): Reac
                 >
                   {action}
                 </Text>
-              </View>
+              </Animated.View>
             ))}
           </Card>
-        </View>
+        </Animated.View>
 
-        {/* Safety Reminder */}
-        <View style={[styles.reminderCard, {
-          backgroundColor: theme.colors.success + '15',
-          marginHorizontal: theme.spacing.md,
-          marginBottom: theme.spacing.xl,
-          padding: theme.spacing.md,
-          borderRadius: theme.radius.card,
-        }]}>
+        {/* Safety Reminder - Final gentle entrance */}
+        <Animated.View
+          entering={FadeInUp.duration(GENTLE_DURATION * 1.2).delay(1400)}
+          style={[
+            styles.reminderCard,
+            {
+              backgroundColor: theme.colors.success + '15',
+              marginHorizontal: theme.spacing.md,
+              marginBottom: theme.spacing.xl,
+              padding: theme.spacing.lg,
+              borderRadius: theme.radius.card,
+            },
+          ]}
+        >
           <MaterialCommunityIcons
             name="head-heart"
-            size={28}
+            size={32}
             color={theme.colors.success}
             style={{ marginBottom: theme.spacing.sm }}
           />
           <Text
             style={[
-              theme.typography.label,
-              { color: theme.colors.success, marginBottom: theme.spacing.xs },
+              theme.typography.title3,
+              { color: theme.colors.success, marginBottom: theme.spacing.xs, textAlign: 'center' },
             ]}
           >
             You are stronger than you know
           </Text>
           <Text
             style={[
-              theme.typography.bodySmall,
-              { color: theme.colors.text, textAlign: 'center', lineHeight: 20 },
+              theme.typography.body,
+              { color: theme.colors.text, textAlign: 'center', lineHeight: 22 },
             ]}
           >
             Every moment you choose recovery is a victory. This crisis will pass, and you have the tools to get through it.
           </Text>
-        </View>
+        </Animated.View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -390,10 +466,26 @@ const styles = StyleSheet.create({
   hotlineContent: {
     flex: 1,
   },
+  breathingSection: {
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  breathingContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   techniqueStep: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 8,
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  groundingBadge: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
   },
   actionItem: {
     flexDirection: 'row',

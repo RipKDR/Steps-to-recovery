@@ -68,3 +68,6 @@ export type { ContextMenuProps, ContextMenuItem } from './ContextMenu';
 
 export { BreathingCircle } from './BreathingCircle';
 export type { BreathingCircleProps } from './BreathingCircle';
+
+export { Skeleton, SkeletonGroup, ProfileSkeleton, CardSkeleton } from './Skeleton';
+export type { SkeletonProps, SkeletonGroupProps } from './Skeleton';

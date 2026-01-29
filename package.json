@@ -18,10 +18,10 @@
     "lint-staged": "lint-staged",
     "validate-env": "node scripts/validate-env.js",
     "clean": "turbo run clean",
-    "mobile": "cd apps/mobile && npm start",
-    "web": "cd apps/mobile && npm run web",
-    "android": "cd apps/mobile && npx expo run:android",
-    "ios": "cd apps/mobile && npx expo run:ios",
+    "mobile": "npm start --workspace=mobile",
+    "web": "npm run web --workspace=mobile",
+    "android": "npm run android --workspace=mobile",
+    "ios": "npm run ios --workspace=mobile",
     "prepare": "husky install"
   },
   "devDependencies": {

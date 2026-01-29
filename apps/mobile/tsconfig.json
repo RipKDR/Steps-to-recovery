@@ -6,7 +6,10 @@
     "forceConsistentCasingInFileNames": true,
     "allowJs": false,
     "target": "es2020",
-    "lib": ["es2020", "dom"],
+    "lib": [
+      "es2020",
+      "dom"
+    ],
     "module": "esnext",
     "moduleResolution": "bundler",
     "resolveJsonModule": true,
@@ -16,13 +19,27 @@
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "paths": {
-      "@/*": ["./src/*"],
-      "@/components/*": ["./src/components/*"],
-      "@/lib/*": ["./src/lib/*"],
-      "@/design-system": ["./src/design-system/index.ts"],
-      "@/design-system/*": ["./src/design-system/*"],
-      "@recovery/shared/*": ["../../packages/shared/src/*"],
-      "@recovery/shared": ["../../packages/shared/src/index.ts"]
+      "@/*": [
+        "./src/*"
+      ],
+      "@/components/*": [
+        "./src/components/*"
+      ],
+      "@/lib/*": [
+        "./src/lib/*"
+      ],
+      "@/design-system": [
+        "./src/design-system/index.ts"
+      ],
+      "@/design-system/*": [
+        "./src/design-system/*"
+      ],
+      "@recovery/shared/*": [
+        "../../packages/shared/src/*"
+      ],
+      "@recovery/shared": [
+        "../../packages/shared/src/index.ts"
+      ]
     }
   },
   "include": [
@@ -44,5 +61,6 @@
     "**/*.test.tsx",
     "../../_bmad-output"
   ],
-  "types": [] // This prevents automatic inclusion of all @types packages
+  "types": [],
+  "extends": "expo/tsconfig.base"
 }
