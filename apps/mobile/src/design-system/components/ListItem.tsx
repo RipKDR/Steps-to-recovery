@@ -4,14 +4,7 @@
  */
 
 import React from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  ViewStyle,
-  Pressable,
-} from 'react-native';
+import { View, Text, StyleSheet, ViewStyle, Pressable } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useTheme } from '../hooks/useTheme';
 
@@ -61,7 +54,7 @@ export function ListItem({
         <View style={styles.leftContainer}>
           {leftElement || (
             <MaterialIcons
-              name={icon as any}
+              name={icon as keyof typeof MaterialIcons.glyphMap}
               size={24}
               color={iconColor || theme.colors.primary}
             />
@@ -82,11 +75,7 @@ export function ListItem({
         </Text>
         {value && (
           <Text
-            style={[
-              theme.typography.caption,
-              { color: theme.colors.textSecondary },
-              styles.value,
-            ]}
+            style={[theme.typography.caption, { color: theme.colors.textSecondary }, styles.value]}
             numberOfLines={1}
           >
             {value}
@@ -98,11 +87,7 @@ export function ListItem({
       {rightElement || showChevron ? (
         <View style={styles.rightContainer}>
           {rightElement || (
-            <MaterialIcons
-              name="chevron-right"
-              size={24}
-              color={theme.colors.textSecondary}
-            />
+            <MaterialIcons name="chevron-right" size={24} color={theme.colors.textSecondary} />
           )}
         </View>
       ) : null}
@@ -119,9 +104,7 @@ export function ListItem({
         accessibilityLabel={accessibilityLabel || label}
         accessibilityHint={accessibilityHint}
         accessibilityState={{ disabled }}
-        style={({ pressed }) => [
-          pressed && { opacity: 0.6 },
-        ]}
+        style={({ pressed }) => [pressed && { opacity: 0.6 }]}
       >
         {content}
       </Pressable>

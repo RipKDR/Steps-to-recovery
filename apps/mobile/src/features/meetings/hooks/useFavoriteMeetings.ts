@@ -11,7 +11,7 @@ import { useAuth } from '../../../contexts/AuthContext';
 import { logger } from '../../../utils/logger';
 import { encryptContent, decryptContent } from '../../../utils/encryption';
 import { addToSyncQueue } from '../../../services/syncService';
-import type { FavoriteMeeting, MeetingWithDetails } from '../types/meeting';
+import type { FavoriteMeeting } from '../types/meeting';
 
 /**
  * Generate a UUID v4
@@ -60,7 +60,7 @@ export function useFavoriteMeetings(): UseFavoriteMeetingsReturn {
 
       const favorites = await db.getAllAsync<FavoriteMeeting>(
         'SELECT * FROM favorite_meetings WHERE user_id = ? ORDER BY created_at DESC',
-        [user.id]
+        [user.id],
       );
 
       return favorites;
@@ -72,13 +72,7 @@ export function useFavoriteMeetings(): UseFavoriteMeetingsReturn {
    * Add a meeting to favorites
    */
   const addFavoriteMutation = useMutation({
-    mutationFn: async ({
-      meetingId,
-      notes,
-    }: {
-      meetingId: string;
-      notes?: string;
-    }) => {
+    mutationFn: async ({ meetingId, notes }: { meetingId: string; notes?: string }) => {
       if (!db || !user) {
         throw new Error('Database or user not initialized');
       }
@@ -86,7 +80,7 @@ export function useFavoriteMeetings(): UseFavoriteMeetingsReturn {
       // Check if already favorited
       const existing = await db.getFirstAsync<FavoriteMeeting>(
         'SELECT * FROM favorite_meetings WHERE user_id = ? AND meeting_id = ?',
-        [user.id, meetingId]
+        [user.id, meetingId],
       );
 
       if (existing) {
@@ -108,7 +102,7 @@ export function useFavoriteMeetings(): UseFavoriteMeetingsReturn {
           id, user_id, meeting_id, encrypted_notes,
           notification_enabled, created_at, sync_status, supabase_id
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-        [id, user.id, meetingId, encryptedNotes, 0, now, 'pending', null]
+        [id, user.id, meetingId, encryptedNotes, 0, now, 'pending', null],
       );
 
       // Add to sync queue
@@ -134,7 +128,7 @@ export function useFavoriteMeetings(): UseFavoriteMeetingsReturn {
       // Get the favorite record
       const favorite = await db.getFirstAsync<FavoriteMeeting>(
         'SELECT * FROM favorite_meetings WHERE user_id = ? AND meeting_id = ?',
-        [user.id, meetingId]
+        [user.id, meetingId],
       );
 
       if (!favorite) {
@@ -142,10 +136,10 @@ export function useFavoriteMeetings(): UseFavoriteMeetingsReturn {
       }
 
       // Delete from local database
-      await db.runAsync(
-        'DELETE FROM favorite_meetings WHERE user_id = ? AND meeting_id = ?',
-        [user.id, meetingId]
-      );
+      await db.runAsync('DELETE FROM favorite_meetings WHERE user_id = ? AND meeting_id = ?', [
+        user.id,
+        meetingId,
+      ]);
 
       // Add delete to sync queue (if it was synced to Supabase)
       if (favorite.supabase_id) {
@@ -161,7 +155,7 @@ export function useFavoriteMeetings(): UseFavoriteMeetingsReturn {
             favorite.supabase_id,
             new Date().toISOString(),
             0,
-          ]
+          ],
         );
       }
 
@@ -176,13 +170,7 @@ export function useFavoriteMeetings(): UseFavoriteMeetingsReturn {
    * Update notes for a favorited meeting
    */
   const updateNotesMutation = useMutation({
-    mutationFn: async ({
-      meetingId,
-      notes,
-    }: {
-      meetingId: string;
-      notes: string;
-    }) => {
+    mutationFn: async ({ meetingId, notes }: { meetingId: string; notes: string }) => {
       if (!db || !user) {
         throw new Error('Database or user not initialized');
       }
@@ -190,7 +178,7 @@ export function useFavoriteMeetings(): UseFavoriteMeetingsReturn {
       // Get the favorite record
       const favorite = await db.getFirstAsync<FavoriteMeeting>(
         'SELECT * FROM favorite_meetings WHERE user_id = ? AND meeting_id = ?',
-        [user.id, meetingId]
+        [user.id, meetingId],
       );
 
       if (!favorite) {
@@ -198,16 +186,14 @@ export function useFavoriteMeetings(): UseFavoriteMeetingsReturn {
       }
 
       // Encrypt notes
-      const encryptedNotes = notes.trim()
-        ? await encryptContent(notes.trim())
-        : null;
+      const encryptedNotes = notes.trim() ? await encryptContent(notes.trim()) : null;
 
       // Update in local database
       await db.runAsync(
         `UPDATE favorite_meetings
          SET encrypted_notes = ?, sync_status = 'pending'
          WHERE user_id = ? AND meeting_id = ?`,
-        [encryptedNotes, user.id, meetingId]
+        [encryptedNotes, user.id, meetingId],
       );
 
       // Add to sync queue
@@ -227,7 +213,7 @@ export function useFavoriteMeetings(): UseFavoriteMeetingsReturn {
     (meetingId: string): boolean => {
       return favoriteMeetings.some((fav) => fav.meeting_id === meetingId);
     },
-    [favoriteMeetings]
+    [favoriteMeetings],
   );
 
   /**
@@ -235,9 +221,7 @@ export function useFavoriteMeetings(): UseFavoriteMeetingsReturn {
    */
   const getFavoriteNotes = useCallback(
     async (meetingId: string): Promise<string | null> => {
-      const favorite = favoriteMeetings.find(
-        (fav) => fav.meeting_id === meetingId
-      );
+      const favorite = favoriteMeetings.find((fav) => fav.meeting_id === meetingId);
 
       if (!favorite || !favorite.encrypted_notes) {
         return null;
@@ -251,7 +235,7 @@ export function useFavoriteMeetings(): UseFavoriteMeetingsReturn {
         return null;
       }
     },
-    [favoriteMeetings]
+    [favoriteMeetings],
   );
 
   return {
@@ -262,19 +246,19 @@ export function useFavoriteMeetings(): UseFavoriteMeetingsReturn {
       async (meetingId: string, notes?: string) => {
         await addFavoriteMutation.mutateAsync({ meetingId, notes });
       },
-      [addFavoriteMutation]
+      [addFavoriteMutation],
     ),
     removeFavorite: useCallback(
       async (meetingId: string) => {
         await removeFavoriteMutation.mutateAsync(meetingId);
       },
-      [removeFavoriteMutation]
+      [removeFavoriteMutation],
     ),
     updateNotes: useCallback(
       async (meetingId: string, notes: string) => {
         await updateNotesMutation.mutateAsync({ meetingId, notes });
       },
-      [updateNotesMutation]
+      [updateNotesMutation],
     ),
     isFavorite,
     getFavoriteNotes,

@@ -7,16 +7,11 @@
  * Animations: Gentle, slow entrances to avoid jarring the user
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useCallback } from 'react';
 import { ScrollView, StyleSheet, View, Linking, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import Animated, {
-  FadeIn,
-  FadeInDown,
-  FadeInUp,
-  Layout,
-} from 'react-native-reanimated';
+import Animated, { FadeIn, FadeInDown, FadeInUp, Layout } from 'react-native-reanimated';
 import { useTheme, Card, Button, BreathingCircle } from '../../../design-system';
 import { hapticSelection } from '../../../utils/haptics';
 
@@ -58,7 +53,6 @@ const getGentleDelay = (index: number): number => 150 + index * 100;
 
 export function EmergencyScreen({ userId: _userId }: EmergencyScreenProps): React.ReactElement {
   const theme = useTheme();
-  const [showBreathingExercise, setShowBreathingExercise] = useState(false);
 
   const handleCall = useCallback((number: string): void => {
     hapticSelection();
@@ -68,11 +62,6 @@ export function EmergencyScreen({ userId: _userId }: EmergencyScreenProps): Reac
 
   const handleBreathingComplete = useCallback(() => {
     // Optional: track completion for analytics
-  }, []);
-
-  const toggleBreathingExercise = useCallback(() => {
-    hapticSelection();
-    setShowBreathingExercise(prev => !prev);
   }, []);
 
   return (
@@ -94,16 +83,9 @@ export function EmergencyScreen({ userId: _userId }: EmergencyScreenProps): Reac
         >
           <Animated.View
             entering={FadeIn.duration(GENTLE_DURATION * 1.5).delay(200)}
-            style={[
-              styles.iconContainer,
-              { backgroundColor: theme.colors.danger + '20' },
-            ]}
+            style={[styles.iconContainer, { backgroundColor: theme.colors.danger + '20' }]}
           >
-            <MaterialCommunityIcons
-              name="phone-alert"
-              size={48}
-              color={theme.colors.danger}
-            />
+            <MaterialCommunityIcons name="phone-alert" size={48} color={theme.colors.danger} />
           </Animated.View>
           <Animated.Text
             entering={FadeInDown.duration(GENTLE_DURATION).delay(300)}
@@ -151,10 +133,7 @@ export function EmergencyScreen({ userId: _userId }: EmergencyScreenProps): Reac
               entering={FadeInDown.duration(GENTLE_DURATION).delay(getGentleDelay(index + 4))}
               layout={Layout.springify()}
             >
-              <Card
-                variant="elevated"
-                style={{ marginBottom: theme.spacing.md }}
-              >
+              <Card variant="elevated" style={{ marginBottom: theme.spacing.md }}>
                 <View style={styles.hotlineCard}>
                   <View style={styles.hotlineIcon}>
                     <MaterialCommunityIcons
@@ -225,7 +204,11 @@ export function EmergencyScreen({ userId: _userId }: EmergencyScreenProps): Reac
               <Text
                 style={[
                   theme.typography.bodySmall,
-                  { color: theme.colors.textSecondary, marginBottom: theme.spacing.lg, textAlign: 'center' },
+                  {
+                    color: theme.colors.textSecondary,
+                    marginBottom: theme.spacing.lg,
+                    textAlign: 'center',
+                  },
                 ]}
               >
                 A simple technique to calm your nervous system
@@ -247,7 +230,12 @@ export function EmergencyScreen({ userId: _userId }: EmergencyScreenProps): Reac
               <Text
                 style={[
                   theme.typography.caption,
-                  { color: theme.colors.textSecondary, marginTop: theme.spacing.md, textAlign: 'center', fontStyle: 'italic' },
+                  {
+                    color: theme.colors.textSecondary,
+                    marginTop: theme.spacing.md,
+                    textAlign: 'center',
+                    fontStyle: 'italic',
+                  },
                 ]}
               >
                 Tap the circle to start • 4 cycles recommended
@@ -272,9 +260,7 @@ export function EmergencyScreen({ userId: _userId }: EmergencyScreenProps): Reac
           </Text>
 
           {/* 5-4-3-2-1 Grounding */}
-          <Animated.View
-            entering={FadeInDown.duration(GENTLE_DURATION).delay(950)}
-          >
+          <Animated.View entering={FadeInDown.duration(GENTLE_DURATION).delay(950)}>
             <Card variant="elevated" style={{ marginBottom: theme.spacing.md }}>
               <Text
                 style={[
@@ -304,27 +290,12 @@ export function EmergencyScreen({ userId: _userId }: EmergencyScreenProps): Reac
                   entering={FadeIn.duration(400).delay(1000 + index * 80)}
                   style={styles.techniqueStep}
                 >
-                  <View
-                    style={[
-                      styles.groundingBadge,
-                      { backgroundColor: step.color + '20' },
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        theme.typography.labelLarge,
-                        { color: step.color },
-                      ]}
-                    >
+                  <View style={[styles.groundingBadge, { backgroundColor: step.color + '20' }]}>
+                    <Text style={[theme.typography.labelLarge, { color: step.color }]}>
                       {step.count}
                     </Text>
                   </View>
-                  <Text
-                    style={[
-                      theme.typography.body,
-                      { color: theme.colors.text, flex: 1 },
-                    ]}
-                  >
+                  <Text style={[theme.typography.body, { color: theme.colors.text, flex: 1 }]}>
                     {step.sense}
                   </Text>
                 </Animated.View>
@@ -376,12 +347,7 @@ export function EmergencyScreen({ userId: _userId }: EmergencyScreenProps): Reac
                   color={theme.colors.success}
                   style={{ marginRight: theme.spacing.sm }}
                 />
-                <Text
-                  style={[
-                    theme.typography.body,
-                    { color: theme.colors.text, flex: 1 },
-                  ]}
-                >
+                <Text style={[theme.typography.body, { color: theme.colors.text, flex: 1 }]}>
                   {action}
                 </Text>
               </Animated.View>
@@ -423,7 +389,8 @@ export function EmergencyScreen({ userId: _userId }: EmergencyScreenProps): Reac
               { color: theme.colors.text, textAlign: 'center', lineHeight: 22 },
             ]}
           >
-            Every moment you choose recovery is a victory. This crisis will pass, and you have the tools to get through it.
+            Every moment you choose recovery is a victory. This crisis will pass, and you have the
+            tools to get through it.
           </Text>
         </Animated.View>
       </ScrollView>

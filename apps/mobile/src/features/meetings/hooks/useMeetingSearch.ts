@@ -6,7 +6,7 @@
  */
 
 import { useCallback } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { useDatabase } from '../../../contexts/DatabaseContext';
 import { logger } from '../../../utils/logger';
 import { searchMeetings } from '../services/meetingGuideApi';
@@ -16,11 +16,7 @@ import {
   isCacheStale,
   generateCacheRegionKey,
 } from '../services/meetingCacheService';
-import type {
-  CachedMeeting,
-  MeetingSearchParams,
-  CacheRegion,
-} from '../types/meeting';
+import type { CachedMeeting, MeetingSearchParams, CacheRegion } from '../types/meeting';
 
 export interface UseMeetingSearchOptions {
   enabled?: boolean; // Whether to auto-fetch (default: false)
@@ -40,11 +36,8 @@ export interface UseMeetingSearchReturn {
  * @param options Configuration options
  * @returns Meeting search state and control functions
  */
-export function useMeetingSearch(
-  options: UseMeetingSearchOptions = {}
-): UseMeetingSearchReturn {
+export function useMeetingSearch(options: UseMeetingSearchOptions = {}): UseMeetingSearchReturn {
   const { db } = useDatabase();
-  const queryClient = useQueryClient();
 
   /**
    * Search for meetings (API call + cache update)
@@ -132,7 +125,7 @@ export function useMeetingSearch(
         throw error;
       }
     },
-    [db]
+    [db],
   );
 
   /**

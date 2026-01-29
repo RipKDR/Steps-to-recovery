@@ -1,7 +1,4 @@
 import * as Crypto from 'expo-crypto';
-import * as SecureStore from 'expo-secure-store';
-import CryptoJS from 'crypto-js';
-import { Platform } from 'react-native';
 import {
   generateEncryptionKey,
   getEncryptionKey,
@@ -15,7 +12,7 @@ import {
 jest.mock('react-native', () => ({
   Platform: {
     OS: 'web',
-    select: (obj: any) => obj.web,
+    select: (obj: { web: unknown }) => obj.web,
   },
 }));
 
@@ -51,7 +48,7 @@ global.crypto = {
     }
     return array;
   }),
-} as any;
+} as Crypto;
 
 // Mock crypto-js is not needed as it's a pure JS library
 // We'll use it as-is for real encryption/decryption
@@ -60,7 +57,6 @@ global.crypto = {
 import { secureStorage } from '../../adapters/secureStorage';
 
 describe('Encryption Utilities', () => {
-  const mockCrypto = Crypto as jest.Mocked<typeof Crypto>;
   const mockSecureStorage = secureStorage as jest.Mocked<typeof secureStorage>;
 
   beforeEach(() => {
@@ -103,7 +99,7 @@ describe('Encryption Utilities', () => {
       expect(mockSecureStorage.setItemAsync).toHaveBeenCalledTimes(1);
       expect(mockSecureStorage.setItemAsync).toHaveBeenCalledWith(
         'journal_encryption_key',
-        expect.any(String)
+        expect.any(String),
       );
     });
 
@@ -751,7 +747,7 @@ With\ttabs\tand\nnewlines\r\n`;
 
       // All should succeed
       expect(results).toHaveLength(10);
-      results.forEach(result => {
+      results.forEach((result) => {
         expect(result).toContain(':');
       });
     });

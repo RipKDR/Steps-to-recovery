@@ -22,12 +22,11 @@ import { MeetingCard } from '../components/MeetingCard';
 import { MeetingFilters } from '../components/MeetingFilters';
 import { useNearbyMeetings } from '../hooks/useNearbyMeetings';
 import type { MeetingWithDetails } from '../types/meeting';
+import type { MeetingsStackParamList } from '../../../navigation/types';
 
-type MeetingFinderScreenProps = NativeStackScreenProps<any, 'MeetingFinder'>;
+type MeetingFinderScreenProps = NativeStackScreenProps<MeetingsStackParamList, 'MeetingFinder'>;
 
-export function MeetingFinderScreen({
-  navigation,
-}: MeetingFinderScreenProps): React.ReactElement {
+export function MeetingFinderScreen({ navigation }: MeetingFinderScreenProps): React.ReactElement {
   const theme = useTheme();
   const [showFilters, setShowFilters] = useState<boolean>(false);
 
@@ -64,7 +63,7 @@ export function MeetingFinderScreen({
     (meeting: MeetingWithDetails): void => {
       navigation.navigate('MeetingDetail', { meetingId: meeting.id });
     },
-    [navigation]
+    [navigation],
   );
 
   const handleFilterPress = useCallback((): void => {
@@ -76,7 +75,7 @@ export function MeetingFinderScreen({
       applyFilters(filters);
       setShowFilters(false);
     },
-    [applyFilters]
+    [applyFilters],
   );
 
   const handleClearFilters = useCallback((): void => {
@@ -189,11 +188,7 @@ export function MeetingFinderScreen({
         data={meetings}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
-          <MeetingCard
-            meeting={item}
-            onPress={() => handleMeetingPress(item)}
-            showFavoriteIcon
-          />
+          <MeetingCard meeting={item} onPress={() => handleMeetingPress(item)} showFavoriteIcon />
         )}
         contentContainerStyle={styles.listContent}
         refreshControl={

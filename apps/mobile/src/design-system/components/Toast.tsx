@@ -4,14 +4,7 @@
  */
 
 import React, { useEffect, useRef } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  Animated,
-  ViewStyle,
-  Platform,
-} from 'react-native';
+import { View, Text, StyleSheet, Animated, ViewStyle, Platform } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useTheme } from '../hooks/useTheme';
 
@@ -139,10 +132,12 @@ export function Toast({
       accessibilityRole="alert"
       accessible={true}
     >
-      <MaterialIcons name={config.icon as any} size={20} color={config.iconColor} />
-      <Text style={[styles.message, theme.typography.body, { color: '#ffffff' }]}>
-        {message}
-      </Text>
+      <MaterialIcons
+        name={config.icon as keyof typeof MaterialIcons.glyphMap}
+        size={20}
+        color={config.iconColor}
+      />
+      <Text style={[styles.message, theme.typography.body, { color: '#ffffff' }]}>{message}</Text>
     </Animated.View>
   );
 }

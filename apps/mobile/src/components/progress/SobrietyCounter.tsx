@@ -19,19 +19,19 @@ interface SobrietyCounterProps {
 }
 
 // Circular progress ring component
-function CircularProgress({ 
-  progress, 
-  size = 180, 
-  strokeWidth = 12 
-}: { 
-  progress: number; 
-  size?: number; 
+function CircularProgress({
+  progress,
+  size = 180,
+  strokeWidth = 12,
+}: {
+  progress: number;
+  size?: number;
   strokeWidth?: number;
 }) {
   const radius = (size - strokeWidth) / 2;
   const circumference = radius * 2 * Math.PI;
-  const strokeDashoffset = circumference - (Math.min(progress, 1) * circumference);
-  
+  const strokeDashoffset = circumference - Math.min(progress, 1) * circumference;
+
   return (
     <View style={{ width: size, height: size }}>
       <Svg width={size} height={size}>
@@ -69,13 +69,13 @@ function CircularProgress({
 }
 
 // Stat item component
-function StatItem({ 
-  icon, 
-  value, 
-  label 
-}: { 
-  icon: React.ComponentProps<typeof Feather>['name']; 
-  value: string | number; 
+function StatItem({
+  icon,
+  value,
+  label,
+}: {
+  icon: React.ComponentProps<typeof Feather>['name'];
+  value: string | number;
   label: string;
 }) {
   return (
@@ -91,25 +91,21 @@ function StatItem({
 
 export const SobrietyCounter = memo(function SobrietyCounter({
   days,
-  hours = 0,
-  minutes = 0,
-  showDetailed = false,
   className = '',
 }: SobrietyCounterProps) {
   // Calculate time units
-  const { weeks, months, years } = useMemo(() => {
+  const { weeks, months } = useMemo(() => {
     const w = Math.floor(days / 7);
     const m = Math.floor(days / 30);
-    const y = Math.floor(days / 365);
-    return { weeks: w, months: m, years: y };
+    return { weeks: w, months: m };
   }, [days]);
 
   // Calculate progress for circular indicator (based on current milestone progress)
   const progress = useMemo(() => {
     // Progress towards next milestone
     const milestones = [1, 7, 14, 30, 60, 90, 180, 365, 730, 1095];
-    const nextMilestone = milestones.find(m => m > days) || days + 30;
-    const prevMilestone = [...milestones].reverse().find(m => m <= days) || 0;
+    const nextMilestone = milestones.find((m) => m > days) || days + 30;
+    const prevMilestone = [...milestones].reverse().find((m) => m <= days) || 0;
     return (days - prevMilestone) / (nextMilestone - prevMilestone);
   }, [days]);
 
@@ -124,7 +120,7 @@ export const SobrietyCounter = memo(function SobrietyCounter({
   const circleSize = Math.min(screenWidth - 80, 200);
 
   return (
-    <View 
+    <View
       className={`bg-navy-800/40 rounded-2xl p-4 border border-surface-700/30 ${className}`}
       accessible
       accessibilityLabel={accessibilityLabel}
@@ -139,7 +135,7 @@ export const SobrietyCounter = memo(function SobrietyCounter({
             <Text className="text-surface-500 text-xs">Continuous, from your last reset</Text>
           </View>
         </View>
-        
+
         {/* Streak Badge */}
         <View className="flex-row items-center gap-1 bg-success-500/20 px-3 py-1.5 rounded-full">
           <Feather name="zap" size={14} color="#4ade80" />
@@ -150,11 +146,7 @@ export const SobrietyCounter = memo(function SobrietyCounter({
       {/* Circular Progress with Days */}
       <View className="items-center py-4">
         <View className="relative items-center justify-center">
-          <CircularProgress 
-            progress={progress} 
-            size={circleSize} 
-            strokeWidth={12}
-          />
+          <CircularProgress progress={progress} size={circleSize} strokeWidth={12} />
           <View className="absolute items-center">
             <Feather name="award" size={24} color="#14b8a6" style={{ marginBottom: 4 }} />
             <Text className="text-white text-5xl font-bold">{days}</Text>
@@ -163,7 +155,7 @@ export const SobrietyCounter = memo(function SobrietyCounter({
             </Text>
           </View>
         </View>
-        
+
         {/* Encouraging message */}
         <Text className="text-surface-400 text-sm text-center mt-4 px-4">
           Every day clean is a victory worth celebrating.
@@ -172,23 +164,11 @@ export const SobrietyCounter = memo(function SobrietyCounter({
 
       {/* Stats Row */}
       <View className="flex-row bg-navy-900/40 rounded-xl p-3 mt-2">
-        <StatItem 
-          icon="heart" 
-          value={weeks} 
-          label="Weeks" 
-        />
+        <StatItem icon="heart" value={weeks} label="Weeks" />
         <View className="w-px bg-surface-700/30" />
-        <StatItem 
-          icon="crosshair" 
-          value={`${months}`} 
-          label="Months est." 
-        />
+        <StatItem icon="crosshair" value={`${months}`} label="Months est." />
         <View className="w-px bg-surface-700/30" />
-        <StatItem 
-          icon="zap" 
-          value={days} 
-          label="Day streak" 
-        />
+        <StatItem icon="zap" value={days} label="Day streak" />
       </View>
     </View>
   );

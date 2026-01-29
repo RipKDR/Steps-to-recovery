@@ -53,7 +53,7 @@ export function SponsorScreen(): React.ReactElement {
     title: string,
     message: string,
     action: () => Promise<void>,
-    variant: 'danger' | 'primary' = 'primary'
+    variant: 'danger' | 'primary' = 'primary',
   ): void => {
     setConfirmation({
       visible: true,
@@ -74,12 +74,12 @@ export function SponsorScreen(): React.ReactElement {
           await acceptRequest(id);
           setSuccessMessage('Sponsorship request accepted!');
           setTimeout(() => setSuccessMessage(null), 3000);
-        } catch (error) {
+        } catch {
           // Error handled by hook
         } finally {
           setProcessingId(null);
         }
-      }
+      },
     );
   };
 
@@ -91,13 +91,13 @@ export function SponsorScreen(): React.ReactElement {
         setProcessingId(id);
         try {
           await declineRequest(id);
-        } catch (error) {
+        } catch {
           // Error handled by hook
         } finally {
           setProcessingId(null);
         }
       },
-      'danger'
+      'danger',
     );
   };
 
@@ -112,11 +112,11 @@ export function SponsorScreen(): React.ReactElement {
           await removeSponsor(id);
           setSuccessMessage(isSponsor ? 'Sponsor removed' : 'Sponsee removed');
           setTimeout(() => setSuccessMessage(null), 3000);
-        } catch (error) {
+        } catch {
           // Error handled by hook
         }
       },
-      'danger'
+      'danger',
     );
   };
 
@@ -438,10 +438,7 @@ export function SponsorScreen(): React.ReactElement {
           >
             <MaterialCommunityIcons name="check-circle" size={20} color="#FFFFFF" />
             <Text
-              style={[
-                theme.typography.label,
-                { color: '#FFFFFF', marginLeft: theme.spacing.sm },
-              ]}
+              style={[theme.typography.label, { color: '#FFFFFF', marginLeft: theme.spacing.sm }]}
             >
               {successMessage}
             </Text>

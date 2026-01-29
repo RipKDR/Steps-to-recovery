@@ -37,7 +37,6 @@ function MiniBarChart({
   color: string;
   height?: number;
 }): React.ReactElement {
-  const theme = useTheme();
   const barWidth = Math.max(4, (screenWidth - 100) / Math.max(data.length, 1) - 2);
 
   return (

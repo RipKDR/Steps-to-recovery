@@ -69,7 +69,7 @@ describe('syncService Integration Tests', () => {
           recordId,
           operation,
           expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/), // ISO date
-        ])
+        ]),
       );
       expect(logger.info).toHaveBeenCalledWith('Added to sync queue', {
         tableName,
@@ -101,9 +101,9 @@ describe('syncService Integration Tests', () => {
       const dbError = new Error('Database error');
       mockDb.runAsync.mockRejectedValueOnce(dbError);
 
-      await expect(
-        addToSyncQueue(mockDb, 'journal_entries', 'test-id', 'insert')
-      ).rejects.toThrow('Database error');
+      await expect(addToSyncQueue(mockDb, 'journal_entries', 'test-id', 'insert')).rejects.toThrow(
+        'Database error',
+      );
 
       expect(logger.error).toHaveBeenCalledWith(
         'Failed to add to sync queue',
@@ -111,7 +111,7 @@ describe('syncService Integration Tests', () => {
           tableName: 'journal_entries',
           recordId: 'test-id',
           error: dbError,
-        })
+        }),
       );
     });
   });
@@ -143,7 +143,7 @@ describe('syncService Integration Tests', () => {
       expect(result.success).toBe(true);
       expect(mockDb.getFirstAsync).toHaveBeenCalledWith(
         'SELECT * FROM journal_entries WHERE id = ? AND user_id = ?',
-        [entryId, userId]
+        [entryId, userId],
       );
 
       // Verify Supabase upsert was called
@@ -159,7 +159,7 @@ describe('syncService Integration Tests', () => {
           created_at: localEntry.created_at,
           updated_at: localEntry.updated_at,
         }),
-        { onConflict: 'id' }
+        { onConflict: 'id' },
       );
 
       // Verify local update
@@ -169,7 +169,7 @@ describe('syncService Integration Tests', () => {
           expect.any(String), // supabase_id
           expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/), // updated_at
           entryId,
-        ])
+        ]),
       );
     });
 
@@ -200,7 +200,7 @@ describe('syncService Integration Tests', () => {
           id: existingSupabaseId, // Uses existing UUID
           content: 'updated-body',
         }),
-        { onConflict: 'id' }
+        { onConflict: 'id' },
       );
     });
 
@@ -220,7 +220,7 @@ describe('syncService Integration Tests', () => {
       };
 
       mockDb.getFirstAsync.mockResolvedValueOnce(localEntry);
-      mockDb.runAsync.mockResolvedValueOnce({} as any);
+      mockDb.runAsync.mockResolvedValueOnce(undefined);
 
       await syncJournalEntry(mockDb, entryId, userId);
 
@@ -229,7 +229,7 @@ describe('syncService Integration Tests', () => {
           content: 'encrypted-content-123',
           title: '', // null becomes empty string
         }),
-        { onConflict: 'id' }
+        { onConflict: 'id' },
       );
     });
 
@@ -249,7 +249,7 @@ describe('syncService Integration Tests', () => {
       };
 
       mockDb.getFirstAsync.mockResolvedValueOnce(localEntry);
-      mockDb.runAsync.mockResolvedValueOnce({} as any);
+      mockDb.runAsync.mockResolvedValueOnce(undefined);
 
       await syncJournalEntry(mockDb, entryId, userId);
 
@@ -257,7 +257,7 @@ describe('syncService Integration Tests', () => {
         expect.objectContaining({
           tags: ['encrypted-tags-json-string'], // Wrapped in array
         }),
-        { onConflict: 'id' }
+        { onConflict: 'id' },
       );
     });
 
@@ -277,13 +277,13 @@ describe('syncService Integration Tests', () => {
       };
 
       mockDb.getFirstAsync.mockResolvedValueOnce(localEntry);
-      mockDb.runAsync.mockResolvedValueOnce({} as any);
+      mockDb.runAsync.mockResolvedValueOnce(undefined);
 
       await syncJournalEntry(mockDb, entryId, userId);
 
       expect(mockDb.runAsync).toHaveBeenCalledWith(
         expect.stringContaining("sync_status = 'synced'"),
-        expect.any(Array)
+        expect.any(Array),
       );
     });
 
@@ -303,7 +303,7 @@ describe('syncService Integration Tests', () => {
       };
 
       mockDb.getFirstAsync.mockResolvedValueOnce(localEntry);
-      mockDb.runAsync.mockResolvedValueOnce({} as any);
+      mockDb.runAsync.mockResolvedValueOnce(undefined);
 
       await syncJournalEntry(mockDb, entryId, userId);
 
@@ -348,7 +348,7 @@ describe('syncService Integration Tests', () => {
       expect(result.error).toBe('Supabase connection failed');
       expect(logger.error).toHaveBeenCalledWith(
         'Supabase upsert failed for journal entry',
-        expect.any(Object)
+        expect.any(Object),
       );
       expect(mockDb.runAsync).not.toHaveBeenCalled(); // Should not update local on failure
     });
@@ -363,7 +363,7 @@ describe('syncService Integration Tests', () => {
       expect(result.error).toBe('Database connection lost');
       expect(logger.error).toHaveBeenCalledWith(
         'Failed to sync journal entry',
-        expect.objectContaining({ entryId, error: dbError })
+        expect.objectContaining({ entryId, error: dbError }),
       );
     });
   });
@@ -388,7 +388,7 @@ describe('syncService Integration Tests', () => {
       };
 
       mockDb.getFirstAsync.mockResolvedValueOnce(localStepWork);
-      mockDb.runAsync.mockResolvedValueOnce({} as any);
+      mockDb.runAsync.mockResolvedValueOnce(undefined);
 
       const result = await syncStepWork(mockDb, stepWorkId, userId);
 
@@ -404,7 +404,7 @@ describe('syncService Integration Tests', () => {
           created_at: localStepWork.created_at,
           updated_at: localStepWork.updated_at,
         }),
-        { onConflict: 'id' }
+        { onConflict: 'id' },
       );
     });
 
@@ -424,7 +424,7 @@ describe('syncService Integration Tests', () => {
       };
 
       mockDb.getFirstAsync.mockResolvedValueOnce(localStepWork);
-      mockDb.runAsync.mockResolvedValueOnce({} as any);
+      mockDb.runAsync.mockResolvedValueOnce(undefined);
 
       await syncStepWork(mockDb, stepWorkId, userId);
 
@@ -432,7 +432,7 @@ describe('syncService Integration Tests', () => {
         expect.objectContaining({
           content: 'my-encrypted-answer',
         }),
-        { onConflict: 'id' }
+        { onConflict: 'id' },
       );
     });
 
@@ -453,7 +453,7 @@ describe('syncService Integration Tests', () => {
       };
 
       mockDb.getFirstAsync.mockResolvedValueOnce(completeStepWork);
-      mockDb.runAsync.mockResolvedValueOnce({} as any);
+      mockDb.runAsync.mockResolvedValueOnce(undefined);
 
       await syncStepWork(mockDb, stepWorkId, userId);
 
@@ -461,7 +461,7 @@ describe('syncService Integration Tests', () => {
         expect.objectContaining({
           is_completed: true,
         }),
-        { onConflict: 'id' }
+        { onConflict: 'id' },
       );
 
       jest.clearAllMocks();
@@ -473,7 +473,7 @@ describe('syncService Integration Tests', () => {
       };
 
       mockDb.getFirstAsync.mockResolvedValueOnce(incompleteStepWork);
-      mockDb.runAsync.mockResolvedValueOnce({} as any);
+      mockDb.runAsync.mockResolvedValueOnce(undefined);
 
       await syncStepWork(mockDb, stepWorkId, userId);
 
@@ -481,7 +481,7 @@ describe('syncService Integration Tests', () => {
         expect.objectContaining({
           is_completed: false,
         }),
-        { onConflict: 'id' }
+        { onConflict: 'id' },
       );
     });
 
@@ -501,13 +501,13 @@ describe('syncService Integration Tests', () => {
       };
 
       mockDb.getFirstAsync.mockResolvedValueOnce(localStepWork);
-      mockDb.runAsync.mockResolvedValueOnce({} as any);
+      mockDb.runAsync.mockResolvedValueOnce(undefined);
 
       await syncStepWork(mockDb, stepWorkId, userId);
 
       expect(mockDb.runAsync).toHaveBeenCalledWith(
         expect.stringContaining("sync_status = 'synced'"),
-        expect.any(Array)
+        expect.any(Array),
       );
     });
 
@@ -527,7 +527,7 @@ describe('syncService Integration Tests', () => {
       };
 
       mockDb.getFirstAsync.mockResolvedValueOnce(localStepWork);
-      mockDb.runAsync.mockResolvedValueOnce({} as any);
+      mockDb.runAsync.mockResolvedValueOnce(undefined);
 
       await syncStepWork(mockDb, stepWorkId, userId);
 
@@ -535,7 +535,7 @@ describe('syncService Integration Tests', () => {
         expect.objectContaining({
           content: '', // null → empty string
         }),
-        { onConflict: 'id' }
+        { onConflict: 'id' },
       );
     });
 
@@ -574,7 +574,7 @@ describe('syncService Integration Tests', () => {
       expect(result.error).toBe('Network timeout');
       expect(logger.error).toHaveBeenCalledWith(
         'Supabase upsert failed for step work',
-        expect.any(Object)
+        expect.any(Object),
       );
     });
   });
@@ -609,7 +609,7 @@ describe('syncService Integration Tests', () => {
       };
 
       mockDb.getFirstAsync.mockResolvedValueOnce(checkIn);
-      mockDb.runAsync.mockResolvedValueOnce({} as any);
+      mockDb.runAsync.mockResolvedValueOnce(undefined);
 
       const result = await syncDailyCheckIn(mockDb, checkInId, userId);
 
@@ -617,7 +617,7 @@ describe('syncService Integration Tests', () => {
       expect(mockSupabaseFrom).toHaveBeenCalledWith('daily_checkins');
       expect(mockDb.runAsync).toHaveBeenCalledWith(
         expect.stringContaining("sync_status = 'synced'"),
-        expect.arrayContaining([expect.any(String), checkInId])
+        expect.arrayContaining([expect.any(String), checkInId]),
       );
     });
   });
@@ -674,14 +674,14 @@ describe('syncService Integration Tests', () => {
         sync_status: 'pending',
         supabase_id: null,
       });
-      mockDb.runAsync.mockResolvedValue({} as any);
+      mockDb.runAsync.mockResolvedValue(undefined);
 
       await processSyncQueue(mockDb, userId);
 
       // Verify getAllAsync queried in order
       expect(mockDb.getAllAsync).toHaveBeenCalledWith(
         expect.stringContaining('ORDER BY created_at ASC'),
-        expect.any(Array)
+        expect.any(Array),
       );
     });
 
@@ -692,10 +692,10 @@ describe('syncService Integration Tests', () => {
 
       await processSyncQueue(mockDb, userId, maxBatchSize);
 
-      expect(mockDb.getAllAsync).toHaveBeenCalledWith(
-        expect.stringContaining('LIMIT ?'),
-        [3, maxBatchSize]
-      );
+      expect(mockDb.getAllAsync).toHaveBeenCalledWith(expect.stringContaining('LIMIT ?'), [
+        3,
+        maxBatchSize,
+      ]);
     });
 
     it('should default to maxBatchSize of 50', async () => {
@@ -737,10 +737,11 @@ describe('syncService Integration Tests', () => {
       const result = await processSyncQueue(mockDb, userId);
 
       expect(result.failed).toBe(1);
-      expect(mockDb.runAsync).toHaveBeenCalledWith(
-        expect.stringContaining('UPDATE sync_queue'),
-        [1, 'Network error', queueItem.id]
-      );
+      expect(mockDb.runAsync).toHaveBeenCalledWith(expect.stringContaining('UPDATE sync_queue'), [
+        1,
+        'Network error',
+        queueItem.id,
+      ]);
     });
 
     it('should remove from queue on success', async () => {
@@ -767,15 +768,14 @@ describe('syncService Integration Tests', () => {
         sync_status: 'pending',
         supabase_id: null,
       });
-      mockDb.runAsync.mockResolvedValue({} as any);
+      mockDb.runAsync.mockResolvedValue(undefined);
 
       const result = await processSyncQueue(mockDb, userId);
 
       expect(result.synced).toBe(1);
-      expect(mockDb.runAsync).toHaveBeenCalledWith(
-        'DELETE FROM sync_queue WHERE id = ?',
-        [queueItem.id]
-      );
+      expect(mockDb.runAsync).toHaveBeenCalledWith('DELETE FROM sync_queue WHERE id = ?', [
+        queueItem.id,
+      ]);
     });
 
     it('should stop retrying after 3 attempts', async () => {
@@ -786,7 +786,7 @@ describe('syncService Integration Tests', () => {
 
       expect(mockDb.getAllAsync).toHaveBeenCalledWith(
         expect.stringContaining('WHERE retry_count < ?'),
-        [3, 50]
+        [3, 50],
       );
     });
 
@@ -805,56 +805,54 @@ describe('syncService Integration Tests', () => {
       const result = await processSyncQueue(mockDb, userId);
 
       expect(result.failed).toBe(1);
-      expect(result.errors).toContain('[insert] unknown_table/record-1: Unknown table: unknown_table');
+      expect(result.errors).toContain(
+        '[insert] unknown_table/record-1: Unknown table: unknown_table',
+      );
     });
 
-    it(
-      'should handle exponential backoff delays between retries',
-      async () => {
-        const queueItems = [
-          {
-            id: 'queue-1',
-            table_name: 'journal_entries',
-            record_id: 'entry-1',
-            operation: 'insert',
-            retry_count: 1, // Should delay 2s
-            last_error: 'Previous error',
-          },
-          {
-            id: 'queue-2',
-            table_name: 'journal_entries',
-            record_id: 'entry-2',
-            operation: 'insert',
-            retry_count: 2, // Should delay 4s
-            last_error: 'Previous error',
-          },
-        ];
+    it('should handle exponential backoff delays between retries', async () => {
+      const queueItems = [
+        {
+          id: 'queue-1',
+          table_name: 'journal_entries',
+          record_id: 'entry-1',
+          operation: 'insert',
+          retry_count: 1, // Should delay 2s
+          last_error: 'Previous error',
+        },
+        {
+          id: 'queue-2',
+          table_name: 'journal_entries',
+          record_id: 'entry-2',
+          operation: 'insert',
+          retry_count: 2, // Should delay 4s
+          last_error: 'Previous error',
+        },
+      ];
 
-        mockDb.getAllAsync.mockResolvedValueOnce(queueItems);
-        mockDb.getFirstAsync.mockResolvedValue({
-          id: 'entry-1',
-          user_id: userId,
-          encrypted_title: 'title',
-          encrypted_body: 'body',
-          encrypted_mood: null,
-          encrypted_craving: null,
-          encrypted_tags: null,
-          created_at: '2025-01-01T00:00:00Z',
-          updated_at: '2025-01-01T00:00:00Z',
-          sync_status: 'pending',
-          supabase_id: null,
-        });
-        mockDb.runAsync.mockResolvedValue({} as any);
+      mockDb.getAllAsync.mockResolvedValueOnce(queueItems);
+      mockDb.getFirstAsync.mockResolvedValue({
+        id: 'entry-1',
+        user_id: userId,
+        encrypted_title: 'title',
+        encrypted_body: 'body',
+        encrypted_mood: null,
+        encrypted_craving: null,
+        encrypted_tags: null,
+        created_at: '2025-01-01T00:00:00Z',
+        updated_at: '2025-01-01T00:00:00Z',
+        sync_status: 'pending',
+        supabase_id: null,
+      });
+      mockDb.runAsync.mockResolvedValue(undefined);
 
-        const startTime = Date.now();
-        await processSyncQueue(mockDb, userId);
-        const endTime = Date.now();
+      const startTime = Date.now();
+      await processSyncQueue(mockDb, userId);
+      const endTime = Date.now();
 
-        // Should have waited at least ~3s (1s + 2s) given BASE_BACKOFF_MS = 1000
-        expect(endTime - startTime).toBeGreaterThanOrEqual(2900);
-      },
-      15000
-    ); // 15 second timeout for exponential backoff test
+      // Should have waited at least ~3s (1s + 2s) given BASE_BACKOFF_MS = 1000
+      expect(endTime - startTime).toBeGreaterThanOrEqual(2900);
+    }, 15000); // 15 second timeout for exponential backoff test
 
     it('should process mixed success/failure correctly', async () => {
       const queueItems = [
@@ -896,7 +894,7 @@ describe('syncService Integration Tests', () => {
       // Second item fails (not found)
       mockDb.getFirstAsync.mockResolvedValueOnce(null);
 
-      mockDb.runAsync.mockResolvedValue({} as any);
+      mockDb.runAsync.mockResolvedValue(undefined);
 
       const result = await processSyncQueue(mockDb, userId);
 
@@ -929,7 +927,7 @@ describe('syncService Integration Tests', () => {
         sync_status: 'pending',
         supabase_id: null,
       });
-      mockDb.runAsync.mockResolvedValue({} as any);
+      mockDb.runAsync.mockResolvedValue(undefined);
 
       const result = await processSyncQueue(mockDb, userId);
 
@@ -949,7 +947,7 @@ describe('syncService Integration Tests', () => {
       };
 
       mockDb.getAllAsync.mockResolvedValueOnce([queueItem]);
-      mockDb.runAsync.mockResolvedValue({} as any);
+      mockDb.runAsync.mockResolvedValue(undefined);
 
       const result = await processSyncQueue(mockDb, userId);
 
@@ -1017,7 +1015,7 @@ describe('syncService Integration Tests', () => {
         sync_status: 'pending',
       });
 
-      mockDb.runAsync.mockResolvedValue({} as any);
+      mockDb.runAsync.mockResolvedValue(undefined);
 
       const result = await processSyncQueue(mockDb, userId);
 
@@ -1054,10 +1052,7 @@ describe('syncService Integration Tests', () => {
       expect(result.synced).toBe(0);
       expect(result.failed).toBe(0);
       expect(result.errors).toContain('Database connection lost');
-      expect(logger.error).toHaveBeenCalledWith(
-        'Sync queue processing failed',
-        dbError
-      );
+      expect(logger.error).toHaveBeenCalledWith('Sync queue processing failed', dbError);
     });
   });
 
@@ -1094,10 +1089,11 @@ describe('syncService Integration Tests', () => {
 
       await processSyncQueue(mockDb, userId);
 
-      expect(mockDb.runAsync).toHaveBeenCalledWith(
-        expect.stringContaining('UPDATE sync_queue'),
-        [1, 'Supabase timeout', queueItem.id]
-      );
+      expect(mockDb.runAsync).toHaveBeenCalledWith(expect.stringContaining('UPDATE sync_queue'), [
+        1,
+        'Supabase timeout',
+        queueItem.id,
+      ]);
     });
 
     it('should increment retry_count on network errors', async () => {
@@ -1115,23 +1111,21 @@ describe('syncService Integration Tests', () => {
 
       await processSyncQueue(mockDb, userId);
 
-      expect(mockDb.runAsync).toHaveBeenCalledWith(
-        expect.stringContaining('UPDATE sync_queue'),
-        [2, 'Network timeout', queueItem.id]
-      );
+      expect(mockDb.runAsync).toHaveBeenCalledWith(expect.stringContaining('UPDATE sync_queue'), [
+        2,
+        'Network timeout',
+        queueItem.id,
+      ]);
     });
 
     it('should return error for missing user_id (implicit in sync functions)', async () => {
       // This tests that sync functions require user_id
-      const result = await syncJournalEntry(mockDb, 'entry-1', '');
+      await syncJournalEntry(mockDb, 'entry-1', '');
 
       // Should fail to find entry with empty user_id
       mockDb.getFirstAsync.mockResolvedValueOnce(null);
 
-      expect(mockDb.getFirstAsync).toHaveBeenCalledWith(
-        expect.any(String),
-        ['entry-1', '']
-      );
+      expect(mockDb.getFirstAsync).toHaveBeenCalledWith(expect.any(String), ['entry-1', '']);
     });
   });
 
@@ -1143,10 +1137,7 @@ describe('syncService Integration Tests', () => {
 
       await processSyncQueue(mockDb, userId);
 
-      expect(mockDb.getAllAsync).toHaveBeenCalledWith(
-        expect.stringContaining('LIMIT ?'),
-        [3, 50]
-      );
+      expect(mockDb.getAllAsync).toHaveBeenCalledWith(expect.stringContaining('LIMIT ?'), [3, 50]);
     });
 
     it('should process max 10 items when maxBatchSize is 10', async () => {
@@ -1154,10 +1145,7 @@ describe('syncService Integration Tests', () => {
 
       await processSyncQueue(mockDb, userId, 10);
 
-      expect(mockDb.getAllAsync).toHaveBeenCalledWith(
-        expect.stringContaining('LIMIT ?'),
-        [3, 10]
-      );
+      expect(mockDb.getAllAsync).toHaveBeenCalledWith(expect.stringContaining('LIMIT ?'), [3, 10]);
     });
 
     it('should handle large batches correctly', async () => {
@@ -1184,7 +1172,7 @@ describe('syncService Integration Tests', () => {
         sync_status: 'pending',
         supabase_id: null,
       });
-      mockDb.runAsync.mockResolvedValue({} as any);
+      mockDb.runAsync.mockResolvedValue(undefined);
 
       const result = await processSyncQueue(mockDb, userId);
 
@@ -1205,10 +1193,10 @@ describe('syncService Integration Tests', () => {
       mockDb.getAllAsync.mockResolvedValueOnce(queueItems);
 
       // Fail items 3, 5, 7
-      mockDb.getFirstAsync.mockImplementation(async (query: string, ...params: any[]) => {
+      mockDb.getFirstAsync.mockImplementation(async (query: string, ...params: unknown[]) => {
         // expo-sqlite typings can be either (query, ...bindParams) OR some callers pass a single params array.
-        const bindParams: any[] =
-          params.length === 1 && Array.isArray(params[0]) ? (params[0] as any[]) : params;
+        const bindParams: unknown[] =
+          params.length === 1 && Array.isArray(params[0]) ? (params[0] as unknown[]) : params;
 
         if (!bindParams || bindParams.length === 0) return null;
 
@@ -1230,7 +1218,7 @@ describe('syncService Integration Tests', () => {
           supabase_id: null,
         };
       });
-      mockDb.runAsync.mockResolvedValue({} as any);
+      mockDb.runAsync.mockResolvedValue(undefined);
 
       const result = await processSyncQueue(mockDb, userId);
 

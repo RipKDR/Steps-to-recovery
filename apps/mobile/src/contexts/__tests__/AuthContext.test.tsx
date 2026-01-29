@@ -10,6 +10,7 @@
 
 import React from 'react';
 import { renderHook, act, waitFor } from '@testing-library/react-native';
+import type { Session, User } from '@supabase/supabase-js';
 import { AuthProvider, useAuth } from '../AuthContext';
 
 // Mock dependencies
@@ -58,7 +59,7 @@ describe('AuthContext', () => {
   };
 
   // Auth state change callback holder
-  let authStateCallback: ((event: string, session: any) => void) | null = null;
+  let authStateCallback: ((event: string, session: Session | null) => void) | null = null;
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -140,7 +141,7 @@ describe('AuthContext', () => {
       expect(result.current.session).toEqual(mockSession);
       expect(secureStorage.initializeWithSession).toHaveBeenCalledWith(
         mockUser.id,
-        mockSession.access_token
+        mockSession.access_token,
       );
     });
 
@@ -189,9 +190,15 @@ describe('AuthContext', () => {
 
     it('should set loading state during sign in', async () => {
       // Delay the sign in response
-      let resolveSignIn: (value: any) => void;
+      let resolveSignIn: (value: {
+        data: { session: Session | null; user: User | null };
+        error: null;
+      }) => void;
       (supabase.auth.signInWithPassword as jest.Mock).mockImplementation(
-        () => new Promise((resolve) => { resolveSignIn = resolve; })
+        () =>
+          new Promise((resolve) => {
+            resolveSignIn = resolve;
+          }),
       );
 
       const { result } = renderHook(() => useAuth(), { wrapper });
@@ -233,9 +240,11 @@ describe('AuthContext', () => {
         expect(result.current.initialized).toBe(true);
       });
 
-      await expect(act(async () => {
-        await result.current.signIn('test@example.com', 'wrongpassword');
-      })).rejects.toEqual(mockError);
+      await expect(
+        act(async () => {
+          await result.current.signIn('test@example.com', 'wrongpassword');
+        }),
+      ).rejects.toEqual(mockError);
 
       expect(result.current.error).toEqual(mockError);
       expect(result.current.loading).toBe(false);
@@ -279,9 +288,11 @@ describe('AuthContext', () => {
         expect(result.current.initialized).toBe(true);
       });
 
-      await expect(act(async () => {
-        await result.current.signUp('existing@example.com', 'password123');
-      })).rejects.toEqual(mockError);
+      await expect(
+        act(async () => {
+          await result.current.signUp('existing@example.com', 'password123');
+        }),
+      ).rejects.toEqual(mockError);
 
       expect(result.current.error).toEqual(mockError);
     });
@@ -344,9 +355,11 @@ describe('AuthContext', () => {
         expect(result.current.initialized).toBe(true);
       });
 
-      await expect(act(async () => {
-        await result.current.signOut();
-      })).rejects.toEqual(mockError);
+      await expect(
+        act(async () => {
+          await result.current.signOut();
+        }),
+      ).rejects.toEqual(mockError);
 
       expect(result.current.error).toEqual(mockError);
     });
@@ -386,9 +399,11 @@ describe('AuthContext', () => {
         expect(result.current.initialized).toBe(true);
       });
 
-      await expect(act(async () => {
-        await result.current.resetPassword('unknown@example.com');
-      })).rejects.toEqual(mockError);
+      await expect(
+        act(async () => {
+          await result.current.resetPassword('unknown@example.com');
+        }),
+      ).rejects.toEqual(mockError);
 
       expect(result.current.error).toEqual(mockError);
     });
@@ -436,7 +451,7 @@ describe('AuthContext', () => {
       expect(result.current.session).toEqual(mockSession);
       expect(secureStorage.initializeWithSession).toHaveBeenCalledWith(
         mockUser.id,
-        mockSession.access_token
+        mockSession.access_token,
       );
     });
 
@@ -496,7 +511,7 @@ describe('AuthContext', () => {
 
       expect(secureStorage.initializeWithSession).toHaveBeenCalledWith(
         mockUser.id,
-        'new-access-token'
+        'new-access-token',
       );
     });
   });
@@ -541,9 +556,7 @@ describe('AuthContext', () => {
     });
 
     it('should handle exception in getSession', async () => {
-      (supabase.auth.getSession as jest.Mock).mockRejectedValue(
-        new Error('Unexpected error')
-      );
+      (supabase.auth.getSession as jest.Mock).mockRejectedValue(new Error('Unexpected error'));
 
       const { result } = renderHook(() => useAuth(), { wrapper });
 

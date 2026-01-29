@@ -25,7 +25,7 @@ import Animated, {
   Easing,
 } from 'react-native-reanimated';
 import type { StepsStackParamList } from '../../../navigation/types';
-import { useTheme, Card, ProgressBar, CircularProgress } from '../../../design-system';
+import { useTheme, Card, CircularProgress } from '../../../design-system';
 import { useStepProgress } from '../hooks/useStepWork';
 import { hapticSelection } from '../../../utils/haptics';
 
@@ -45,7 +45,8 @@ const STEPS: Step[] = [
   {
     number: 1,
     title: 'Admit powerlessness',
-    description: 'We admitted we were powerless over our addiction - that our lives had become unmanageable.',
+    description:
+      'We admitted we were powerless over our addiction - that our lives had become unmanageable.',
   },
   {
     number: 2,
@@ -55,7 +56,8 @@ const STEPS: Step[] = [
   {
     number: 3,
     title: 'Decide to turn will over',
-    description: 'Made a decision to turn our will and our lives over to the care of God as we understood Him.',
+    description:
+      'Made a decision to turn our will and our lives over to the care of God as we understood Him.',
   },
   {
     number: 4,
@@ -65,7 +67,8 @@ const STEPS: Step[] = [
   {
     number: 5,
     title: 'Admit wrongs',
-    description: 'Admitted to God, to ourselves, and to another human being the exact nature of our wrongs.',
+    description:
+      'Admitted to God, to ourselves, and to another human being the exact nature of our wrongs.',
   },
   {
     number: 6,
@@ -80,27 +83,32 @@ const STEPS: Step[] = [
   {
     number: 8,
     title: 'Make a list',
-    description: 'Made a list of all persons we had harmed, and became willing to make amends to them all.',
+    description:
+      'Made a list of all persons we had harmed, and became willing to make amends to them all.',
   },
   {
     number: 9,
     title: 'Make amends',
-    description: 'Made direct amends to such people wherever possible, except when to do so would injure them or others.',
+    description:
+      'Made direct amends to such people wherever possible, except when to do so would injure them or others.',
   },
   {
     number: 10,
     title: 'Continue inventory',
-    description: 'Continued to take personal inventory and when we were wrong promptly admitted it.',
+    description:
+      'Continued to take personal inventory and when we were wrong promptly admitted it.',
   },
   {
     number: 11,
     title: 'Seek conscious contact',
-    description: 'Sought through prayer and meditation to improve our conscious contact with God as we understood Him.',
+    description:
+      'Sought through prayer and meditation to improve our conscious contact with God as we understood Him.',
   },
   {
     number: 12,
     title: 'Carry the message',
-    description: 'Having had a spiritual awakening as the result of these steps, we tried to carry this message to addicts.',
+    description:
+      'Having had a spiritual awakening as the result of these steps, we tried to carry this message to addicts.',
   },
 ];
 
@@ -116,18 +124,18 @@ function PulseIndicator({ color }: { color: string }): React.ReactElement {
     pulseScale.value = withRepeat(
       withSequence(
         withTiming(1.3, { duration: 1000, easing: Easing.inOut(Easing.ease) }),
-        withTiming(1, { duration: 1000, easing: Easing.inOut(Easing.ease) })
+        withTiming(1, { duration: 1000, easing: Easing.inOut(Easing.ease) }),
       ),
       -1,
-      false
+      false,
     );
     pulseOpacity.value = withRepeat(
       withSequence(
         withTiming(0.2, { duration: 1000, easing: Easing.inOut(Easing.ease) }),
-        withTiming(0.6, { duration: 1000, easing: Easing.inOut(Easing.ease) })
+        withTiming(0.6, { duration: 1000, easing: Easing.inOut(Easing.ease) }),
       ),
       -1,
-      false
+      false,
     );
   }, []);
 
@@ -136,15 +144,7 @@ function PulseIndicator({ color }: { color: string }): React.ReactElement {
     opacity: pulseOpacity.value,
   }));
 
-  return (
-    <Animated.View
-      style={[
-        styles.pulseIndicator,
-        { backgroundColor: color },
-        pulseStyle,
-      ]}
-    />
-  );
+  return <Animated.View style={[styles.pulseIndicator, { backgroundColor: color }, pulseStyle]} />;
 }
 
 export function StepsOverviewScreen({ userId }: StepsOverviewScreenProps): React.ReactElement {
@@ -200,10 +200,7 @@ export function StepsOverviewScreen({ userId }: StepsOverviewScreenProps): React
         </Text>
 
         {/* Circular Progress Display */}
-        <Animated.View
-          entering={FadeIn.duration(600).delay(300)}
-          style={styles.progressContainer}
-        >
+        <Animated.View entering={FadeIn.duration(600).delay(300)} style={styles.progressContainer}>
           <CircularProgress
             progress={overallProgress}
             size={100}
@@ -248,10 +245,7 @@ export function StepsOverviewScreen({ userId }: StepsOverviewScreenProps): React
       {/* Steps List */}
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={[
-          styles.contentContainer,
-          { paddingHorizontal: theme.spacing.md },
-        ]}
+        contentContainerStyle={[styles.contentContainer, { paddingHorizontal: theme.spacing.md }]}
         showsVerticalScrollIndicator={false}
         accessibilityRole="scrollbar"
         accessibilityLabel="12 Steps list"
@@ -290,9 +284,7 @@ export function StepsOverviewScreen({ userId }: StepsOverviewScreenProps): React
                   <View style={styles.stepCard}>
                     {/* Step Number Badge with Pulse for Current */}
                     <View style={styles.badgeContainer}>
-                      {current && !completed && (
-                        <PulseIndicator color={theme.colors.primary} />
-                      )}
+                      {current && !completed && <PulseIndicator color={theme.colors.primary} />}
                       <Animated.View
                         entering={FadeIn.duration(300).delay(getStaggerDelay(index) + 100)}
                         style={[
@@ -301,8 +293,8 @@ export function StepsOverviewScreen({ userId }: StepsOverviewScreenProps): React
                             backgroundColor: completed
                               ? theme.colors.success
                               : current
-                              ? theme.colors.primary
-                              : theme.colors.disabled,
+                                ? theme.colors.primary
+                                : theme.colors.disabled,
                             width: 52,
                             height: 52,
                             borderRadius: 26,
@@ -310,11 +302,7 @@ export function StepsOverviewScreen({ userId }: StepsOverviewScreenProps): React
                         ]}
                       >
                         {completed ? (
-                          <MaterialCommunityIcons
-                            name="check"
-                            size={28}
-                            color="#FFFFFF"
-                          />
+                          <MaterialCommunityIcons name="check" size={28} color="#FFFFFF" />
                         ) : (
                           <Text
                             style={[
@@ -334,10 +322,7 @@ export function StepsOverviewScreen({ userId }: StepsOverviewScreenProps): React
                     <View style={[styles.stepContent, { marginLeft: theme.spacing.md }]}>
                       <View style={styles.stepHeader}>
                         <Text
-                          style={[
-                            theme.typography.h3,
-                            { color: theme.colors.text, flex: 1 },
-                          ]}
+                          style={[theme.typography.h3, { color: theme.colors.text, flex: 1 }]}
                           numberOfLines={2}
                         >
                           Step {step.number}: {step.title}
@@ -458,7 +443,8 @@ export function StepsOverviewScreen({ userId }: StepsOverviewScreenProps): React
               },
             ]}
           >
-            Tap on any step to begin your step work. Your progress is saved locally and encrypted for privacy.
+            Tap on any step to begin your step work. Your progress is saved locally and encrypted
+            for privacy.
           </Text>
         </Animated.View>
       </ScrollView>

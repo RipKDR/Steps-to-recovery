@@ -10,6 +10,7 @@
  */
 
 import { Platform } from 'react-native';
+import type { SQLiteDatabase } from 'expo-sqlite';
 import type { StorageAdapter } from './types';
 import { logger } from '../../utils/logger';
 
@@ -66,7 +67,7 @@ export async function createStorageAdapter(nativeDb?: unknown): Promise<StorageA
       if (!nativeDb || typeof nativeDb !== 'object') {
         throw new Error(
           'SQLite database instance required for mobile platform. ' +
-          'Ensure SQLiteProvider is properly configured and database is initialized.'
+            'Ensure SQLiteProvider is properly configured and database is initialized.',
         );
       }
 
@@ -74,9 +75,9 @@ export async function createStorageAdapter(nativeDb?: unknown): Promise<StorageA
       const { SQLiteAdapter } = await import('./sqlite');
 
       // Type assertion with runtime validation - expo-sqlite database object
-      // has required methods. Using 'as any' to handle version differences in
+      // has required methods. Using 'as SQLiteDatabase' to handle version differences in
       // expo-sqlite types while maintaining runtime safety.
-      const adapter = new SQLiteAdapter(nativeDb as any);
+      const adapter = new SQLiteAdapter(nativeDb as SQLiteDatabase);
       return adapter;
     }
   } catch (error) {

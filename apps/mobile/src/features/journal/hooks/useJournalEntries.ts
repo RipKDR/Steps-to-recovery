@@ -11,8 +11,12 @@ import type { JournalEntry, JournalEntryDecrypted } from '@recovery/shared/types
 async function decryptJournalEntry(entry: JournalEntry): Promise<JournalEntryDecrypted> {
   const title = entry.encrypted_title ? await decryptContent(entry.encrypted_title) : null;
   const body = await decryptContent(entry.encrypted_body);
-  const mood = entry.encrypted_mood ? parseInt(await decryptContent(entry.encrypted_mood), 10) : null;
-  const craving = entry.encrypted_craving ? parseInt(await decryptContent(entry.encrypted_craving), 10) : null;
+  const mood = entry.encrypted_mood
+    ? parseInt(await decryptContent(entry.encrypted_mood), 10)
+    : null;
+  const craving = entry.encrypted_craving
+    ? parseInt(await decryptContent(entry.encrypted_craving), 10)
+    : null;
   const tags = entry.encrypted_tags ? JSON.parse(await decryptContent(entry.encrypted_tags)) : [];
 
   return {
@@ -40,7 +44,12 @@ export function useJournalEntries(userId: string): {
   refetch: () => Promise<void>;
 } {
   const { db, isReady } = useDatabase();
-  const { data: entries = [], isLoading, error, refetch } = useQuery({
+  const {
+    data: entries = [],
+    isLoading,
+    error,
+    refetch,
+  } = useQuery({
     queryKey: ['journal_entries', userId],
     queryFn: async () => {
       if (!db || !isReady) {
@@ -49,7 +58,7 @@ export function useJournalEntries(userId: string): {
       try {
         const result = await db.getAllAsync<JournalEntry>(
           'SELECT * FROM journal_entries WHERE user_id = ? ORDER BY created_at DESC',
-          [userId]
+          [userId],
         );
 
         const decrypted = await Promise.all(result.map(decryptJournalEntry));
@@ -76,30 +85,54 @@ export function useJournalEntries(userId: string): {
  * Hook to create a new journal entry
  */
 export function useCreateJournalEntry(userId: string): {
-  createEntry: (entry: Omit<JournalEntryDecrypted, 'id' | 'user_id' | 'created_at' | 'updated_at' | 'sync_status' | 'supabase_id'>) => Promise<void>;
+  createEntry: (
+    entry: Omit<
+      JournalEntryDecrypted,
+      'id' | 'user_id' | 'created_at' | 'updated_at' | 'sync_status' | 'supabase_id'
+    >,
+  ) => Promise<void>;
   isPending: boolean;
 } {
-  const { db, isReady } = useDatabase();
+  const { db } = useDatabase();
   const queryClient = useQueryClient();
 
   const mutation = useMutation({
-    mutationFn: async (entry: Omit<JournalEntryDecrypted, 'id' | 'user_id' | 'created_at' | 'updated_at' | 'sync_status' | 'supabase_id'>) => {
+    mutationFn: async (
+      entry: Omit<
+        JournalEntryDecrypted,
+        'id' | 'user_id' | 'created_at' | 'updated_at' | 'sync_status' | 'supabase_id'
+      >,
+    ) => {
       try {
         const id = `journal_${Date.now()}_${Math.random().toString(36).substring(7)}`;
         const now = new Date().toISOString();
 
         const encrypted_title = entry.title ? await encryptContent(entry.title) : null;
         const encrypted_body = await encryptContent(entry.body);
-        const encrypted_mood = entry.mood !== null ? await encryptContent(entry.mood.toString()) : null;
-        const encrypted_craving = entry.craving !== null ? await encryptContent(entry.craving.toString()) : null;
-        const encrypted_tags = entry.tags.length > 0 ? await encryptContent(JSON.stringify(entry.tags)) : null;
+        const encrypted_mood =
+          entry.mood !== null ? await encryptContent(entry.mood.toString()) : null;
+        const encrypted_craving =
+          entry.craving !== null ? await encryptContent(entry.craving.toString()) : null;
+        const encrypted_tags =
+          entry.tags.length > 0 ? await encryptContent(JSON.stringify(entry.tags)) : null;
 
         if (!db) throw new Error('Database not initialized');
 
         await db.runAsync(
           `INSERT INTO journal_entries (id, user_id, encrypted_title, encrypted_body, encrypted_mood, encrypted_craving, encrypted_tags, created_at, updated_at, sync_status)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [id, userId, encrypted_title, encrypted_body, encrypted_mood, encrypted_craving, encrypted_tags, now, now, 'pending']
+          [
+            id,
+            userId,
+            encrypted_title,
+            encrypted_body,
+            encrypted_mood,
+            encrypted_craving,
+            encrypted_tags,
+            now,
+            now,
+            'pending',
+          ],
         );
 
         // Add to sync queue for cloud backup
@@ -126,14 +159,33 @@ export function useCreateJournalEntry(userId: string): {
  * Hook to update an existing journal entry
  */
 export function useUpdateJournalEntry(userId: string): {
-  updateEntry: (id: string, entry: Partial<Omit<JournalEntryDecrypted, 'id' | 'user_id' | 'created_at' | 'updated_at' | 'sync_status' | 'supabase_id'>>) => Promise<void>;
+  updateEntry: (
+    id: string,
+    entry: Partial<
+      Omit<
+        JournalEntryDecrypted,
+        'id' | 'user_id' | 'created_at' | 'updated_at' | 'sync_status' | 'supabase_id'
+      >
+    >,
+  ) => Promise<void>;
   isPending: boolean;
 } {
-  const { db, isReady } = useDatabase();
+  const { db } = useDatabase();
   const queryClient = useQueryClient();
 
   const mutation = useMutation({
-    mutationFn: async ({ id, entry }: { id: string; entry: Partial<Omit<JournalEntryDecrypted, 'id' | 'user_id' | 'created_at' | 'updated_at' | 'sync_status' | 'supabase_id'>> }) => {
+    mutationFn: async ({
+      id,
+      entry,
+    }: {
+      id: string;
+      entry: Partial<
+        Omit<
+          JournalEntryDecrypted,
+          'id' | 'user_id' | 'created_at' | 'updated_at' | 'sync_status' | 'supabase_id'
+        >
+      >;
+    }) => {
       try {
         const now = new Date().toISOString();
         const updates: string[] = [];
@@ -153,11 +205,15 @@ export function useUpdateJournalEntry(userId: string): {
         }
         if (entry.craving !== undefined) {
           updates.push('encrypted_craving = ?');
-          values.push(entry.craving !== null ? await encryptContent(entry.craving.toString()) : null);
+          values.push(
+            entry.craving !== null ? await encryptContent(entry.craving.toString()) : null,
+          );
         }
         if (entry.tags !== undefined) {
           updates.push('encrypted_tags = ?');
-          values.push(entry.tags.length > 0 ? await encryptContent(JSON.stringify(entry.tags)) : null);
+          values.push(
+            entry.tags.length > 0 ? await encryptContent(JSON.stringify(entry.tags)) : null,
+          );
         }
 
         updates.push('updated_at = ?');
@@ -172,7 +228,7 @@ export function useUpdateJournalEntry(userId: string): {
 
         await db.runAsync(
           `UPDATE journal_entries SET ${updates.join(', ')} WHERE id = ? AND user_id = ?`,
-          values
+          values,
         );
 
         // Add to sync queue for cloud backup
@@ -202,7 +258,7 @@ export function useDeleteJournalEntry(userId: string): {
   deleteEntry: (id: string) => Promise<void>;
   isPending: boolean;
 } {
-  const { db, isReady } = useDatabase();
+  const { db } = useDatabase();
   const queryClient = useQueryClient();
 
   const mutation = useMutation({

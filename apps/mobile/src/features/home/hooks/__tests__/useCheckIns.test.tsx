@@ -48,8 +48,8 @@ jest.mock('../../../../utils/encryption', () => ({
 }));
 
 jest.mock('../../../../services/syncService', () => ({
-  addToSyncQueue: (...args: any[]) => mockAddToSyncQueue(...args),
-  addDeleteToSyncQueue: (...args: any[]) => mockAddDeleteToSyncQueue(...args),
+  addToSyncQueue: jest.fn((...args: unknown[]) => mockAddToSyncQueue(...args)),
+  addDeleteToSyncQueue: jest.fn((...args: unknown[]) => mockAddDeleteToSyncQueue(...args)),
 }));
 
 jest.mock('../../../../utils/logger', () => ({

@@ -1,5 +1,15 @@
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
-import { FlatList, StyleSheet, View, KeyboardAvoidingView, Platform, Animated, TouchableOpacity, type ListRenderItemInfo, type ViewToken } from 'react-native';
+import {
+  FlatList,
+  StyleSheet,
+  View,
+  KeyboardAvoidingView,
+  Platform,
+  Animated,
+  TouchableOpacity,
+  type ListRenderItemInfo,
+  type ViewToken,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRoute, type RouteProp } from '@react-navigation/native';
 import { MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
@@ -7,7 +17,19 @@ import * as Haptics from 'expo-haptics';
 import { STEP_PROMPTS, type StepPrompt, type StepSection } from '@recovery/shared/constants';
 import { useStepWork, useSaveStepAnswer } from '../hooks/useStepWork';
 import { useAuth } from '../../../contexts/AuthContext';
-import { useTheme, Card, Button, TextArea, ProgressBar, Badge, Toast, Divider, Text, Skeleton, CardSkeleton } from '../../../design-system';
+import {
+  useTheme,
+  Card,
+  Button,
+  TextArea,
+  ProgressBar,
+  Badge,
+  Toast,
+  Divider,
+  Text,
+  Skeleton,
+  CardSkeleton,
+} from '../../../design-system';
 
 type RouteParams = {
   StepDetail: {
@@ -52,7 +74,9 @@ export function StepDetailScreen(): React.ReactElement {
   // Toast state
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
-  const [toastVariant, setToastVariant] = useState<'success' | 'error' | 'info' | 'warning'>('success');
+  const [toastVariant, setToastVariant] = useState<'success' | 'error' | 'info' | 'warning'>(
+    'success',
+  );
 
   // Refs
   const flatListRef = useRef<FlatList<ListItem>>(null);
@@ -67,7 +91,7 @@ export function StepDetailScreen(): React.ReactElement {
     if (!stepData) return 1;
     for (let i = 0; i < stepData.prompts.length; i++) {
       const questionNumber = i + 1;
-      const answered = questions.find(q => q.question_number === questionNumber && q.is_complete);
+      const answered = questions.find((q) => q.question_number === questionNumber && q.is_complete);
       if (!answered) {
         return questionNumber;
       }
@@ -142,7 +166,7 @@ export function StepDetailScreen(): React.ReactElement {
   useEffect(() => {
     if (questions.length > 0) {
       const initialAnswers: Record<number, string> = {};
-      questions.forEach(q => {
+      questions.forEach((q) => {
         if (q.answer) {
           initialAnswers[q.question_number] = q.answer;
         }
@@ -151,29 +175,32 @@ export function StepDetailScreen(): React.ReactElement {
     }
   }, [questions]);
 
-  const handleSaveAnswer = useCallback(async (questionNumber: number) => {
-    const answer = answers[questionNumber];
-    if (!answer?.trim()) return;
+  const handleSaveAnswer = useCallback(
+    async (questionNumber: number) => {
+      const answer = answers[questionNumber];
+      if (!answer?.trim()) return;
 
-    setSavingQuestion(questionNumber);
-    try {
-      await saveAnswer(stepNumber, questionNumber, answer, true);
+      setSavingQuestion(questionNumber);
+      try {
+        await saveAnswer(stepNumber, questionNumber, answer, true);
 
-      // Success feedback
-      if (Platform.OS !== 'web') {
-        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        // Success feedback
+        if (Platform.OS !== 'web') {
+          await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        }
+        setToastMessage('Answer saved successfully');
+        setToastVariant('success');
+        setShowToast(true);
+      } catch {
+        setToastMessage('Failed to save answer. Please try again.');
+        setToastVariant('error');
+        setShowToast(true);
+      } finally {
+        setSavingQuestion(null);
       }
-      setToastMessage('Answer saved successfully');
-      setToastVariant('success');
-      setShowToast(true);
-    } catch (error) {
-      setToastMessage('Failed to save answer. Please try again.');
-      setToastVariant('error');
-      setShowToast(true);
-    } finally {
-      setSavingQuestion(null);
-    }
-  }, [answers, saveAnswer, stepNumber]);
+    },
+    [answers, saveAnswer, stepNumber],
+  );
 
   // Scroll to first unanswered question
   const scrollToFirstUnanswered = useCallback(() => {
@@ -181,7 +208,7 @@ export function StepDetailScreen(): React.ReactElement {
 
     // Find the index in listItems that corresponds to the first unanswered question
     const targetIndex = listItems.findIndex(
-      item => item.type === 'question' && item.questionNumber === firstUnansweredQuestion
+      (item) => item.type === 'question' && item.questionNumber === firstUnansweredQuestion,
     );
 
     if (targetIndex !== -1) {
@@ -199,121 +226,152 @@ export function StepDetailScreen(): React.ReactElement {
   }, [listItems, firstUnansweredQuestion, stepData]);
 
   // Track visible question for counter
-  const onViewableItemsChanged = useCallback(({ viewableItems }: { viewableItems: ViewToken[] }) => {
-    const questionItems = viewableItems.filter(
-      item => item.item?.type === 'question'
-    );
-    if (questionItems.length > 0) {
-      const firstVisible = questionItems[0].item as QuestionItem;
-      setCurrentVisibleQuestion(firstVisible.questionNumber);
-    }
-  }, []);
+  const onViewableItemsChanged = useCallback(
+    ({ viewableItems }: { viewableItems: ViewToken[] }) => {
+      const questionItems = viewableItems.filter((item) => item.item?.type === 'question');
+      if (questionItems.length > 0) {
+        const firstVisible = questionItems[0].item as QuestionItem;
+        setCurrentVisibleQuestion(firstVisible.questionNumber);
+      }
+    },
+    [],
+  );
 
-  const viewabilityConfig = useMemo(() => ({
-    itemVisiblePercentThreshold: 50,
-  }), []);
+  const viewabilityConfig = useMemo(
+    () => ({
+      itemVisiblePercentThreshold: 50,
+    }),
+    [],
+  );
 
-  const renderItem = useCallback(({ item }: ListRenderItemInfo<ListItem>) => {
-    if (item.type === 'section') {
-      return (
-        <View style={[styles.sectionHeader, { backgroundColor: theme.colors.primary + '10' }]}>
-          <MaterialCommunityIcons
-            name="bookmark-outline"
-            size={20}
-            color={theme.colors.primary}
-          />
-          <View style={styles.sectionHeaderContent}>
-            <Text style={[theme.typography.h3, { color: theme.colors.primary, fontWeight: '600' }]}>
-              {item.title}
-            </Text>
-            <Text style={[theme.typography.caption, { color: theme.colors.textSecondary }]}>
-              {item.questionRange}
-            </Text>
+  const renderItem = useCallback(
+    ({ item }: ListRenderItemInfo<ListItem>) => {
+      if (item.type === 'section') {
+        return (
+          <View style={[styles.sectionHeader, { backgroundColor: theme.colors.primary + '10' }]}>
+            <MaterialCommunityIcons
+              name="bookmark-outline"
+              size={20}
+              color={theme.colors.primary}
+            />
+            <View style={styles.sectionHeaderContent}>
+              <Text
+                style={[theme.typography.h3, { color: theme.colors.primary, fontWeight: '600' }]}
+              >
+                {item.title}
+              </Text>
+              <Text style={[theme.typography.caption, { color: theme.colors.textSecondary }]}>
+                {item.questionRange}
+              </Text>
+            </View>
           </View>
-        </View>
+        );
+      }
+
+      if (item.type === 'footer') {
+        return (
+          <Card variant="outlined" style={[styles.infoCard, { borderColor: theme.colors.success }]}>
+            <View style={styles.infoContent}>
+              <MaterialCommunityIcons name="lock" size={24} color={theme.colors.success} />
+              <Text
+                style={[
+                  theme.typography.caption,
+                  { color: theme.colors.textSecondary, marginLeft: 12, flex: 1, lineHeight: 18 },
+                ]}
+              >
+                Your answers are encrypted and stored securely on your device. Only you can read
+                them. Your progress is private and safe.
+              </Text>
+            </View>
+          </Card>
+        );
+      }
+
+      // Question item
+      const questionNumber = item.questionNumber;
+      const isAnswered = questions.find(
+        (q) => q.question_number === questionNumber && q.is_complete,
       );
-    }
+      const isSaving = savingQuestion === questionNumber;
 
-    if (item.type === 'footer') {
       return (
-        <Card variant="outlined" style={[styles.infoCard, { borderColor: theme.colors.success }]}>
-          <View style={styles.infoContent}>
-            <MaterialCommunityIcons name="lock" size={24} color={theme.colors.success} />
-            <Text style={[theme.typography.caption, { color: theme.colors.textSecondary, marginLeft: 12, flex: 1, lineHeight: 18 }]}>
-              Your answers are encrypted and stored securely on your device. Only you can read them. Your progress is private and safe.
+        <Card variant="elevated" style={styles.questionCard}>
+          <View style={styles.questionHeader}>
+            <View
+              style={[
+                styles.questionNumber,
+                isAnswered
+                  ? { backgroundColor: theme.colors.success }
+                  : {
+                      backgroundColor: theme.colors.surface,
+                      borderWidth: 2,
+                      borderColor: theme.colors.border,
+                    },
+              ]}
+            >
+              {isAnswered ? (
+                <MaterialCommunityIcons name="check" size={20} color="#FFFFFF" />
+              ) : (
+                <Text
+                  style={[
+                    theme.typography.body,
+                    { color: theme.colors.textSecondary, fontWeight: '600' },
+                  ]}
+                >
+                  {questionNumber}
+                </Text>
+              )}
+            </View>
+            <Text
+              style={[theme.typography.h3, { color: theme.colors.text, flex: 1, lineHeight: 24 }]}
+            >
+              {item.prompt}
             </Text>
           </View>
+
+          <Divider style={styles.questionDivider} />
+
+          <TextArea
+            label=""
+            value={answers[questionNumber] || ''}
+            onChangeText={(text) => setAnswers((prev) => ({ ...prev, [questionNumber]: text }))}
+            placeholder="Take your time to reflect and write your answer here. Remember, this is a private space for your personal growth."
+            containerStyle={styles.answerTextArea}
+            minHeight={150}
+            maxLength={2000}
+            showCharacterCount
+            editable={!isSaving}
+            accessibilityLabel={`Answer for question ${questionNumber} of ${totalQuestions}`}
+          />
+
+          <Button
+            title={isSaving ? 'Saving...' : isAnswered ? 'Update Answer' : 'Save Answer'}
+            onPress={() => handleSaveAnswer(questionNumber)}
+            disabled={!answers[questionNumber]?.trim() || isSaving}
+            loading={isSaving}
+            variant="primary"
+            fullWidth
+          />
         </Card>
       );
-    }
+    },
+    [questions, savingQuestion, answers, theme, handleSaveAnswer, totalQuestions],
+  );
 
-    // Question item
-    const questionNumber = item.questionNumber;
-    const isAnswered = questions.find(q => q.question_number === questionNumber && q.is_complete);
-    const isSaving = savingQuestion === questionNumber;
-
-    return (
-      <Card variant="elevated" style={styles.questionCard}>
-        <View style={styles.questionHeader}>
-          <View
-            style={[
-              styles.questionNumber,
-              isAnswered
-                ? { backgroundColor: theme.colors.success }
-                : { backgroundColor: theme.colors.surface, borderWidth: 2, borderColor: theme.colors.border },
-            ]}
-          >
-            {isAnswered ? (
-              <MaterialCommunityIcons name="check" size={20} color="#FFFFFF" />
-            ) : (
-              <Text style={[theme.typography.body, { color: theme.colors.textSecondary, fontWeight: '600' }]}>
-                {questionNumber}
-              </Text>
-            )}
-          </View>
-          <Text style={[theme.typography.h3, { color: theme.colors.text, flex: 1, lineHeight: 24 }]}>
-            {item.prompt}
-          </Text>
-        </View>
-
-        <Divider style={styles.questionDivider} />
-
-        <TextArea
-          label=""
-          value={answers[questionNumber] || ''}
-          onChangeText={(text) => setAnswers(prev => ({ ...prev, [questionNumber]: text }))}
-          placeholder="Take your time to reflect and write your answer here. Remember, this is a private space for your personal growth."
-          containerStyle={styles.answerTextArea}
-          minHeight={150}
-          maxLength={2000}
-          showCharacterCount
-          editable={!isSaving}
-          accessibilityLabel={`Answer for question ${questionNumber} of ${totalQuestions}`}
-        />
-
-        <Button
-          title={isSaving ? 'Saving...' : isAnswered ? 'Update Answer' : 'Save Answer'}
-          onPress={() => handleSaveAnswer(questionNumber)}
-          disabled={!answers[questionNumber]?.trim() || isSaving}
-          loading={isSaving}
-          variant="primary"
-          fullWidth
-        />
-      </Card>
-    );
-  }, [questions, savingQuestion, answers, theme, handleSaveAnswer, totalQuestions]);
-
-  const keyExtractor = useCallback((item: ListItem, index: number) => {
+  const keyExtractor = useCallback((item: ListItem) => {
     if (item.type === 'section') return `section-${item.title}`;
     if (item.type === 'footer') return 'footer';
     return `question-${item.questionNumber}`;
   }, []);
 
-  const getItemLayout = useCallback((data: ArrayLike<ListItem> | null | undefined, index: number) => ({
-    length: 350, // Approximate height
-    offset: 350 * index,
-    index,
-  }), []);
+  const getItemLayout = useCallback(
+    (data: ArrayLike<ListItem> | null | undefined, index: number) => ({
+      length: 350, // Approximate height
+      offset: 350 * index,
+      index,
+    }),
+    [],
+  );
 
   if (!stepData) {
     return (
@@ -330,7 +388,10 @@ export function StepDetailScreen(): React.ReactElement {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]} edges={['bottom']}>
+      <SafeAreaView
+        style={[styles.container, { backgroundColor: theme.colors.background }]}
+        edges={['bottom']}
+      >
         <View style={styles.loadingSkeletonContainer}>
           {/* Header skeleton */}
           <Card variant="elevated" style={styles.headerCard}>
@@ -347,7 +408,10 @@ export function StepDetailScreen(): React.ReactElement {
           </Card>
 
           {/* Description skeleton */}
-          <Card variant="outlined" style={[styles.descriptionCard, { borderColor: theme.colors.border }]}>
+          <Card
+            variant="outlined"
+            style={[styles.descriptionCard, { borderColor: theme.colors.border }]}
+          >
             <Skeleton variant="text" width="40%" height={12} />
             <View style={{ height: 8 }} />
             <Skeleton variant="text" width="100%" height={14} />
@@ -365,11 +429,14 @@ export function StepDetailScreen(): React.ReactElement {
     );
   }
 
-  const answeredCount = questions.filter(q => q.is_complete).length;
+  const answeredCount = questions.filter((q) => q.is_complete).length;
   const hasUnanswered = answeredCount < totalQuestions;
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]} edges={['bottom']}>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: theme.colors.background }]}
+      edges={['bottom']}
+    >
       <Toast
         visible={showToast}
         message={toastMessage}
@@ -398,14 +465,21 @@ export function StepDetailScreen(): React.ReactElement {
                 <Text style={styles.stepBadgeText}>{stepNumber}</Text>
               </View>
               <View style={styles.headerContent}>
-                <Text style={[theme.typography.h2, { color: theme.colors.text, fontWeight: '600' }]}>
+                <Text
+                  style={[theme.typography.h2, { color: theme.colors.text, fontWeight: '600' }]}
+                >
                   Step {stepNumber}: {stepData.title}
                 </Text>
                 <View style={styles.badgeRow}>
                   <Badge variant="primary" size="medium" style={styles.principleBadge}>
                     {stepData.principle}
                   </Badge>
-                  <Text style={[theme.typography.caption, { color: theme.colors.textSecondary, marginLeft: 8 }]}>
+                  <Text
+                    style={[
+                      theme.typography.caption,
+                      { color: theme.colors.textSecondary, marginLeft: 8 },
+                    ]}
+                  >
                     {totalQuestions} questions
                   </Text>
                 </View>
@@ -418,7 +492,9 @@ export function StepDetailScreen(): React.ReactElement {
                 <Text style={[theme.typography.label, { color: theme.colors.textSecondary }]}>
                   Your Progress ({answeredCount}/{totalQuestions})
                 </Text>
-                <Text style={[theme.typography.h3, { color: theme.colors.primary, fontWeight: '600' }]}>
+                <Text
+                  style={[theme.typography.h3, { color: theme.colors.primary, fontWeight: '600' }]}
+                >
                   {Math.round(progress)}%
                 </Text>
               </View>
@@ -433,8 +509,17 @@ export function StepDetailScreen(): React.ReactElement {
                 accessibilityLabel={`Continue at question ${firstUnansweredQuestion}`}
                 accessibilityRole="button"
               >
-                <MaterialCommunityIcons name="play-circle-outline" size={20} color={theme.colors.primary} />
-                <Text style={[theme.typography.body, { color: theme.colors.primary, marginLeft: 8, fontWeight: '600' }]}>
+                <MaterialCommunityIcons
+                  name="play-circle-outline"
+                  size={20}
+                  color={theme.colors.primary}
+                />
+                <Text
+                  style={[
+                    theme.typography.body,
+                    { color: theme.colors.primary, marginLeft: 8, fontWeight: '600' },
+                  ]}
+                >
                   Continue at Question {firstUnansweredQuestion}
                 </Text>
               </TouchableOpacity>
@@ -442,14 +527,28 @@ export function StepDetailScreen(): React.ReactElement {
           </Card>
 
           {/* Description */}
-          <Card variant="outlined" style={[styles.descriptionCard, { borderColor: theme.colors.primary }]}>
+          <Card
+            variant="outlined"
+            style={[styles.descriptionCard, { borderColor: theme.colors.primary }]}
+          >
             <View style={styles.descriptionHeader}>
-              <MaterialCommunityIcons name="lightbulb-outline" size={24} color={theme.colors.primary} />
-              <Text style={[theme.typography.label, { color: theme.colors.primary, marginLeft: 8 }]}>
+              <MaterialCommunityIcons
+                name="lightbulb-outline"
+                size={24}
+                color={theme.colors.primary}
+              />
+              <Text
+                style={[theme.typography.label, { color: theme.colors.primary, marginLeft: 8 }]}
+              >
                 STEP GUIDANCE
               </Text>
             </View>
-            <Text style={[theme.typography.body, { color: theme.colors.text, lineHeight: 24, fontStyle: 'italic' }]}>
+            <Text
+              style={[
+                theme.typography.body,
+                { color: theme.colors.text, lineHeight: 24, fontStyle: 'italic' },
+              ]}
+            >
               "{stepData.description}"
             </Text>
           </Card>

@@ -15,7 +15,7 @@ import {
   runOnJS,
   Easing as ReanimatedEasing,
 } from 'react-native-reanimated';
-import { springConfigs, timingDurations, easingCurves } from '../tokens/animations';
+import { springConfigs, easingCurves } from '../tokens/animations';
 import { hapticError } from '../../utils/haptics';
 
 /**
@@ -39,11 +39,6 @@ interface FadeAndScaleReturn {
 interface ShakeAnimationReturn {
   animatedStyle: ReturnType<typeof useAnimatedStyle>;
   shake: (withHaptic?: boolean) => void;
-}
-
-interface CountUpReturn {
-  value: number;
-  animatedStyle: ReturnType<typeof useAnimatedStyle>;
 }
 
 /**
@@ -161,12 +156,15 @@ export function useScaleIn(initialScale: number = 0.95, delay: number = 0): Anim
 export function usePressAnimation(pressScale: number = 0.98): PressAnimationReturn {
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
-  const animatePress = useCallback((isPressed: boolean) => {
-    Animated.spring(scaleAnim, {
-      toValue: isPressed ? pressScale : 1,
-      ...springConfigs.gentle,
-    }).start();
-  }, [scaleAnim, pressScale]);
+  const animatePress = useCallback(
+    (isPressed: boolean) => {
+      Animated.spring(scaleAnim, {
+        toValue: isPressed ? pressScale : 1,
+        ...springConfigs.gentle,
+      }).start();
+    },
+    [scaleAnim, pressScale],
+  );
 
   return { scaleAnim, animatePress };
 }
@@ -337,7 +335,11 @@ export function useFadeAndScaleIn(delay: number = 0): FadeAndScaleReturn {
  * }
  * ```
  */
-export function useNumberAnimation(start: number, end: number, duration: number = 500): Animated.Value {
+export function useNumberAnimation(
+  start: number,
+  end: number,
+  duration: number = 500,
+): Animated.Value {
   const animValue = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -390,32 +392,35 @@ export function useNumberAnimation(start: number, end: number, duration: number 
  */
 export function useShakeAnimation(
   amplitude: number = 10,
-  oscillations: number = 3
+  oscillations: number = 3,
 ): ShakeAnimationReturn {
   const translateX = useSharedValue(0);
 
-  const shake = useCallback((withHaptic: boolean = true) => {
-    'worklet';
-    // Generate shake sequence: right, left, right, left... back to center
-    const shakeSequence: number[] = [];
-    for (let i = 0; i < oscillations; i++) {
-      // Decreasing amplitude for natural feel
-      const currentAmplitude = amplitude * (1 - i / oscillations);
-      shakeSequence.push(
-        withTiming(currentAmplitude, { duration: 50, easing: ReanimatedEasing.linear }),
-        withTiming(-currentAmplitude, { duration: 50, easing: ReanimatedEasing.linear })
-      );
-    }
-    // Return to center
-    shakeSequence.push(withSpring(0, { damping: 10, stiffness: 200 }));
+  const shake = useCallback(
+    (withHaptic: boolean = true) => {
+      'worklet';
+      // Generate shake sequence: right, left, right, left... back to center
+      const shakeSequence: number[] = [];
+      for (let i = 0; i < oscillations; i++) {
+        // Decreasing amplitude for natural feel
+        const currentAmplitude = amplitude * (1 - i / oscillations);
+        shakeSequence.push(
+          withTiming(currentAmplitude, { duration: 50, easing: ReanimatedEasing.linear }),
+          withTiming(-currentAmplitude, { duration: 50, easing: ReanimatedEasing.linear }),
+        );
+      }
+      // Return to center
+      shakeSequence.push(withSpring(0, { damping: 10, stiffness: 200 }));
 
-    translateX.value = withSequence(...shakeSequence);
+      translateX.value = withSequence(...shakeSequence);
 
-    // Trigger haptic on the JS thread
-    if (withHaptic) {
-      runOnJS(hapticError)();
-    }
-  }, [amplitude, oscillations, translateX]);
+      // Trigger haptic on the JS thread
+      if (withHaptic) {
+        runOnJS(hapticError)();
+      }
+    },
+    [amplitude, oscillations, translateX],
+  );
 
   const animatedStyle = useAnimatedStyle(() => {
     return {
@@ -443,10 +448,7 @@ export function useShakeAnimation(
  * }
  * ```
  */
-export function useCountUp(
-  targetValue: number,
-  duration: number = 1000
-): { value: number } {
+export function useCountUp(targetValue: number, duration: number = 1000): { value: number } {
   const progress = useSharedValue(0);
   const displayValue = useRef(0);
 
@@ -497,7 +499,7 @@ export function useCountUp(
 export function getStaggerDelay(
   index: number,
   baseDelay: number = 50,
-  maxDelay: number = 500
+  maxDelay: number = 500,
 ): number {
   return Math.min(index * baseDelay, maxDelay);
 }

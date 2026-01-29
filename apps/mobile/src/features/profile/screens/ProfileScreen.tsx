@@ -9,6 +9,8 @@ import { ScrollView, StyleSheet, View, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { ProfileStackParamList } from '../../../navigation/types';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useTheme, Card, Button, Modal, ProfileSkeleton } from '../../../design-system';
 import { Text } from 'react-native';
@@ -33,37 +35,19 @@ function ListItem({
   const theme = useTheme();
 
   const content = (
-    <View
-      style={[
-        styles.listItem,
-        { opacity: disabled ? 0.6 : 1 },
-      ]}
-    >
+    <View style={[styles.listItem, { opacity: disabled ? 0.6 : 1 }]}>
       <View style={[styles.listItemIcon, { marginRight: theme.spacing.md }]}>
-        <MaterialCommunityIcons
-          name={icon}
-          size={24}
-          color={iconColor || theme.colors.primary}
-        />
+        <MaterialCommunityIcons name={icon} size={24} color={iconColor || theme.colors.primary} />
       </View>
       <View style={styles.listItemContent}>
-        <Text style={[theme.typography.label, { color: theme.colors.text }]}>
-          {title}
-        </Text>
+        <Text style={[theme.typography.label, { color: theme.colors.text }]}>{title}</Text>
         <Text
-          style={[
-            theme.typography.bodySmall,
-            { color: theme.colors.textSecondary, marginTop: 2 },
-          ]}
+          style={[theme.typography.bodySmall, { color: theme.colors.textSecondary, marginTop: 2 }]}
         >
           {description}
         </Text>
       </View>
-      <MaterialCommunityIcons
-        name="chevron-right"
-        size={20}
-        color={theme.colors.textSecondary}
-      />
+      <MaterialCommunityIcons name="chevron-right" size={20} color={theme.colors.textSecondary} />
     </View>
   );
 
@@ -98,7 +82,7 @@ function Divider(): React.ReactElement {
 }
 
 export function ProfileScreen(): React.ReactElement {
-  const navigation = useNavigation<any>();
+  const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList>>();
   const theme = useTheme();
   const { user, signOut, loading } = useAuth();
   const [signingOut, setSigningOut] = useState(false);
@@ -111,7 +95,7 @@ export function ProfileScreen(): React.ReactElement {
     setSigningOut(true);
     try {
       await signOut();
-    } catch (error) {
+    } catch {
       // Error handled by auth context
     } finally {
       setSigningOut(false);
@@ -127,10 +111,7 @@ export function ProfileScreen(): React.ReactElement {
       >
         <ScrollView
           style={styles.scrollView}
-          contentContainerStyle={[
-            styles.contentContainer,
-            { paddingHorizontal: theme.spacing.md },
-          ]}
+          contentContainerStyle={[styles.contentContainer, { paddingHorizontal: theme.spacing.md }]}
           showsVerticalScrollIndicator={false}
         >
           {/* User Profile Card */}
@@ -261,11 +242,7 @@ export function ProfileScreen(): React.ReactElement {
                   },
                 ]}
               >
-                <MaterialCommunityIcons
-                  name="lock"
-                  size={28}
-                  color={theme.colors.success}
-                />
+                <MaterialCommunityIcons name="lock" size={28} color={theme.colors.success} />
               </View>
               <Text
                 style={[
@@ -289,7 +266,8 @@ export function ProfileScreen(): React.ReactElement {
                   },
                 ]}
               >
-                All your journal entries and step work are encrypted with AES-256 encryption before being stored. Only you can decrypt and read your data.
+                All your journal entries and step work are encrypted with AES-256 encryption before
+                being stored. Only you can decrypt and read your data.
               </Text>
             </View>
           </Card>

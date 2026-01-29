@@ -62,7 +62,7 @@ export function JournalListScreen({ userId }: JournalListScreenProps): React.Rea
       try {
         await deleteEntry?.(entryId);
         hapticSuccess();
-      } catch (error) {
+      } catch {
         // Error handled by hook
       }
     },

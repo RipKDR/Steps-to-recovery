@@ -11,7 +11,8 @@
 
 import React from 'react';
 import { renderHook, act, waitFor } from '@testing-library/react-native';
-import { AppState, Platform } from 'react-native';
+import { AppState } from 'react-native';
+import type { NetInfoState } from '@react-native-community/netinfo';
 
 // Must mock modules before importing the component
 const mockProcessSyncQueue = jest.fn();
@@ -24,7 +25,7 @@ const mockLogger = {
 };
 
 // Mock NetInfo
-let netInfoCallback: ((state: any) => void) | null = null;
+let netInfoCallback: ((state: NetInfoState) => void) | null = null;
 const mockNetInfoUnsubscribe = jest.fn();
 
 jest.mock('@react-native-community/netinfo', () => ({
@@ -37,11 +38,11 @@ jest.mock('@react-native-community/netinfo', () => ({
 }));
 
 jest.mock('../../services/syncService', () => ({
-  processSyncQueue: (...args: any[]) => mockProcessSyncQueue(...args),
+  processSyncQueue: jest.fn((...args: unknown[]) => mockProcessSyncQueue(...args)),
 }));
 
 jest.mock('../../utils/database', () => ({
-  clearDatabase: (...args: any[]) => mockClearDatabase(...args),
+  clearDatabase: jest.fn((...args: unknown[]) => mockClearDatabase(...args)),
 }));
 
 jest.mock('../../utils/logger', () => ({
@@ -248,9 +249,10 @@ describe('SyncContext', () => {
       // Make processSyncQueue slow
       let resolveSync: () => void;
       mockProcessSyncQueue.mockImplementation(
-        () => new Promise<any>((resolve) => {
-          resolveSync = () => resolve({ synced: 1, failed: 0, errors: [] });
-        })
+        () =>
+          new Promise<{ synced: number; failed: number; errors: unknown[] }>((resolve) => {
+            resolveSync = () => resolve({ synced: 1, failed: 0, errors: [] });
+          }),
       );
 
       const { result } = renderHook(() => useSync(), { wrapper });
@@ -438,7 +440,7 @@ describe('SyncContext', () => {
     });
 
     it('should deduplicate rapid network state changes', async () => {
-      const { result } = renderHook(() => useSync(), { wrapper });
+      renderHook(() => useSync(), { wrapper });
 
       // Rapid state changes (same state)
       act(() => {
@@ -449,7 +451,7 @@ describe('SyncContext', () => {
 
       // Should only log once due to deduplication
       const onlineCalls = mockLogger.info.mock.calls.filter(
-        (call) => call[0] === 'Network state changed'
+        (call) => call[0] === 'Network state changed',
       );
       expect(onlineCalls.length).toBeLessThanOrEqual(1);
     });
@@ -493,7 +495,7 @@ describe('SyncContext', () => {
 
       // Pending count should be updated
       expect(mockDb.getFirstAsync).toHaveBeenCalledWith(
-        'SELECT COUNT(*) as count FROM sync_queue WHERE retry_count < 3'
+        'SELECT COUNT(*) as count FROM sync_queue WHERE retry_count < 3',
       );
     });
   });
@@ -685,7 +687,7 @@ describe('SyncContext', () => {
       await waitFor(() => {
         expect(mockLogger.error).toHaveBeenCalledWith(
           'Failed to clear database on logout',
-          expect.any(Error)
+          expect.any(Error),
         );
       });
     });
@@ -716,7 +718,7 @@ describe('SyncContext', () => {
       await waitFor(() => {
         expect(mockLogger.error).toHaveBeenCalledWith(
           'Failed to update pending count',
-          expect.any(Error)
+          expect.any(Error),
         );
       });
     });
