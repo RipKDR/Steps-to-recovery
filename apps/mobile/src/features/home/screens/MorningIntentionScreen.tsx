@@ -1,17 +1,24 @@
 /**
  * Morning Check-In Screen
- * Daily intention setting and mood tracking
+ * Daily intention setting and mood tracking with premium animations
  */
 
-import React, { useState, useEffect, useRef } from 'react';
-import { ScrollView, StyleSheet, View, Text, Animated, Platform } from 'react-native';
+import React, { useState, useCallback } from 'react';
+import { ScrollView, StyleSheet, View, Text, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
-import * as Haptics from 'expo-haptics';
+import Animated, {
+  FadeIn,
+  FadeInDown,
+  FadeInUp,
+  FadeOut,
+  SlideOutDown,
+} from 'react-native-reanimated';
 import { useCreateCheckIn } from '../hooks/useCheckIns';
 import { useTheme } from '../../../design-system/hooks/useTheme';
-import { TextArea, Button, Card, Toast } from '../../../design-system/components';
+import { TextArea, Button, Card, Toast, AnimatedCheckmark } from '../../../design-system/components';
 import { Slider } from '../../../components/Slider';
+import { hapticSuccess, hapticSelection, hapticError } from '../../../utils/haptics';
 
 interface MorningIntentionScreenProps {
   userId: string;
@@ -27,26 +34,23 @@ export function MorningIntentionScreen({ userId }: MorningIntentionScreenProps):
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [toastVariant, setToastVariant] = useState<'success' | 'error'>('success');
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
-  // Entrance animation
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(30)).current;
+  // Handle mood slider change with haptic feedback
+  const handleMoodChange = useCallback((value: number) => {
+    if (value !== mood) {
+      hapticSelection();
+    }
+    setMood(value);
+  }, [mood]);
 
-  useEffect(() => {
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 400,
-        useNativeDriver: true,
-      }),
-      Animated.spring(slideAnim, {
-        toValue: 0,
-        friction: 8,
-        tension: 40,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, []);
+  // Handle successful completion animation
+  const handleSuccessAnimationComplete = useCallback(() => {
+    setTimeout(() => {
+      setShowSuccessModal(false);
+      navigation.goBack();
+    }, 300);
+  }, [navigation]);
 
   const handleSubmit = async (): Promise<void> => {
     try {
@@ -56,21 +60,11 @@ export function MorningIntentionScreen({ userId }: MorningIntentionScreenProps):
         mood,
       });
 
-      // Haptic feedback on success
-      if (Platform.OS !== 'web') {
-        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      }
-
-      // Show success toast
-      setToastMessage('Morning check-in complete! Have a great day.');
-      setToastVariant('success');
-      setShowToast(true);
-
-      // Navigate back after toast
-      setTimeout(() => {
-        navigation.goBack();
-      }, 1500);
+      // Show success modal with animated checkmark
+      setShowSuccessModal(true);
+      hapticSuccess();
     } catch (err) {
+      hapticError();
       setToastMessage('Failed to save check-in. Please try again.');
       setToastVariant('error');
       setShowToast(true);
@@ -85,19 +79,13 @@ export function MorningIntentionScreen({ userId }: MorningIntentionScreenProps):
       style={[styles.container, { backgroundColor: theme.colors.background }]}
       edges={['bottom']}
     >
-      <Animated.View
-        style={{
-          flex: 1,
-          opacity: fadeAnim,
-          transform: [{ translateY: slideAnim }],
-        }}
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.contentContainer}
+        showsVerticalScrollIndicator={false}
       >
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.contentContainer}
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Header Card */}
+        {/* Header Card */}
+        <Animated.View entering={FadeInDown.delay(100).springify()}>
           <Card variant="flat" style={styles.headerCard}>
             <Text
               style={[
@@ -116,8 +104,10 @@ export function MorningIntentionScreen({ userId }: MorningIntentionScreenProps):
               Set your intention for today
             </Text>
           </Card>
+        </Animated.View>
 
-          {/* Intention Input */}
+        {/* Intention Input */}
+        <Animated.View entering={FadeInDown.delay(200).springify()}>
           <TextArea
             label="Today's Intention"
             value={intention}
@@ -129,8 +119,10 @@ export function MorningIntentionScreen({ userId }: MorningIntentionScreenProps):
             accessibilityLabel="Daily intention"
             accessibilityHint="Enter your intention for the day"
           />
+        </Animated.View>
 
-          {/* Mood Section */}
+        {/* Mood Section */}
+        <Animated.View entering={FadeInDown.delay(300).springify()}>
           <Card variant="flat" style={styles.moodCard}>
             <Text
               style={[
@@ -150,16 +142,24 @@ export function MorningIntentionScreen({ userId }: MorningIntentionScreenProps):
             </Text>
 
             {/* Mood Emoji Display */}
-            <View style={styles.moodEmojiContainer}>
-              <Text style={styles.moodEmoji}>
+            <Animated.View
+              style={styles.moodEmojiContainer}
+              entering={FadeIn.delay(400)}
+              key={mood} // Re-animate on mood change
+            >
+              <Animated.Text
+                entering={FadeInUp.springify().damping(8)}
+                exiting={FadeOut.duration(100)}
+                style={styles.moodEmoji}
+              >
                 {moodEmojis[mood - 1]}
-              </Text>
-            </View>
+              </Animated.Text>
+            </Animated.View>
 
             {/* Slider */}
             <Slider
               value={mood}
-              onValueChange={setMood}
+              onValueChange={handleMoodChange}
               minimumValue={1}
               maximumValue={5}
               step={1}
@@ -170,8 +170,10 @@ export function MorningIntentionScreen({ userId }: MorningIntentionScreenProps):
               accessibilityRole="adjustable"
             />
           </Card>
+        </Animated.View>
 
-          {/* Submit Button */}
+        {/* Submit Button */}
+        <Animated.View entering={FadeInUp.delay(400).springify()}>
           <Button
             variant="primary"
             size="large"
@@ -184,8 +186,53 @@ export function MorningIntentionScreen({ userId }: MorningIntentionScreenProps):
           >
             Start My Day
           </Button>
-        </ScrollView>
-      </Animated.View>
+        </Animated.View>
+      </ScrollView>
+
+      {/* Success Modal */}
+      <Modal
+        visible={showSuccessModal}
+        transparent
+        animationType="fade"
+        statusBarTranslucent
+      >
+        <View style={styles.successModalOverlay}>
+          <Animated.View
+            entering={FadeIn.duration(200)}
+            exiting={SlideOutDown.duration(300)}
+            style={[
+              styles.successModalContent,
+              {
+                backgroundColor: theme.colors.surface,
+                borderRadius: theme.radius.xl,
+                ...(theme.isDark ? theme.shadows.lgDark : theme.shadows.lg),
+              },
+            ]}
+          >
+            <AnimatedCheckmark
+              size={100}
+              color={theme.colors.success}
+              onAnimationComplete={handleSuccessAnimationComplete}
+            />
+            <Text
+              style={[
+                theme.typography.h2,
+                { color: theme.colors.text, marginTop: 20, textAlign: 'center' },
+              ]}
+            >
+              Great Start!
+            </Text>
+            <Text
+              style={[
+                theme.typography.body,
+                { color: theme.colors.textSecondary, marginTop: 8, textAlign: 'center' },
+              ]}
+            >
+              Have a wonderful day
+            </Text>
+          </Animated.View>
+        </View>
+      </Modal>
 
       {/* Toast Notification */}
       <Toast
@@ -219,6 +266,8 @@ const styles = StyleSheet.create({
   moodEmojiContainer: {
     alignItems: 'center',
     marginBottom: 16,
+    height: 80,
+    justifyContent: 'center',
   },
   moodEmoji: {
     fontSize: 64,
@@ -228,5 +277,17 @@ const styles = StyleSheet.create({
   },
   submitButton: {
     marginTop: 8,
+  },
+  successModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 40,
+  },
+  successModalContent: {
+    padding: 40,
+    alignItems: 'center',
+    minWidth: 280,
   },
 });

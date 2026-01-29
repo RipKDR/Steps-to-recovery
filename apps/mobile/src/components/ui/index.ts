@@ -10,11 +10,11 @@ export * from './accordion';
 export * from './alert-dialog';
 export * from './avatar';
 export * from './badge';
-export * from './button';
-export * from './card';
+export * from './Button';
+export * from './Card';
 export * from './checkbox';
 export * from './dialog';
-export * from './input';
+export * from './Input';
 export * from './label';
 export * from './progress';
 export * from './separator';
@@ -30,7 +30,7 @@ export * from './native-only-animated-view';
 export { Slider } from './Slider';
 
 // Icon component (shadcn style - Lucide icons with NativeWind support)
-export { Icon } from './icon';
+export { Icon } from './Icon';
 
 // Legacy compatibility wrappers (use new components for new code)
 export { LegacyCard } from './legacy-card';

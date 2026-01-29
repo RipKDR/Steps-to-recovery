@@ -10,6 +10,8 @@
 *.md text eol=lf
 *.yml text eol=lf
 *.yaml text eol=lf
+*.sh text eol=lf
+.husky/* text eol=lf
 
 # Force CRLF for Windows batch files
 *.bat text eol=crlf

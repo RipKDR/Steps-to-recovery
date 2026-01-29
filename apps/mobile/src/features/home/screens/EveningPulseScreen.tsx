@@ -1,17 +1,24 @@
 /**
  * Evening Pulse Check Screen
- * Daily reflection, mood tracking, and craving assessment
+ * Daily reflection, mood tracking, and craving assessment with premium animations
  */
 
-import React, { useState, useEffect, useRef } from 'react';
-import { ScrollView, StyleSheet, View, Text, Animated, Platform } from 'react-native';
+import React, { useState, useCallback } from 'react';
+import { ScrollView, StyleSheet, View, Text, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
-import * as Haptics from 'expo-haptics';
+import Animated, {
+  FadeIn,
+  FadeInDown,
+  FadeInUp,
+  FadeOut,
+  SlideOutDown,
+} from 'react-native-reanimated';
 import { useCreateCheckIn, useTodayCheckIns } from '../hooks/useCheckIns';
 import { useTheme } from '../../../design-system/hooks/useTheme';
-import { TextArea, Button, Card, Toast } from '../../../design-system/components';
+import { TextArea, Button, Card, Toast, AnimatedCheckmark } from '../../../design-system/components';
 import { Slider } from '../../../components/Slider';
+import { hapticSuccess, hapticSelection, hapticError, hapticWarning } from '../../../utils/haptics';
 
 interface EveningPulseScreenProps {
   userId: string;
@@ -29,26 +36,35 @@ export function EveningPulseScreen({ userId }: EveningPulseScreenProps): React.R
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [toastVariant, setToastVariant] = useState<'success' | 'error'>('success');
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
-  // Entrance animation
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(30)).current;
+  // Handle mood slider change with haptic feedback
+  const handleMoodChange = useCallback((value: number) => {
+    if (value !== mood) {
+      hapticSelection();
+    }
+    setMood(value);
+  }, [mood]);
 
-  useEffect(() => {
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 400,
-        useNativeDriver: true,
-      }),
-      Animated.spring(slideAnim, {
-        toValue: 0,
-        friction: 8,
-        tension: 40,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, []);
+  // Handle craving slider change with haptic feedback
+  const handleCravingChange = useCallback((value: number) => {
+    if (value !== craving) {
+      hapticSelection();
+      // Warning haptic for high craving
+      if (value > 6 && craving <= 6) {
+        hapticWarning();
+      }
+    }
+    setCraving(value);
+  }, [craving]);
+
+  // Handle successful completion animation
+  const handleSuccessAnimationComplete = useCallback(() => {
+    setTimeout(() => {
+      setShowSuccessModal(false);
+      navigation.goBack();
+    }, 300);
+  }, [navigation]);
 
   const handleSubmit = async (): Promise<void> => {
     try {
@@ -59,21 +75,11 @@ export function EveningPulseScreen({ userId }: EveningPulseScreenProps): React.R
         craving,
       });
 
-      // Haptic feedback on success
-      if (Platform.OS !== 'web') {
-        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      }
-
-      // Show success toast
-      setToastMessage('Evening check-in complete! Rest well tonight.');
-      setToastVariant('success');
-      setShowToast(true);
-
-      // Navigate back after toast
-      setTimeout(() => {
-        navigation.goBack();
-      }, 1500);
+      // Show success modal with animated checkmark
+      setShowSuccessModal(true);
+      hapticSuccess();
     } catch (err) {
+      hapticError();
       setToastMessage('Failed to save check-in. Please try again.');
       setToastVariant('error');
       setShowToast(true);
@@ -102,19 +108,13 @@ export function EveningPulseScreen({ userId }: EveningPulseScreenProps): React.R
       style={[styles.container, { backgroundColor: theme.colors.background }]}
       edges={['bottom']}
     >
-      <Animated.View
-        style={{
-          flex: 1,
-          opacity: fadeAnim,
-          transform: [{ translateY: slideAnim }],
-        }}
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.contentContainer}
+        showsVerticalScrollIndicator={false}
       >
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.contentContainer}
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Header Card */}
+        {/* Header Card */}
+        <Animated.View entering={FadeInDown.delay(100).springify()}>
           <Card variant="flat" style={styles.headerCard}>
             <Text
               style={[
@@ -133,9 +133,11 @@ export function EveningPulseScreen({ userId }: EveningPulseScreenProps): React.R
               Reflect on your day
             </Text>
           </Card>
+        </Animated.View>
 
-          {/* Morning Intention Reminder (if exists) */}
-          {morning?.intention && (
+        {/* Morning Intention Reminder (if exists) */}
+        {morning?.intention && (
+          <Animated.View entering={FadeInDown.delay(150).springify()}>
             <Card
               variant="flat"
               style={[
@@ -160,9 +162,11 @@ export function EveningPulseScreen({ userId }: EveningPulseScreenProps): React.R
                 "{morning.intention}"
               </Text>
             </Card>
-          )}
+          </Animated.View>
+        )}
 
-          {/* Reflection Input */}
+        {/* Reflection Input */}
+        <Animated.View entering={FadeInDown.delay(200).springify()}>
           <TextArea
             label="How did your day go?"
             value={reflection}
@@ -174,8 +178,10 @@ export function EveningPulseScreen({ userId }: EveningPulseScreenProps): React.R
             accessibilityLabel="Daily reflection"
             accessibilityHint="Reflect on your day"
           />
+        </Animated.View>
 
-          {/* Mood Section */}
+        {/* Mood Section */}
+        <Animated.View entering={FadeInDown.delay(300).springify()}>
           <Card variant="flat" style={styles.sectionCard}>
             <Text
               style={[
@@ -195,16 +201,23 @@ export function EveningPulseScreen({ userId }: EveningPulseScreenProps): React.R
             </Text>
 
             {/* Mood Emoji Display */}
-            <View style={styles.emojiContainer}>
-              <Text style={styles.emoji}>
+            <Animated.View
+              style={styles.emojiContainer}
+              key={mood}
+            >
+              <Animated.Text
+                entering={FadeInUp.springify().damping(8)}
+                exiting={FadeOut.duration(100)}
+                style={styles.emoji}
+              >
                 {moodEmojis[mood - 1]}
-              </Text>
-            </View>
+              </Animated.Text>
+            </Animated.View>
 
             {/* Slider */}
             <Slider
               value={mood}
-              onValueChange={setMood}
+              onValueChange={handleMoodChange}
               minimumValue={1}
               maximumValue={5}
               step={1}
@@ -215,8 +228,10 @@ export function EveningPulseScreen({ userId }: EveningPulseScreenProps): React.R
               accessibilityRole="adjustable"
             />
           </Card>
+        </Animated.View>
 
-          {/* Craving Level Section */}
+        {/* Craving Level Section */}
+        <Animated.View entering={FadeInDown.delay(400).springify()}>
           <Card variant="flat" style={styles.sectionCard}>
             <Text
               style={[
@@ -236,21 +251,25 @@ export function EveningPulseScreen({ userId }: EveningPulseScreenProps): React.R
             </Text>
 
             {/* Craving Value Display */}
-            <View style={styles.emojiContainer}>
-              <Text
+            <Animated.View
+              style={styles.emojiContainer}
+              key={`craving-${craving}`}
+            >
+              <Animated.Text
+                entering={FadeInUp.springify().damping(8)}
                 style={[
                   styles.cravingValue,
                   { color: getCravingColor(craving) },
                 ]}
               >
                 {craving}
-              </Text>
-            </View>
+              </Animated.Text>
+            </Animated.View>
 
             {/* Slider */}
             <Slider
               value={craving}
-              onValueChange={setCraving}
+              onValueChange={handleCravingChange}
               minimumValue={0}
               maximumValue={10}
               step={1}
@@ -263,7 +282,8 @@ export function EveningPulseScreen({ userId }: EveningPulseScreenProps): React.R
 
             {/* High Craving Warning */}
             {craving > 6 && (
-              <View
+              <Animated.View
+                entering={FadeIn.duration(300)}
                 style={[
                   styles.warningContainer,
                   { backgroundColor: theme.colors.dangerLight },
@@ -277,11 +297,13 @@ export function EveningPulseScreen({ userId }: EveningPulseScreenProps): React.R
                 >
                   Consider reaching out to your sponsor or attending a meeting if cravings are strong.
                 </Text>
-              </View>
+              </Animated.View>
             )}
           </Card>
+        </Animated.View>
 
-          {/* Submit Button */}
+        {/* Submit Button */}
+        <Animated.View entering={FadeInUp.delay(500).springify()}>
           <Button
             variant="primary"
             size="large"
@@ -294,8 +316,53 @@ export function EveningPulseScreen({ userId }: EveningPulseScreenProps): React.R
           >
             Complete Day
           </Button>
-        </ScrollView>
-      </Animated.View>
+        </Animated.View>
+      </ScrollView>
+
+      {/* Success Modal */}
+      <Modal
+        visible={showSuccessModal}
+        transparent
+        animationType="fade"
+        statusBarTranslucent
+      >
+        <View style={styles.successModalOverlay}>
+          <Animated.View
+            entering={FadeIn.duration(200)}
+            exiting={SlideOutDown.duration(300)}
+            style={[
+              styles.successModalContent,
+              {
+                backgroundColor: theme.colors.surface,
+                borderRadius: theme.radius.xl,
+                ...(theme.isDark ? theme.shadows.lgDark : theme.shadows.lg),
+              },
+            ]}
+          >
+            <AnimatedCheckmark
+              size={100}
+              color={theme.colors.success}
+              onAnimationComplete={handleSuccessAnimationComplete}
+            />
+            <Text
+              style={[
+                theme.typography.h2,
+                { color: theme.colors.text, marginTop: 20, textAlign: 'center' },
+              ]}
+            >
+              Day Complete!
+            </Text>
+            <Text
+              style={[
+                theme.typography.body,
+                { color: theme.colors.textSecondary, marginTop: 8, textAlign: 'center' },
+              ]}
+            >
+              Rest well tonight
+            </Text>
+          </Animated.View>
+        </View>
+      </Modal>
 
       {/* Toast Notification */}
       <Toast
@@ -333,6 +400,8 @@ const styles = StyleSheet.create({
   emojiContainer: {
     alignItems: 'center',
     marginBottom: 16,
+    height: 80,
+    justifyContent: 'center',
   },
   emoji: {
     fontSize: 64,
@@ -351,5 +420,17 @@ const styles = StyleSheet.create({
   },
   submitButton: {
     marginTop: 8,
+  },
+  successModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 40,
+  },
+  successModalContent: {
+    padding: 40,
+    alignItems: 'center',
+    minWidth: 280,
   },
 });

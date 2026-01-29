@@ -11,7 +11,7 @@ import { useDatabase } from '../contexts/DatabaseContext';
 import { useReadingStore } from '../store/readingStore';
 import { addToSyncQueue } from '../services/syncService';
 import { logger } from '../utils/logger';
-import { DAILY_READINGS, generateFullYearReadings } from '../data/dailyReadings';
+import { generateFullYearReadings } from '../data/dailyReadings';
 import type { DailyReading, DailyReadingReflection } from '../types';
 
 // Generate simple UUID for local use
@@ -116,16 +116,14 @@ export function useReadingDatabase() {
           reflection_prompt: reading.reflection_prompt
         };
         
-        store.setState({ todayReading: formattedReading });
+        useReadingStore.setState({ todayReading: formattedReading });
         
         // Also load today's reflection if it exists
         await loadTodayReflection();
       }
     } catch (error) {
       logger.error('Failed to load today\'s reading', error);
-      store.setState({ 
-        error: error instanceof Error ? error.message : 'Failed to load reading'
-      });
+      // Error is logged, store state remains unchanged
     }
   }, [db, isReady]);
 
@@ -142,7 +140,7 @@ export function useReadingDatabase() {
         [dateKey]
       );
 
-      store.setState({ todayReflection: reflection || null });
+      useReadingStore.setState({ todayReflection: reflection || null });
     } catch (error) {
       logger.error('Failed to load today\'s reflection', error);
     }
@@ -153,10 +151,10 @@ export function useReadingDatabase() {
     reflectionText: string,
     userId: string
   ): Promise<DailyReadingReflection | null> => {
-    if (!db || !isReady || !store.getState().todayReading) return null;
+    if (!db || !isReady || !store.todayReading) return null;
 
     try {
-      const { todayReading } = store.getState();
+      const { todayReading } = store;
       const now = new Date();
       const dateKey = formatDateKey(now);
       
@@ -198,11 +196,11 @@ export function useReadingDatabase() {
       await addToSyncQueue(db, 'reading_reflections', reflectionId, 'insert');
 
       // Update store
-      store.setState({ todayReflection: reflection });
+      useReadingStore.setState({ todayReflection: reflection });
       
       // Recalculate streak
       const newStreak = await calculateStreak();
-      store.setState({ readingStreak: newStreak });
+      useReadingStore.setState({ readingStreak: newStreak });
 
       logger.info('Reflection saved successfully', { 
         reflectionId, 
@@ -212,9 +210,7 @@ export function useReadingDatabase() {
       return reflection;
     } catch (error) {
       logger.error('Failed to save reflection', error);
-      store.setState({ 
-        error: error instanceof Error ? error.message : 'Failed to save reflection'
-      });
+      // Error is logged, store state remains unchanged
       return null;
     }
   }, [db, isReady]);
@@ -278,7 +274,7 @@ export function useReadingDatabase() {
   }, [isReady, initializeReadings]);
 
   return {
-    // Database operations
+    // Database operations (local versions that override store's placeholder methods)
     initializeReadings,
     loadTodayReading,
     loadTodayReflection,
@@ -286,8 +282,19 @@ export function useReadingDatabase() {
     calculateStreak,
     getReflectionForDate,
     
-    // Store state and actions (pass through)
-    ...store.getState(),
+    // Store state
+    todayReading: store.todayReading,
+    todayReflection: store.todayReflection,
+    reflections: store.reflections,
+    readingStreak: store.readingStreak,
+    isLoading: store.isLoading,
+    error: store.error,
+    
+    // Store actions (non-database dependent)
+    decryptReflectionContent: store.decryptReflectionContent,
+    hasReflectedToday: store.hasReflectedToday,
+    markAsRead: store.markAsRead,
+    getReadingForDate: store.getReadingForDate,
     
     // Database status
     isReady

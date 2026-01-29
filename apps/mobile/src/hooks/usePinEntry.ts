@@ -57,7 +57,7 @@ export function usePinEntry({
                             setError('Incorrect PIN'); // default error, can be overridden
                             // Logic for shake or clear can be handled by the consumer via the effect of error or callback
                         }
-                    } catch (e) {
+                    } catch {
                         setError('Error validating PIN');
                     } finally {
                         setIsValidating(false);

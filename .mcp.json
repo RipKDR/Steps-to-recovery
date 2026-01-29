@@ -1,5 +1,4 @@
 {
-  "$schema": "https://raw.githubusercontent.com/modelcontextprotocol/specification/main/schema/config.json",
   "mcpServers": {
     "supabase": {
       "transport": "http",

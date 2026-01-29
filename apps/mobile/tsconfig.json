@@ -43,5 +43,6 @@
     "**/*.test.ts",
     "**/*.test.tsx",
     "../../_bmad-output"
-  ]
+  ],
+  "types": [] // This prevents automatic inclusion of all @types packages
 }

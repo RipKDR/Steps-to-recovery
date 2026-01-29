@@ -3,9 +3,10 @@
  * A themed switch control for on/off settings
  */
 
-import React from 'react';
+import React, { useCallback } from 'react';
 import { View, Switch, Text, StyleSheet, ViewStyle, Platform } from 'react-native';
 import { useTheme } from '../hooks/useTheme';
+import { hapticSelection } from '../../utils/haptics';
 
 export interface ToggleProps {
   /**
@@ -65,6 +66,11 @@ export function Toggle({
 
   const thumbColor = Platform.OS === 'ios' ? '#FFFFFF' : value ? activeTrackColor : '#FFFFFF';
 
+  const handleValueChange = useCallback(async (newValue: boolean): Promise<void> => {
+    await hapticSelection();
+    onValueChange(newValue);
+  }, [onValueChange]);
+
   return (
     <View style={[styles.container, style]}>
       {label && (
@@ -82,7 +88,7 @@ export function Toggle({
       )}
       <Switch
         value={value}
-        onValueChange={onValueChange}
+        onValueChange={handleValueChange}
         disabled={disabled}
         trackColor={{
           false: inactiveTrackColor,

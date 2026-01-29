@@ -3,6 +3,7 @@ import { Session, User, AuthError } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import { secureStorage } from '../adapters/secureStorage';
 import { performLogoutCleanup } from '../utils/logoutCleanup';
+import { setSentryUser } from '../lib/sentry';
 
 interface AuthState {
   session: Session | null;
@@ -41,6 +42,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           await secureStorage.initializeWithSession(session.user.id, session.access_token);
         }
 
+        // Set Sentry user context for error tracking
+        setSentryUser(session?.user?.id ?? null);
+
         setState(prev => ({
           ...prev,
           session,
@@ -71,6 +75,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } else {
         await secureStorage.clearSession();
       }
+
+      // Update Sentry user context
+      setSentryUser(session?.user?.id ?? null);
 
       setState(prev => ({
         ...prev,

@@ -5,7 +5,6 @@ import {
   syncStepWork,
   syncDailyCheckIn,
   addToSyncQueue,
-  type SyncResult,
 } from '../syncService';
 import { supabase } from '../../lib/supabase';
 import { logger } from '../../utils/logger';
@@ -15,7 +14,6 @@ jest.mock('../../lib/supabase');
 jest.mock('../../utils/logger');
 
 // Mock UUID generation for consistent testing
-const mockUUID = '12345678-1234-4abc-yxyz-123456789012';
 jest.mock('crypto', () => ({
   randomFillSync: jest.fn(() => Buffer.from('12345678901234567890123456789012', 'hex')),
 }));
@@ -138,7 +136,7 @@ describe('syncService Integration Tests', () => {
       };
 
       mockDb.getFirstAsync.mockResolvedValueOnce(localEntry);
-      mockDb.runAsync.mockResolvedValueOnce({} as any);
+      mockDb.runAsync.mockResolvedValueOnce(undefined);
 
       const result = await syncJournalEntry(mockDb, entryId, userId);
 
@@ -192,7 +190,7 @@ describe('syncService Integration Tests', () => {
       };
 
       mockDb.getFirstAsync.mockResolvedValueOnce(localEntry);
-      mockDb.runAsync.mockResolvedValueOnce({} as any);
+      mockDb.runAsync.mockResolvedValueOnce(undefined);
 
       const result = await syncJournalEntry(mockDb, entryId, userId);
 

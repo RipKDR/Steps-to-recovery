@@ -82,14 +82,21 @@ This app is built with privacy as a fundamental principle:
 - [Development Plan](./plan.txt) - Detailed MVP implementation plan
 - [Tech Stack Guide](./tech%20stack.txt) - In-depth technology decisions
 - [Claude Prompts](./.claude/) - Feature-specific implementation guides
+- [API & Data Model](./docs/API.md) - Local schema, sync, and Supabase overview
+- [Troubleshooting](./TROUBLESHOOTING.md) - Common issues and fixes
+- [Privacy Policy (Draft)](./docs/PRIVACY_POLICY.md) - Review before release
+- [Terms of Service (Draft)](./docs/TERMS_OF_SERVICE.md) - Review before release
 
 ## 🤝 Contributing
 
 This is currently a solo-developed MVP. Contributions, suggestions, and feedback are welcome once the initial release is complete.
 
+- See [CONTRIBUTING.md](./CONTRIBUTING.md)
+- See [CODE_OF_CONDUCT.md](./CODE_OF_CONDUCT.md)
+
 ## 📄 License
 
-To be determined
+MIT. See [LICENSE](./LICENSE).
 
 ## 🆘 Support Resources
 

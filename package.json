@@ -1,6 +1,7 @@
 {
   "name": "steps-to-recovery-monorepo",
   "version": "1.0.0",
+  "license": "MIT",
   "private": true,
   "workspaces": [
     "apps/*",
@@ -11,18 +12,35 @@
     "build": "turbo run build",
     "test": "turbo run test",
     "lint": "turbo run lint",
+    "type-check": "turbo run type-check",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "lint-staged": "lint-staged",
+    "validate-env": "node scripts/validate-env.js",
     "clean": "turbo run clean",
     "mobile": "cd apps/mobile && npm start",
-    "web": "cd apps/web && npm run dev",
+    "web": "cd apps/mobile && npm run web",
     "android": "cd apps/mobile && npx expo run:android",
-    "ios": "cd apps/mobile && npx expo run:ios"
+    "ios": "cd apps/mobile && npx expo run:ios",
+    "prepare": "husky install"
   },
   "devDependencies": {
+    "@commitlint/cli": "^20.3.1",
+    "@commitlint/config-conventional": "^20.3.1",
+    "@microsoft/eslint-formatter-sarif": "^3.1.0",
     "@types/sql.js": "^1.4.9",
+    "@types/ws": "^8.18.1",
+    "dotenv": "^17.2.3",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.7",
+    "prettier": "^3.8.1",
     "turbo": "^2.7.3",
     "typescript": "~5.9.3"
   },
   "engines": {
     "node": ">=20.0.0"
+  },
+  "dependencies": {
+    "@sentry/react-native": "^7.10.0"
   }
 }

@@ -163,6 +163,70 @@ Use these prompts with Claude Code to generate feature implementations.
 - No sensitive data logging
 - Privacy-first analytics (PostHog)
 
+## Error Monitoring with Sentry
+
+Sentry is configured for production error tracking with automatic sanitization of sensitive data.
+
+### Local Development Setup
+
+1. **Create Sentry account** (if needed)
+   - Go to https://sentry.io/signup/
+   - Create organization: `steps-to-recovery` (or your preferred name)
+
+2. **Create mobile project**
+   - Organization → Projects → Create Project
+   - Platform: React Native
+   - Project name: `mobile`
+
+3. **Get your DSN**
+   - Project Settings → Client Keys (DSN)
+   - Copy the DSN (format: `https://<key>@<org>.ingest.sentry.io/<project-id>`)
+
+4. **Add to local `.env`**
+   ```bash
+   # apps/mobile/.env
+   EXPO_PUBLIC_SENTRY_DSN=https://your-key@your-org.ingest.sentry.io/your-project-id
+   ```
+
+### Production Setup (EAS Build)
+
+For production builds, add the Sentry DSN to EAS Secrets:
+
+```bash
+# Set production Sentry DSN
+eas secret:create --scope project --name EXPO_PUBLIC_SENTRY_DSN --value "https://your-key@your-org.ingest.sentry.io/your-project-id" --type string
+
+# Verify it's set
+eas secret:list
+```
+
+### How It Works
+
+- **Automatic initialization**: Sentry is initialized early in `App.tsx` via `initSentry()`
+- **User tracking**: User ID (not email) is tracked via `setSentryUser()` in `AuthContext`
+- **Error capture**: Errors are automatically captured via `Sentry.wrap()` on the root component
+- **Logger integration**: `logger.error()` automatically sends errors to Sentry in production
+- **Data sanitization**: All sensitive fields (encrypted_*, journal, etc.) are automatically redacted
+- **Privacy-first**: Only runs in production builds (`__DEV__ = false`)
+
+### Testing Sentry
+
+To test Sentry in a preview build:
+
+```bash
+# Create preview build with Sentry
+eas build --platform android --profile preview
+
+# Test by triggering an error in the app
+# Errors should appear in Sentry dashboard within 30 seconds
+```
+
+### Sentry Configuration Files
+
+- `apps/mobile/src/lib/sentry.ts` - Sentry initialization & sanitization
+- `apps/mobile/app.json` - Sentry plugin config (`@sentry/react-native/expo`)
+- `apps/mobile/App.tsx` - Early initialization & root component wrapping
+
 ## Next Steps
 
 1. Install remaining dependencies
@@ -175,5 +239,6 @@ Use these prompts with Claude Code to generate feature implementations.
 - [Expo Documentation](https://docs.expo.dev/)
 - [Supabase Documentation](https://supabase.com/docs)
 - [React Navigation](https://reactnavigation.org/)
+- [Sentry Documentation](https://docs.sentry.io/platforms/react-native/)
 - [Plan Document](./plan.txt)
 - [Tech Stack Details](./tech%20stack.txt)

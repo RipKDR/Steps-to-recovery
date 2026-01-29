@@ -141,3 +141,47 @@ export const animationPresets = {
 export type SpringConfigKey = keyof typeof springConfigs;
 export type TimingDurationKey = keyof typeof timingDurations;
 export type EasingCurveKey = keyof typeof easingCurves;
+
+/**
+ * Reanimated-compatible spring configurations
+ * Uses damping and stiffness instead of tension and friction
+ */
+export const reanimatedSprings = {
+  // Default spring - smooth, natural feel
+  default: {
+    damping: 15,
+    stiffness: 150,
+  },
+
+  // Bouncy spring - energetic, playful
+  bouncy: {
+    damping: 8,
+    stiffness: 200,
+  },
+
+  // Gentle spring - subtle, calming
+  gentle: {
+    damping: 20,
+    stiffness: 100,
+  },
+
+  // Stiff spring - quick, responsive
+  stiff: {
+    damping: 20,
+    stiffness: 300,
+  },
+
+  // Snappy spring - for quick interactions
+  snappy: {
+    damping: 25,
+    stiffness: 400,
+  },
+
+  // Soft spring - for subtle movements
+  soft: {
+    damping: 30,
+    stiffness: 80,
+  },
+} as const;
+
+export type ReanimatedSpringKey = keyof typeof reanimatedSprings;

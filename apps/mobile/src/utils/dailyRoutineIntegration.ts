@@ -7,7 +7,16 @@
  */
 
 import { logger } from '../utils/logger';
-import type { DailyCheckin, DailyReading, DailyReadingReflection } from '../types';
+import type { DailyReading, DailyReadingReflection } from '../types';
+
+// Define DailyCheckin interface locally since it's not exported from types
+interface DailyCheckin {
+  id: string;
+  user_id: string;
+  encrypted_mood?: string;
+  encrypted_craving?: string;
+  created_at: string;
+}
 
 export interface DailyRoutineData {
   date: string;
@@ -19,13 +28,16 @@ export interface DailyRoutineData {
   routineScore: number; // 0-100 based on completion
 }
 
+// Maximum possible routine score
+const MAX_ROUTINE_SCORE = 100;
+
 /**
  * Calculate routine completion score
  * Gives a score out of 100 based on daily activities completed
  */
 export function calculateRoutineScore(data: Partial<DailyRoutineData>): number {
   let score = 0;
-  const maxScore = 100;
+
   
   // Check-in completion (50 points)
   if (data.hasCheckedIn) {
@@ -37,5 +49,230 @@ export function calculateRoutineScore(data: Partial<DailyRoutineData>): number {
     score += 50;
   }
   
-  return Math.min(score, maxScore);
-}\n\n/**\n * Get suggested daily routine flow\n * Returns recommendations based on what the user has/hasn't completed\n */\nexport function getDailyRoutineGuidance(data: DailyRoutineData): {\n  message: string;\n  nextAction: 'checkin' | 'reading' | 'reflection' | 'complete';\n  encouragement: string;\n} {\n  const { hasCheckedIn, hasReflected, routineScore } = data;\n  \n  if (!hasCheckedIn && !hasReflected) {\n    return {\n      message: \"Good morning! Let's start your day with intention.\",\n      nextAction: 'checkin',\n      encouragement: \"Taking time for your daily check-in helps set a positive tone for the day ahead.\"\n    };\n  }\n  \n  if (hasCheckedIn && !hasReflected) {\n    return {\n      message: \"Great check-in! Now let's explore today's reading.\",\n      nextAction: 'reading',\n      encouragement: \"Today's reading has insights that might resonate with where you are right now.\"\n    };\n  }\n  \n  if (!hasCheckedIn && hasReflected) {\n    return {\n      message: \"Wonderful reflection! A quick check-in would complete your routine.\",\n      nextAction: 'checkin',\n      encouragement: \"Pairing reflection with check-in creates a more complete daily practice.\"\n    };\n  }\n  \n  return {\n    message: \"Excellent! You've completed your daily routine.\",\n    nextAction: 'complete',\n    encouragement: `Your routine score today is ${routineScore}/100. You're building a strong foundation for recovery.`\n  };\n}\n\n/**\n * Generate personalized reading suggestions based on check-in data\n */\nexport function getReadingSuggestions(checkin: DailyCheckin | null): {\n  focusAreas: string[];\n  reflectionPrompts: string[];\n} {\n  const focusAreas: string[] = [];\n  const reflectionPrompts: string[] = [];\n  \n  if (!checkin) {\n    return {\n      focusAreas: ['mindfulness', 'self-compassion', 'daily intention'],\n      reflectionPrompts: [\n        \"What am I most grateful for today?\",\n        \"How can I show kindness to myself today?\",\n        \"What positive intention do I want to set?\"\n      ]\n    };\n  }\n  \n  // Analyze mood from check-in\n  if (checkin.encrypted_mood) {\n    // Would decrypt and analyze mood here\n    focusAreas.push('emotional awareness', 'mood balance');\n    reflectionPrompts.push(\"How did I handle my emotions today?\");\n  }\n  \n  // Analyze cravings from check-in\n  if (checkin.encrypted_craving) {\n    focusAreas.push('craving management', 'healthy coping');\n    reflectionPrompts.push(\"What healthy alternatives did I choose today?\");\n  }\n  \n  // Add general reflection prompts\n  reflectionPrompts.push(\n    \"What did I learn about myself today?\",\n    \"How did I practice self-care today?\",\n    \"What am I looking forward to tomorrow?\"\n  );\n  \n  return { focusAreas, reflectionPrompts };\n}\n\n/**\n * Create integrated daily summary\n * Combines check-in and reading data into a cohesive daily summary\n */\nexport function createDailySummary(data: DailyRoutineData): {\n  title: string;\n  summary: string;\n  insights: string[];\n  celebrateMessage?: string;\n} {\n  const { hasCheckedIn, hasReflected, routineScore, checkin, reflection } = data;\n  \n  const insights: string[] = [];\n  let title = \"Daily Summary\";\n  let summary = \"Here's how your day unfolded:\";\n  \n  if (routineScore === 100) {\n    title = \"Complete Day! 🌟\";\n    summary = \"You completed your full daily routine today. That's something to celebrate!\";\n    insights.push(\"Consistency in daily practices builds lasting positive change.\");\n  } else if (routineScore >= 50) {\n    title = \"Good Progress 📈\";\n    summary = \"You made meaningful progress in your daily routine today.\";\n  } else {\n    title = \"Every Step Counts 💙\";\n    summary = \"Remember, recovery is about progress, not perfection.\";\n    insights.push(\"Even small steps forward are valuable and worth acknowledging.\");\n  }\n  \n  // Add specific insights based on activities completed\n  if (hasCheckedIn) {\n    insights.push(\"Taking time to check in with yourself shows self-awareness and care.\");\n  }\n  \n  if (hasReflected) {\n    insights.push(\"Your reflection today contributes to deeper self-understanding.\");\n  }\n  \n  // Generate celebration message for complete routines\n  const celebrateMessage = routineScore === 100 \n    ? \"You've built another day of positive habits. Each day like this strengthens your foundation for lasting recovery.\"\n    : undefined;\n  \n  return {\n    title,\n    summary,\n    insights,\n    celebrateMessage\n  };\n}\n\n/**\n * Track routine consistency over time\n */\nexport function calculateRoutineStreak(routineHistory: DailyRoutineData[]): {\n  currentStreak: number;\n  longestStreak: number;\n  completionRate: number;\n} {\n  const sortedHistory = routineHistory.sort((a, b) => \n    new Date(b.date).getTime() - new Date(a.date).getTime()\n  );\n  \n  // Calculate current streak (working backwards from today)\n  let currentStreak = 0;\n  for (const day of sortedHistory) {\n    if (day.routineScore >= 50) { // At least 50% completion\n      currentStreak++;\n    } else {\n      break;\n    }\n  }\n  \n  // Calculate longest streak\n  let longestStreak = 0;\n  let tempStreak = 0;\n  \n  for (const day of sortedHistory.reverse()) {\n    if (day.routineScore >= 50) {\n      tempStreak++;\n      longestStreak = Math.max(longestStreak, tempStreak);\n    } else {\n      tempStreak = 0;\n    }\n  }\n  \n  // Calculate completion rate\n  const totalDays = routineHistory.length;\n  const completedDays = routineHistory.filter(day => day.routineScore >= 50).length;\n  const completionRate = totalDays > 0 ? (completedDays / totalDays) * 100 : 0;\n  \n  return {\n    currentStreak,\n    longestStreak,\n    completionRate: Math.round(completionRate)\n  };\n}\n\n/**\n * Get motivational message based on routine performance\n */\nexport function getMotivationalMessage(streak: number, completionRate: number): string {\n  if (streak >= 30) {\n    return \"Incredible! You've built a solid routine that's become part of who you are. This consistency is transforming your life.\";\n  }\n  \n  if (streak >= 7) {\n    return \"You're building momentum! A week of consistent daily practices shows real commitment to your growth.\";\n  }\n  \n  if (streak >= 3) {\n    return \"Great start! Three days in a row is the beginning of a powerful new habit.\";\n  }\n  \n  if (completionRate >= 70) {\n    return \"You're doing well overall! Even with some ups and downs, you're showing up for yourself consistently.\";\n  }\n  \n  if (completionRate >= 40) {\n    return \"Keep going! You're making progress, and each day you practice these routines, you're investing in your wellbeing.\";\n  }\n  \n  return \"Every journey begins with a single step. Today is a perfect day to recommit to the daily practices that support your recovery.\";\n}\n\n/**\n * Log routine integration events for analytics\n */\nexport function logRoutineEvent(event: {\n  type: 'routine_completed' | 'guidance_viewed' | 'streak_achieved';\n  data: Record<string, unknown>;\n}): void {\n  logger.info('Daily routine event', {\n    event: event.type,\n    ...event.data,\n    timestamp: new Date().toISOString()\n  });\n}\n"
+  return Math.min(score, MAX_ROUTINE_SCORE);
+}
+
+/**
+ * Get suggested daily routine flow
+ * Returns recommendations based on what the user has/hasn't completed
+ */
+export function getDailyRoutineGuidance(data: DailyRoutineData): {
+  message: string;
+  nextAction: 'checkin' | 'reading' | 'reflection' | 'complete';
+  encouragement: string;
+} {
+  const { hasCheckedIn, hasReflected, routineScore } = data;
+  
+  if (!hasCheckedIn && !hasReflected) {
+    return {
+      message: "Good morning! Let's start your day with intention.",
+      nextAction: 'checkin',
+      encouragement: "Taking time for your daily check-in helps set a positive tone for the day ahead."
+    };
+  }
+  
+  if (hasCheckedIn && !hasReflected) {
+    return {
+      message: "Great check-in! Now let's explore today's reading.",
+      nextAction: 'reading',
+      encouragement: "Today's reading has insights that might resonate with where you are right now."
+    };
+  }
+  
+  if (!hasCheckedIn && hasReflected) {
+    return {
+      message: "Wonderful reflection! A quick check-in would complete your routine.",
+      nextAction: 'checkin',
+      encouragement: "Pairing reflection with check-in creates a more complete daily practice."
+    };
+  }
+  
+  return {
+    message: "Excellent! You've completed your daily routine.",
+    nextAction: 'complete',
+    encouragement: `Your routine score today is ${routineScore}/100. You're building a strong foundation for recovery.`
+  };
+}
+
+/**
+ * Generate personalized reading suggestions based on check-in data
+ */
+export function getReadingSuggestions(checkin: DailyCheckin | null): {
+  focusAreas: string[];
+  reflectionPrompts: string[];
+} {
+  const focusAreas: string[] = [];
+  const reflectionPrompts: string[] = [];
+  
+  if (!checkin) {
+    return {
+      focusAreas: ['mindfulness', 'self-compassion', 'daily intention'],
+      reflectionPrompts: [
+        "What am I most grateful for today?",
+        "How can I show kindness to myself today?",
+        "What positive intention do I want to set?"
+      ]
+    };
+  }
+  
+  // Analyze mood from check-in
+  if (checkin.encrypted_mood) {
+    // Would decrypt and analyze mood here
+    focusAreas.push('emotional awareness', 'mood balance');
+    reflectionPrompts.push("How did I handle my emotions today?");
+  }
+  
+  // Analyze cravings from check-in
+  if (checkin.encrypted_craving) {
+    focusAreas.push('craving management', 'healthy coping');
+    reflectionPrompts.push("What healthy alternatives did I choose today?");
+  }
+  
+  // Add general reflection prompts
+  reflectionPrompts.push(
+    "What did I learn about myself today?",
+    "How did I practice self-care today?",
+    "What am I looking forward to tomorrow?"
+  );
+  
+  return { focusAreas, reflectionPrompts };
+}
+
+/**
+ * Create integrated daily summary
+ * Combines check-in and reading data into a cohesive daily summary
+ */
+export function createDailySummary(data: DailyRoutineData): {
+  title: string;
+  summary: string;
+  insights: string[];
+  celebrateMessage?: string;
+} {
+  const { hasCheckedIn, hasReflected, routineScore } = data;
+  
+  const insights: string[] = [];
+  let title = "Daily Summary";
+  let summary = "Here's how your day unfolded:";
+  
+  if (routineScore === 100) {
+    title = "Complete Day! 🌟";
+    summary = "You completed your full daily routine today. That's something to celebrate!";
+    insights.push("Consistency in daily practices builds lasting positive change.");
+  } else if (routineScore >= 50) {
+    title = "Good Progress 📈";
+    summary = "You made meaningful progress in your daily routine today.";
+  } else {
+    title = "Every Step Counts 💙";
+    summary = "Remember, recovery is about progress, not perfection.";
+    insights.push("Even small steps forward are valuable and worth acknowledging.");
+  }
+  
+  // Add specific insights based on activities completed
+  if (hasCheckedIn) {
+    insights.push("Taking time to check in with yourself shows self-awareness and care.");
+  }
+  
+  if (hasReflected) {
+    insights.push("Your reflection today contributes to deeper self-understanding.");
+  }
+  
+  // Generate celebration message for complete routines
+  const celebrateMessage = routineScore === 100 
+    ? "You've built another day of positive habits. Each day like this strengthens your foundation for lasting recovery."
+    : undefined;
+  
+  return {
+    title,
+    summary,
+    insights,
+    celebrateMessage
+  };
+}
+
+/**
+ * Track routine consistency over time
+ */
+export function calculateRoutineStreak(routineHistory: DailyRoutineData[]): {
+  currentStreak: number;
+  longestStreak: number;
+  completionRate: number;
+} {
+  const sortedHistory = routineHistory.sort((a, b) => 
+    new Date(b.date).getTime() - new Date(a.date).getTime()
+  );
+  
+  // Calculate current streak (working backwards from today)
+  let currentStreak = 0;
+  for (const day of sortedHistory) {
+    if (day.routineScore >= 50) { // At least 50% completion
+      currentStreak++;
+    } else {
+      break;
+    }
+  }
+  
+  // Calculate longest streak
+  let longestStreak = 0;
+  let tempStreak = 0;
+  
+  for (const day of sortedHistory.reverse()) {
+    if (day.routineScore >= 50) {
+      tempStreak++;
+      longestStreak = Math.max(longestStreak, tempStreak);
+    } else {
+      tempStreak = 0;
+    }
+  }
+  
+  // Calculate completion rate
+  const totalDays = routineHistory.length;
+  const completedDays = routineHistory.filter(day => day.routineScore >= 50).length;
+  const completionRate = totalDays > 0 ? (completedDays / totalDays) * 100 : 0;
+  
+  return {
+    currentStreak,
+    longestStreak,
+    completionRate: Math.round(completionRate)
+  };
+}
+
+/**
+ * Get motivational message based on routine performance
+ */
+export function getMotivationalMessage(streak: number, completionRate: number): string {
+  if (streak >= 30) {
+    return "Incredible! You've built a solid routine that's become part of who you are. This consistency is transforming your life.";
+  }
+  
+  if (streak >= 7) {
+    return "You're building momentum! A week of consistent daily practices shows real commitment to your growth.";
+  }
+  
+  if (streak >= 3) {
+    return "Great start! Three days in a row is the beginning of a powerful new habit.";
+  }
+  
+  if (completionRate >= 70) {
+    return "You're doing well overall! Even with some ups and downs, you're showing up for yourself consistently.";
+  }
+  
+  if (completionRate >= 40) {
+    return "Keep going! You're making progress, and each day you practice these routines, you're investing in your wellbeing.";
+  }
+  
+  return "Every journey begins with a single step. Today is a perfect day to recommit to the daily practices that support your recovery.";
+}
+
+/**
+ * Log routine integration events for analytics
+ */
+export function logRoutineEvent(event: {
+  type: 'routine_completed' | 'guidance_viewed' | 'streak_achieved';
+  data: Record<string, unknown>;
+}): void {
+  logger.info('Daily routine event', {
+    event: event.type,
+    ...event.data,
+    timestamp: new Date().toISOString()
+  });
+}

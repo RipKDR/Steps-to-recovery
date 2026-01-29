@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { useTheme } from '../hooks/useTheme';
 import { usePressAnimation } from '../hooks/useAnimation';
+import { hapticImpact } from '../../utils/haptics';
 
 type FABVariant = 'primary' | 'danger';
 
@@ -45,9 +46,14 @@ export function FloatingActionButton({
   // If label is provided, render extended FAB
   const hasLabel = !!label;
 
+  const handlePress = async (): Promise<void> => {
+    await hapticImpact('medium');
+    onPress();
+  };
+
   return (
     <TouchableOpacity
-      onPress={onPress}
+      onPress={handlePress}
       onPressIn={() => animatePress(true)}
       onPressOut={() => animatePress(false)}
       activeOpacity={0.9}

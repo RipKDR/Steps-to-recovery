@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback } from 'react';
 import { StyleSheet, View, Text } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import type { JournalEntryDecrypted } from '@recovery/shared/types';

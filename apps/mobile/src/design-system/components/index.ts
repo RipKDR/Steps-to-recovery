@@ -47,7 +47,24 @@ export type { DividerProps } from './Divider';
 export { Text } from './Text';
 export type { TextProps } from './Text';
 
-// Additional components will be exported here as they're built
-// export { StreakCard } from './StreakCard';
-// export { ChallengeCard } from './ChallengeCard';
-// export { MilestoneCelebration } from './MilestoneCelebration';
+// Premium UI Components
+export { AnimatedCheckmark } from './AnimatedCheckmark';
+export type { AnimatedCheckmarkProps } from './AnimatedCheckmark';
+
+export { SwipeableListItem } from './SwipeableListItem';
+export type { SwipeableListItemProps, SwipeAction } from './SwipeableListItem';
+
+export { BottomSheet } from './BottomSheet';
+export type { BottomSheetProps, BottomSheetRef } from './BottomSheet';
+
+export { CircularProgress } from './CircularProgress';
+export type { CircularProgressProps } from './CircularProgress';
+
+export { PullToRefresh, RefreshIndicator } from './PullToRefresh';
+export type { PullToRefreshProps } from './PullToRefresh';
+
+export { ContextMenu } from './ContextMenu';
+export type { ContextMenuProps, ContextMenuItem } from './ContextMenu';
+
+export { BreathingCircle } from './BreathingCircle';
+export type { BreathingCircleProps } from './BreathingCircle';

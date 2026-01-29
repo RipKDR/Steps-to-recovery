@@ -2,10 +2,10 @@
  * Milestone Celebration Modal
  *
  * Displays a congratulatory modal when user reaches a recovery milestone.
- * Celebrates achievements with encouraging messages and animations.
+ * Celebrates achievements with real confetti, haptic feedback, and encouraging messages.
  */
 
-import React from 'react';
+import React, { useRef, useEffect, useCallback } from 'react';
 import {
   Modal,
   View,
@@ -13,9 +13,22 @@ import {
   StyleSheet,
   TouchableOpacity,
   Dimensions,
-  Animated,
+  Platform,
 } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  withDelay,
+  withSequence,
+  withTiming,
+  runOnJS,
+} from 'react-native-reanimated';
+import ConfettiCannon from 'react-native-confetti-cannon';
+import { BlurView } from 'expo-blur';
 import type { Milestone } from '@recovery/shared/types';
+import { useTheme } from '../design-system/hooks/useTheme';
+import { hapticCelebration } from '../utils/haptics';
 
 interface MilestoneCelebrationModalProps {
   visible: boolean;
@@ -23,26 +36,95 @@ interface MilestoneCelebrationModalProps {
   onClose: () => void;
 }
 
+const { width, height } = Dimensions.get('window');
+
 export function MilestoneCelebrationModal({
   visible,
   milestone,
   onClose,
-}: MilestoneCelebrationModalProps) {
-  const scaleAnim = React.useRef(new Animated.Value(0)).current;
+}: MilestoneCelebrationModalProps): React.ReactElement | null {
+  const theme = useTheme();
+  const confettiRef = useRef<ConfettiCannon>(null);
 
-  React.useEffect(() => {
-    if (visible) {
-      // Animate modal entrance
-      Animated.spring(scaleAnim, {
-        toValue: 1,
-        tension: 50,
-        friction: 7,
-        useNativeDriver: true,
-      }).start();
+  // Animation values
+  const scale = useSharedValue(0);
+  const opacity = useSharedValue(0);
+  const badgeScale = useSharedValue(0);
+  const buttonOpacity = useSharedValue(0);
+
+  // Trigger haptic celebration
+  const triggerHaptic = useCallback((): void => {
+    hapticCelebration();
+  }, []);
+
+  // Animation sequence when modal becomes visible
+  useEffect(() => {
+    if (visible && milestone) {
+      // Reset animations
+      scale.value = 0;
+      opacity.value = 0;
+      badgeScale.value = 0;
+      buttonOpacity.value = 0;
+
+      // Animate in
+      opacity.value = withTiming(1, { duration: 200 });
+      scale.value = withDelay(
+        100,
+        withSpring(1, { damping: 12, stiffness: 150 }, (finished) => {
+          if (finished) {
+            runOnJS(triggerHaptic)();
+          }
+        })
+      );
+      badgeScale.value = withDelay(
+        400,
+        withSequence(
+          withSpring(1.2, { damping: 8, stiffness: 200 }),
+          withSpring(1, { damping: 10, stiffness: 150 })
+        )
+      );
+      buttonOpacity.value = withDelay(600, withTiming(1, { duration: 300 }));
+
+      // Fire confetti
+      const confettiTimeout = setTimeout(() => {
+        confettiRef.current?.start();
+      }, 300);
+
+      return () => clearTimeout(confettiTimeout);
     } else {
-      scaleAnim.setValue(0);
+      // Reset on close
+      scale.value = withSpring(0);
+      opacity.value = withTiming(0, { duration: 150 });
     }
-  }, [visible, scaleAnim]);
+  }, [visible, milestone]);
+
+  // Animated styles
+  const modalAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+    opacity: opacity.value,
+  }));
+
+  const overlayAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+  }));
+
+  const badgeAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: badgeScale.value }],
+  }));
+
+  const buttonAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: buttonOpacity.value,
+  }));
+
+  // Generate confetti colors from theme
+  const confettiColors = [
+    theme.colors.primary,
+    theme.colors.success,
+    theme.colors.secondary,
+    theme.colors.warning,
+    '#FFD700', // Gold
+    '#FF6B6B', // Coral
+  ];
 
   if (!milestone) return null;
 
@@ -50,62 +132,141 @@ export function MilestoneCelebrationModal({
     <Modal
       visible={visible}
       transparent
-      animationType="fade"
+      animationType="none"
       onRequestClose={onClose}
       statusBarTranslucent
     >
-      <View style={styles.overlay}>
+      <Animated.View style={[styles.overlay, overlayAnimatedStyle]}>
+        {Platform.OS !== 'web' ? (
+          <BlurView
+            intensity={30}
+            tint={theme.isDark ? 'dark' : 'light'}
+            style={StyleSheet.absoluteFill}
+          />
+        ) : (
+          <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.5)' }]} />
+        )}
+
+        {/* Confetti Cannon */}
+        <ConfettiCannon
+          ref={confettiRef}
+          count={150}
+          origin={{ x: width / 2, y: -20 }}
+          autoStart={false}
+          fadeOut
+          fallSpeed={3000}
+          explosionSpeed={350}
+          colors={confettiColors}
+        />
+
         <Animated.View
           style={[
             styles.modalContent,
             {
-              transform: [{ scale: scaleAnim }],
+              backgroundColor: theme.colors.surface,
+              borderRadius: theme.radius.xl,
+              ...(theme.isDark ? theme.shadows.lgDark : theme.shadows.lg),
             },
+            modalAnimatedStyle,
           ]}
         >
-          {/* Confetti Effect (Visual Only) */}
-          <View style={styles.confetti}>
-            <Text style={styles.confettiEmoji}>🎉</Text>
-            <Text style={styles.confettiEmoji}>✨</Text>
-            <Text style={styles.confettiEmoji}>🎊</Text>
-            <Text style={styles.confettiEmoji}>⭐</Text>
-          </View>
-
           {/* Milestone Icon */}
-          <View style={styles.iconContainer}>
+          <View
+            style={[
+              styles.iconContainer,
+              {
+                backgroundColor: `${theme.colors.success}15`,
+                borderColor: theme.colors.success,
+              },
+            ]}
+          >
             <Text style={styles.milestoneIcon}>{milestone.icon}</Text>
           </View>
 
           {/* Celebration Message */}
-          <Text style={styles.title}>{milestone.title}</Text>
-          <Text style={styles.subtitle}>{milestone.description}</Text>
+          <Text
+            style={[
+              styles.title,
+              { color: theme.colors.text },
+              theme.typography.h1,
+            ]}
+          >
+            {milestone.title}
+          </Text>
+          <Text
+            style={[
+              styles.subtitle,
+              { color: theme.colors.textSecondary },
+              theme.typography.body,
+            ]}
+          >
+            {milestone.description}
+          </Text>
 
           {/* Days Badge */}
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>{milestone.days}</Text>
-            <Text style={styles.badgeLabel}>
+          <Animated.View
+            style={[
+              styles.badge,
+              { backgroundColor: theme.colors.success },
+              badgeAnimatedStyle,
+            ]}
+          >
+            <Text style={[styles.badgeText, theme.typography.h1]}>
+              {milestone.days}
+            </Text>
+            <Text style={[styles.badgeLabel, theme.typography.label]}>
               {milestone.days === 1 ? 'Day' : 'Days'} Clean
             </Text>
-          </View>
+          </Animated.View>
 
           {/* Encouragement Message */}
-          <View style={styles.messageContainer}>
-            <Text style={styles.message}>
+          <View
+            style={[
+              styles.messageContainer,
+              { backgroundColor: `${theme.colors.primary}10` },
+            ]}
+          >
+            <Text
+              style={[
+                styles.message,
+                { color: theme.colors.text },
+                theme.typography.body,
+              ]}
+            >
               {getEncouragementMessage(milestone.days)}
             </Text>
           </View>
 
           {/* Close Button */}
-          <TouchableOpacity style={styles.button} onPress={onClose}>
-            <Text style={styles.buttonText}>Continue Journey</Text>
-          </TouchableOpacity>
+          <Animated.View style={[styles.buttonContainer, buttonAnimatedStyle]}>
+            <TouchableOpacity
+              style={[
+                styles.button,
+                { backgroundColor: theme.colors.success },
+                theme.isDark ? theme.shadows.mdDark : theme.shadows.md,
+              ]}
+              onPress={onClose}
+              accessibilityLabel="Continue your recovery journey"
+              accessibilityRole="button"
+            >
+              <Text style={[styles.buttonText, theme.typography.label]}>
+                Continue Journey
+              </Text>
+            </TouchableOpacity>
+          </Animated.View>
 
           {/* Quote */}
-          <Text style={styles.quote}>
+          <Text
+            style={[
+              styles.quote,
+              { color: theme.colors.textTertiary },
+              theme.typography.caption,
+            ]}
+          >
             "Progress, not perfection"
           </Text>
         </Animated.View>
-      </View>
+      </Animated.View>
     </Modal>
   );
 }
@@ -132,72 +293,40 @@ function getEncouragementMessage(days: number): string {
   return "Your journey is an inspiration! You've demonstrated incredible strength and commitment. Celebrate how far you've come!";
 }
 
-const { width } = Dimensions.get('window');
-
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
   },
   modalContent: {
-    backgroundColor: '#fff',
-    borderRadius: 24,
     padding: 32,
     width: width - 40,
     maxWidth: 400,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.3,
-    shadowRadius: 20,
-    elevation: 10,
-  },
-  confetti: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    padding: 16,
-  },
-  confettiEmoji: {
-    fontSize: 32,
-    opacity: 0.6,
   },
   iconContainer: {
     width: 120,
     height: 120,
     borderRadius: 60,
-    backgroundColor: '#F0F8FF',
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 24,
     marginBottom: 16,
     borderWidth: 4,
-    borderColor: '#4CAF50',
   },
   milestoneIcon: {
     fontSize: 64,
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#333',
     textAlign: 'center',
     marginBottom: 8,
   },
   subtitle: {
-    fontSize: 16,
-    color: '#666',
     textAlign: 'center',
     marginBottom: 24,
   },
   badge: {
-    backgroundColor: '#4CAF50',
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 20,
@@ -205,51 +334,39 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   badgeText: {
-    fontSize: 32,
+    color: '#FFFFFF',
     fontWeight: 'bold',
-    color: '#fff',
   },
   badgeLabel: {
-    fontSize: 14,
-    color: '#fff',
-    fontWeight: '600',
+    color: '#FFFFFF',
     textTransform: 'uppercase',
     letterSpacing: 1,
   },
   messageContainer: {
-    backgroundColor: '#F0F8FF',
     padding: 16,
     borderRadius: 12,
     marginBottom: 24,
+    width: '100%',
   },
   message: {
-    fontSize: 15,
-    color: '#333',
     textAlign: 'center',
     lineHeight: 22,
   },
+  buttonContainer: {
+    width: '100%',
+    marginBottom: 16,
+  },
   button: {
-    backgroundColor: '#4CAF50',
     paddingHorizontal: 32,
     paddingVertical: 16,
     borderRadius: 12,
-    marginBottom: 16,
-    width: '100%',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 3,
   },
   buttonText: {
-    color: '#fff',
-    fontSize: 18,
+    color: '#FFFFFF',
     fontWeight: '600',
   },
   quote: {
-    fontSize: 13,
-    color: '#999',
     fontStyle: 'italic',
     textAlign: 'center',
   },

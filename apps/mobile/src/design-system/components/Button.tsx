@@ -3,7 +3,7 @@
  * Replaces react-native-paper Button with custom iOS design
  */
 
-import React, { useRef } from 'react';
+import React from 'react';
 import {
   TouchableOpacity,
   Text,
@@ -18,6 +18,7 @@ import {
 } from 'react-native';
 import { useTheme } from '../hooks/useTheme';
 import { usePressAnimation } from '../hooks/useAnimation';
+import { hapticImpact } from '../../utils/haptics';
 
 type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'danger';
 type ButtonSize = 'small' | 'medium' | 'large';
@@ -113,9 +114,16 @@ export function Button({
 
   const colors = getColors();
 
+  const handlePress = async (): Promise<void> => {
+    if (!isDisabled) {
+      await hapticImpact('light');
+    }
+    onPress();
+  };
+
   return (
     <TouchableOpacity
-      onPress={onPress}
+      onPress={handlePress}
       onPressIn={() => !isDisabled && animatePress(true)}
       onPressOut={() => !isDisabled && animatePress(false)}
       disabled={isDisabled}

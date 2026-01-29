@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import { useTheme } from '../hooks/useTheme';
 import { useFadeAndScaleIn, usePressAnimation } from '../hooks/useAnimation';
+import { hapticImpact } from '../../utils/haptics';
 
 type CardVariant = 'default' | 'elevated' | 'interactive' | 'flat' | 'outlined' | 'outline';
 
@@ -94,11 +95,18 @@ export function Card({
     ...(variant === 'interactive' ? interactiveStyle : {}),
   };
 
+  const handlePress = async (): Promise<void> => {
+    if (variant === 'interactive') {
+      await hapticImpact('light');
+    }
+    onPress?.();
+  };
+
   // If onPress is provided, wrap in TouchableOpacity
   if (onPress) {
     return (
       <TouchableOpacity
-        onPress={onPress}
+        onPress={handlePress}
         onPressIn={() => variant === 'interactive' && animatePress(true)}
         onPressOut={() => variant === 'interactive' && animatePress(false)}
         activeOpacity={variant === 'interactive' ? 0.95 : 0.7}

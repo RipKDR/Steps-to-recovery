@@ -1,11 +1,22 @@
 /**
  * Animation helper hooks
  * Provides reusable animation patterns using React Native Animated API
+ * with additional Reanimated-based hooks for premium interactions
  */
 
 import { useRef, useEffect, useCallback } from 'react';
 import { Animated } from 'react-native';
+import {
+  useSharedValue,
+  useAnimatedStyle,
+  withSequence,
+  withTiming,
+  withSpring,
+  runOnJS,
+  Easing as ReanimatedEasing,
+} from 'react-native-reanimated';
 import { springConfigs, timingDurations, easingCurves } from '../tokens/animations';
+import { hapticError } from '../../utils/haptics';
 
 /**
  * Type definitions for animation hooks
@@ -23,6 +34,16 @@ interface BounceAnimationReturn {
 interface FadeAndScaleReturn {
   fadeAnim: Animated.Value;
   scaleAnim: Animated.Value;
+}
+
+interface ShakeAnimationReturn {
+  animatedStyle: ReturnType<typeof useAnimatedStyle>;
+  shake: (withHaptic?: boolean) => void;
+}
+
+interface CountUpReturn {
+  value: number;
+  animatedStyle: ReturnType<typeof useAnimatedStyle>;
 }
 
 /**
@@ -338,4 +359,145 @@ export function useNumberAnimation(start: number, end: number, duration: number 
   }, [end, duration]); // Only re-run when end or duration changes
 
   return animValue;
+}
+
+/**
+ * Shake animation hook (Reanimated)
+ * Provides horizontal shake animation for error feedback
+ *
+ * @param amplitude - Maximum horizontal offset in pixels (default: 10)
+ * @param oscillations - Number of shake oscillations (default: 3)
+ * @returns Object with animatedStyle and shake function
+ *
+ * @example
+ * ```tsx
+ * import Animated from 'react-native-reanimated';
+ *
+ * function MyInput() {
+ *   const { animatedStyle, shake } = useShakeAnimation();
+ *
+ *   const handleError = () => {
+ *     shake(true); // with haptic feedback
+ *   };
+ *
+ *   return (
+ *     <Animated.View style={animatedStyle}>
+ *       <TextInput />
+ *     </Animated.View>
+ *   );
+ * }
+ * ```
+ */
+export function useShakeAnimation(
+  amplitude: number = 10,
+  oscillations: number = 3
+): ShakeAnimationReturn {
+  const translateX = useSharedValue(0);
+
+  const shake = useCallback((withHaptic: boolean = true) => {
+    'worklet';
+    // Generate shake sequence: right, left, right, left... back to center
+    const shakeSequence: number[] = [];
+    for (let i = 0; i < oscillations; i++) {
+      // Decreasing amplitude for natural feel
+      const currentAmplitude = amplitude * (1 - i / oscillations);
+      shakeSequence.push(
+        withTiming(currentAmplitude, { duration: 50, easing: ReanimatedEasing.linear }),
+        withTiming(-currentAmplitude, { duration: 50, easing: ReanimatedEasing.linear })
+      );
+    }
+    // Return to center
+    shakeSequence.push(withSpring(0, { damping: 10, stiffness: 200 }));
+
+    translateX.value = withSequence(...shakeSequence);
+
+    // Trigger haptic on the JS thread
+    if (withHaptic) {
+      runOnJS(hapticError)();
+    }
+  }, [amplitude, oscillations, translateX]);
+
+  const animatedStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ translateX: translateX.value }],
+    };
+  });
+
+  return { animatedStyle, shake };
+}
+
+/**
+ * Count up animation hook (Reanimated)
+ * Animates a number from 0 to target value
+ *
+ * @param targetValue - The final number to count to
+ * @param duration - Animation duration in ms (default: 1000)
+ * @returns Object with current interpolated value and animatedStyle for opacity
+ *
+ * @example
+ * ```tsx
+ * function DaysCounter({ days }: { days: number }) {
+ *   const { value } = useCountUp(days, 1500);
+ *
+ *   return <Text>{Math.floor(value)}</Text>;
+ * }
+ * ```
+ */
+export function useCountUp(
+  targetValue: number,
+  duration: number = 1000
+): { value: number } {
+  const progress = useSharedValue(0);
+  const displayValue = useRef(0);
+
+  useEffect(() => {
+    progress.value = 0;
+    progress.value = withTiming(1, {
+      duration,
+      easing: ReanimatedEasing.out(ReanimatedEasing.cubic),
+    });
+
+    // Update display value using JS listener
+    const interval = setInterval(() => {
+      displayValue.current = progress.value * targetValue;
+    }, 16); // ~60fps
+
+    const timeout = setTimeout(() => {
+      displayValue.current = targetValue;
+      clearInterval(interval);
+    }, duration);
+
+    return () => {
+      clearInterval(interval);
+      clearTimeout(timeout);
+    };
+  }, [targetValue, duration]);
+
+  return { value: displayValue.current };
+}
+
+/**
+ * Stagger animation delay calculator
+ * Returns the delay for an item based on its index
+ *
+ * @param index - Item index in the list
+ * @param baseDelay - Base delay per item (default: 50ms)
+ * @param maxDelay - Maximum total delay (default: 500ms)
+ * @returns Delay in milliseconds
+ *
+ * @example
+ * ```tsx
+ * {items.map((item, index) => (
+ *   <FadeInView delay={getStaggerDelay(index)}>
+ *     <ItemComponent item={item} />
+ *   </FadeInView>
+ * ))}
+ * ```
+ */
+export function getStaggerDelay(
+  index: number,
+  baseDelay: number = 50,
+  maxDelay: number = 500
+): number {
+  return Math.min(index * baseDelay, maxDelay);
 }

@@ -6,8 +6,8 @@
  *
  * Only the first two arguments are required (agent name, worked). Others default to "n/a".
  */
-const fs = require('fs');
-const path = require('path');
+import { appendFileSync } from 'fs';
+import { join } from 'path';
 
 const [agentName, worked, slowdown, checklistTweak, unneededDocs] = process.argv.slice(2);
 
@@ -26,10 +26,10 @@ const entry = [
   '',
 ].join('\n');
 
-const logPath = path.join(__dirname, '..', 'agent-retro-log.md');
+const logPath = join(__dirname, '..', 'agent-retro-log.md');
 
 try {
-  fs.appendFileSync(logPath, `${entry}\n`);
+  appendFileSync(logPath, `${entry}\n`);
   console.log(`Retro logged to ${logPath}`);
 } catch (error) {
   console.error('Failed to write retro log:', error);

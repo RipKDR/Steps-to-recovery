@@ -1,0 +1,12 @@
+node_modules
+.expo
+.turbo
+coverage
+dist
+build
+android
+ios
+web
+*.log
+package-lock.json
+_bmad-output

@@ -82,8 +82,8 @@ export function useReading() {
 
   // Get reading for specific date
   const getReading = useCallback(
-    (date: Date): DailyReading | null => {
-      return getReadingForDate(date);
+    async (date: Date): Promise<DailyReading | null> => {
+      return await getReadingForDate(date);
     },
     [getReadingForDate]
   );

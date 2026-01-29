@@ -1,6 +1,7 @@
 {
   "name": "@recovery/shared",
   "version": "1.0.0",
+  "license": "MIT",
   "description": "Shared types, utilities, and constants for the Steps to Recovery app",
   "main": "src/index.ts",
   "types": "src/index.ts",

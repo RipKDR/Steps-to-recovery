@@ -17,6 +17,9 @@ export {
   useSlideIn,
   useFadeAndScaleIn,
   useNumberAnimation,
+  useShakeAnimation,
+  useCountUp,
+  getStaggerDelay,
 } from './hooks/useAnimation';
 
 // Tokens
@@ -43,8 +46,14 @@ export {
   opacities,
   createTimingConfig,
   animationPresets,
+  reanimatedSprings,
 } from './tokens/animations';
-export type { SpringConfigKey, TimingDurationKey, EasingCurveKey } from './tokens/animations';
+export type {
+  SpringConfigKey,
+  TimingDurationKey,
+  EasingCurveKey,
+  ReanimatedSpringKey,
+} from './tokens/animations';
 
 // Components
 export {
@@ -63,6 +72,14 @@ export {
   TextArea,
   Toast,
   Toggle,
+  // Premium UI Components
+  AnimatedCheckmark,
+  SwipeableListItem,
+  BottomSheet,
+  CircularProgress,
+  PullToRefresh,
+  RefreshIndicator,
+  ContextMenu,
 } from './components';
 export type {
   BadgeProps,
@@ -84,4 +101,14 @@ export type {
   ToastProps,
   ToastVariant,
   ToggleProps,
+  // Premium UI Component Types
+  AnimatedCheckmarkProps,
+  SwipeableListItemProps,
+  SwipeAction,
+  BottomSheetProps,
+  BottomSheetRef,
+  CircularProgressProps,
+  PullToRefreshProps,
+  ContextMenuProps,
+  ContextMenuItem,
 } from './components';
