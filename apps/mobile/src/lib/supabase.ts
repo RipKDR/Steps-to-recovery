@@ -184,10 +184,15 @@ export async function testSupabaseConnection(): Promise<{connected: boolean, err
 /**
  * Gets current session information for debugging
  *
- * @returns Promise with session info or null
+ * @returns Promise with session info or null (sensitive data masked for security)
  */
 export async function getSupabaseSessionInfo(): Promise<{
-  session: { access_token: string; refresh_token: string; expires_at?: number; user: string } | null;
+  session: { 
+    access_token: 'present' | 'missing'; 
+    refresh_token: 'present' | 'missing'; 
+    expires_at?: number; 
+    user: 'present' | 'missing' 
+  } | null;
   user: { id: string; email?: string; role?: string } | null;
   error?: string;
 }> {
