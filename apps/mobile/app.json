@@ -20,11 +20,7 @@
         "NSLocationAlwaysAndWhenInUseUsageDescription": "We use your location to notify you when you're near saved meeting locations to provide timely support.",
         "NSLocationWhenInUseUsageDescription": "We use your location to help you save meeting locations for geofencing support.",
         "NSLocationAlwaysUsageDescription": "We use your location in the background to notify you when you're near saved meeting locations.",
-        "UIBackgroundModes": [
-          "location",
-          "fetch",
-          "processing"
-        ]
+        "UIBackgroundModes": ["location", "fetch", "processing"]
       }
     },
     "android": {
@@ -39,9 +35,7 @@
         "ACCESS_BACKGROUND_LOCATION",
         "POST_NOTIFICATIONS",
         "RECEIVE_BOOT_COMPLETED",
-        "SCHEDULE_EXACT_ALARM",
-        "android.permission.ACCESS_COARSE_LOCATION",
-        "android.permission.ACCESS_FINE_LOCATION"
+        "SCHEDULE_EXACT_ALARM"
       ],
       "edgeToEdgeEnabled": false,
       "predictiveBackGestureEnabled": false
@@ -52,10 +46,7 @@
       "output": "single",
       "build": {
         "babel": {
-          "include": [
-            "sql.js",
-            "idb"
-          ]
+          "include": ["sql.js", "idb"]
         }
       },
       "meta": {

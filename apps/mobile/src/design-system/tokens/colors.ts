@@ -18,6 +18,7 @@ export const lightColors = {
   danger: '#FF3B30',
   dangerLight: '#FF6961',
   success: '#34C759',
+  successLight: '#52D769',
   successMuted: 'rgba(52, 199, 89, 0.2)',
   warning: '#FF9500',
   info: '#5AC8FA',
@@ -27,10 +28,10 @@ export const lightColors = {
   disabled: '#C7C7CC',
 
   // Background colors
-  background: '#F2F2F7',      // iOS grouped background
-  surface: '#FFFFFF',          // Card background
-  surfaceElevated: '#FFFFFF',  // Elevated card
-  surfaceVariant: '#F2F2F7',   // Variant surface color
+  background: '#F2F2F7', // iOS grouped background
+  surface: '#FFFFFF', // Card background
+  surfaceElevated: '#FFFFFF', // Elevated card
+  surfaceVariant: '#F2F2F7', // Variant surface color
 
   // Text colors
   text: '#000000',
@@ -62,20 +63,21 @@ export const darkColors = {
   // Semantic colors
   danger: '#FF453A',
   dangerLight: '#FF7A73',
-  success: '#00D4AA',        // Match secondary for consistency
+  success: '#00D4AA', // Match secondary for consistency
+  successLight: '#33DFC0',
   successMuted: 'rgba(0, 212, 170, 0.2)',
   warning: '#FF9F0A',
-  info: '#5B9EFF',           // Match primary
+  info: '#5B9EFF', // Match primary
 
   // Neutral colors
   muted: '#8E8E93',
   disabled: '#48484A',
 
   // Background colors - Reference app dark navy theme
-  background: '#0B1120',          // Dark navy-black
-  surface: '#1A2332',             // Navy card background
-  surfaceElevated: '#232F42',     // Elevated navy card
-  surfaceVariant: '#141B28',      // Variant surface (darker)
+  background: '#0B1120', // Dark navy-black
+  surface: '#1A2332', // Navy card background
+  surfaceElevated: '#232F42', // Elevated navy card
+  surfaceVariant: '#141B28', // Variant surface (darker)
 
   // Text colors
   text: '#FFFFFF',
@@ -89,7 +91,7 @@ export const darkColors = {
   divider: 'rgba(255, 255, 255, 0.08)',
 
   // Interactive states
-  pressed: 'rgba(91, 158, 255, 0.15)',  // Blue tint on press
+  pressed: 'rgba(91, 158, 255, 0.15)', // Blue tint on press
   overlay: 'rgba(0, 0, 0, 0.85)',
 } as const;
 
@@ -98,13 +100,13 @@ export const darkColors = {
  * (Same in light and dark modes for consistency)
  */
 export const categoryColors = {
-  gratitude: '#FFD700',    // Gold
-  reflection: '#007AFF',   // Blue
-  action: '#34C759',       // Green
-  connection: '#FF9500',   // Orange
-  'self-care': '#AF52DE',  // Purple
-  sponsor: '#FF3B30',      // Red
-  meeting: '#5AC8FA',      // Cyan
+  gratitude: '#FFD700', // Gold
+  reflection: '#007AFF', // Blue
+  action: '#34C759', // Green
+  connection: '#FF9500', // Orange
+  'self-care': '#AF52DE', // Purple
+  sponsor: '#FF3B30', // Red
+  meeting: '#5AC8FA', // Cyan
 } as const;
 
 // Export a flexible color palette type that works for both light and dark
@@ -118,6 +120,7 @@ export type ColorPalette = {
   danger: string;
   dangerLight: string;
   success: string;
+  successLight: string;
   successMuted: string;
   warning: string;
   info: string;

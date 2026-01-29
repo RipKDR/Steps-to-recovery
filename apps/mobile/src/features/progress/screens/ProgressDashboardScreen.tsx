@@ -13,14 +13,7 @@
  */
 
 import React from 'react';
-import {
-  ScrollView,
-  StyleSheet,
-  View,
-  Text,
-  ActivityIndicator,
-  Dimensions,
-} from 'react-native';
+import { ScrollView, StyleSheet, View, Text, ActivityIndicator, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme, Card, Badge, ProgressBar } from '../../../design-system';
@@ -93,9 +86,7 @@ function InsightCard({ insight }: { insight: RecoveryInsight }): React.ReactElem
           size={20}
           color={colorMap[insight.type]}
         />
-        <Text style={[styles.insightTitle, { color: theme.colors.text }]}>
-          {insight.title}
-        </Text>
+        <Text style={[styles.insightTitle, { color: theme.colors.text }]}>{insight.title}</Text>
       </View>
       <Text style={[styles.insightDescription, { color: theme.colors.textSecondary }]}>
         {insight.description}
@@ -126,14 +117,14 @@ function StatCard({
       </View>
       <Text style={[styles.statValue, { color: theme.colors.text }]}>{value}</Text>
       <Text style={[styles.statLabel, { color: theme.colors.textSecondary }]}>{label}</Text>
-      {subtext && (
-        <Text style={[styles.statSubtext, { color }]}>{subtext}</Text>
-      )}
+      {subtext && <Text style={[styles.statSubtext, { color }]}>{subtext}</Text>}
     </Card>
   );
 }
 
-export function ProgressDashboardScreen({ userId }: ProgressDashboardScreenProps): React.ReactElement {
+export function ProgressDashboardScreen({
+  userId,
+}: ProgressDashboardScreenProps): React.ReactElement {
   const theme = useTheme();
   const analytics = useRecoveryAnalytics(userId);
 
@@ -167,20 +158,29 @@ export function ProgressDashboardScreen({ userId }: ProgressDashboardScreenProps
   }
 
   // Prepare chart data
-  const moodValues = analytics.moodData.map(d => d.mood);
-  const cravingValues = analytics.moodData.map(d => d.craving);
+  const moodValues = analytics.moodData.map((d) => d.mood);
+  const cravingValues = analytics.moodData.map((d) => d.craving);
 
   // Get trend icons
   const moodTrendIcon: keyof typeof MaterialCommunityIcons.glyphMap =
-    analytics.moodTrend === 'improving' ? 'trending-up' :
-    analytics.moodTrend === 'declining' ? 'trending-down' : 'minus';
+    analytics.moodTrend === 'improving'
+      ? 'trending-up'
+      : analytics.moodTrend === 'declining'
+        ? 'trending-down'
+        : 'minus';
 
   const cravingTrendIcon: keyof typeof MaterialCommunityIcons.glyphMap =
-    analytics.cravingTrend === 'improving' ? 'trending-down' :
-    analytics.cravingTrend === 'worsening' ? 'trending-up' : 'minus';
+    analytics.cravingTrend === 'improving'
+      ? 'trending-down'
+      : analytics.cravingTrend === 'worsening'
+        ? 'trending-up'
+        : 'minus';
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]} edges={['bottom']}>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: theme.colors.background }]}
+      edges={['bottom']}
+    >
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.contentContainer}
@@ -214,24 +214,33 @@ export function ProgressDashboardScreen({ userId }: ProgressDashboardScreenProps
                 size={20}
                 color={theme.colors.primary}
               />
-              <Text style={[styles.cardTitle, { color: theme.colors.text }]}>
-                Mood Trend
-              </Text>
+              <Text style={[styles.cardTitle, { color: theme.colors.text }]}>Mood Trend</Text>
             </View>
             <View style={styles.trendBadge}>
               <MaterialCommunityIcons
                 name={moodTrendIcon}
                 size={16}
-                color={analytics.moodTrend === 'improving' ? theme.colors.success :
-                       analytics.moodTrend === 'declining' ? theme.colors.danger :
-                       theme.colors.textSecondary}
+                color={
+                  analytics.moodTrend === 'improving'
+                    ? theme.colors.success
+                    : analytics.moodTrend === 'declining'
+                      ? theme.colors.danger
+                      : theme.colors.textSecondary
+                }
               />
-              <Text style={[
-                styles.trendText,
-                { color: analytics.moodTrend === 'improving' ? theme.colors.success :
-                         analytics.moodTrend === 'declining' ? theme.colors.danger :
-                         theme.colors.textSecondary }
-              ]}>
+              <Text
+                style={[
+                  styles.trendText,
+                  {
+                    color:
+                      analytics.moodTrend === 'improving'
+                        ? theme.colors.success
+                        : analytics.moodTrend === 'declining'
+                          ? theme.colors.danger
+                          : theme.colors.textSecondary,
+                  },
+                ]}
+              >
                 {analytics.moodTrend}
               </Text>
             </View>
@@ -239,11 +248,7 @@ export function ProgressDashboardScreen({ userId }: ProgressDashboardScreenProps
 
           {moodValues.length > 0 ? (
             <>
-              <MiniBarChart
-                data={moodValues}
-                maxValue={5}
-                color={theme.colors.primary}
-              />
+              <MiniBarChart data={moodValues} maxValue={5} color={theme.colors.primary} />
               <View style={styles.chartLegend}>
                 <Text style={[styles.legendText, { color: theme.colors.textSecondary }]}>
                   Last {moodValues.length} days
@@ -271,24 +276,33 @@ export function ProgressDashboardScreen({ userId }: ProgressDashboardScreenProps
                 size={20}
                 color={theme.colors.warning}
               />
-              <Text style={[styles.cardTitle, { color: theme.colors.text }]}>
-                Craving Levels
-              </Text>
+              <Text style={[styles.cardTitle, { color: theme.colors.text }]}>Craving Levels</Text>
             </View>
             <View style={styles.trendBadge}>
               <MaterialCommunityIcons
                 name={cravingTrendIcon}
                 size={16}
-                color={analytics.cravingTrend === 'improving' ? theme.colors.success :
-                       analytics.cravingTrend === 'worsening' ? theme.colors.danger :
-                       theme.colors.textSecondary}
+                color={
+                  analytics.cravingTrend === 'improving'
+                    ? theme.colors.success
+                    : analytics.cravingTrend === 'worsening'
+                      ? theme.colors.danger
+                      : theme.colors.textSecondary
+                }
               />
-              <Text style={[
-                styles.trendText,
-                { color: analytics.cravingTrend === 'improving' ? theme.colors.success :
-                         analytics.cravingTrend === 'worsening' ? theme.colors.danger :
-                         theme.colors.textSecondary }
-              ]}>
+              <Text
+                style={[
+                  styles.trendText,
+                  {
+                    color:
+                      analytics.cravingTrend === 'improving'
+                        ? theme.colors.success
+                        : analytics.cravingTrend === 'worsening'
+                          ? theme.colors.danger
+                          : theme.colors.textSecondary,
+                  },
+                ]}
+              >
                 {analytics.cravingTrend}
               </Text>
             </View>
@@ -296,11 +310,7 @@ export function ProgressDashboardScreen({ userId }: ProgressDashboardScreenProps
 
           {cravingValues.length > 0 ? (
             <>
-              <MiniBarChart
-                data={cravingValues}
-                maxValue={10}
-                color={theme.colors.warning}
-              />
+              <MiniBarChart data={cravingValues} maxValue={10} color={theme.colors.warning} />
               <View style={styles.chartLegend}>
                 <Text style={[styles.legendText, { color: theme.colors.textSecondary }]}>
                   Last {cravingValues.length} days
@@ -323,25 +333,20 @@ export function ProgressDashboardScreen({ userId }: ProgressDashboardScreenProps
         <Card variant="elevated" style={styles.chartCard}>
           <View style={styles.cardHeader}>
             <View style={styles.cardTitleRow}>
-              <MaterialCommunityIcons
-                name="stairs"
-                size={20}
-                color={theme.colors.secondary}
-              />
+              <MaterialCommunityIcons name="stairs" size={20} color={theme.colors.secondary} />
               <Text style={[styles.cardTitle, { color: theme.colors.text }]}>
                 Step Work Progress
               </Text>
             </View>
-            <Badge variant={analytics.totalStepsCompleted > 0 ? 'success' : 'default'}>
+            <Badge variant={analytics.totalStepsCompleted > 0 ? 'success' : 'muted'}>
               {analytics.totalStepsCompleted}/12 Complete
             </Badge>
           </View>
 
           <View style={styles.stepsGrid}>
             {analytics.stepProgress.slice(0, 4).map((step) => {
-              const progress = step.totalQuestions > 0
-                ? step.answeredQuestions / step.totalQuestions
-                : 0;
+              const progress =
+                step.totalQuestions > 0 ? step.answeredQuestions / step.totalQuestions : 0;
 
               return (
                 <View key={step.stepNumber} style={styles.stepItem}>
@@ -430,13 +435,10 @@ export function ProgressDashboardScreen({ userId }: ProgressDashboardScreenProps
 
         {/* Privacy Notice */}
         <View style={styles.privacyNotice}>
-          <MaterialCommunityIcons
-            name="shield-lock"
-            size={14}
-            color={theme.colors.textSecondary}
-          />
+          <MaterialCommunityIcons name="shield-lock" size={14} color={theme.colors.textSecondary} />
           <Text style={[styles.privacyText, { color: theme.colors.textSecondary }]}>
-            All analytics are calculated on your device. Your data never leaves your phone unencrypted.
+            All analytics are calculated on your device. Your data never leaves your phone
+            unencrypted.
           </Text>
         </View>
       </ScrollView>
