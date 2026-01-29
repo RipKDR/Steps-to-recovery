@@ -168,6 +168,7 @@ function getSecureRandomIndex(max: number): number {
   return Math.floor(Math.random() * max);
 }
 
+<<<<<<< Updated upstream
 function assertWebCryptoAvailable(): asserts globalThis is {
   crypto: {
     subtle: SubtleCrypto;
@@ -364,6 +365,8 @@ export function parseCommentSharePayload(value: string): CommentSharePayload | n
   return decodePayload<CommentSharePayload>('RCCOMMENT', value);
 }
 
+=======
+>>>>>>> Stashed changes
 /**
  * Get the current sponsor connection code (if exists and valid)
  * 
@@ -554,7 +557,11 @@ function base64Encode(value: string): string {
     return btoaFn(value);
   }
   if (typeof Buffer !== 'undefined') {
+<<<<<<< Updated upstream
     return Buffer.from(value, 'binary').toString('base64');
+=======
+    return Buffer.from(value, 'utf-8').toString('base64');
+>>>>>>> Stashed changes
   }
   throw new Error('Base64 encoding is unavailable');
 }
@@ -565,7 +572,11 @@ function base64Decode(value: string): string {
     return atobFn(value);
   }
   if (typeof Buffer !== 'undefined') {
+<<<<<<< Updated upstream
     return Buffer.from(value, 'base64').toString('binary');
+=======
+    return Buffer.from(value, 'base64').toString('utf-8');
+>>>>>>> Stashed changes
   }
   throw new Error('Base64 decoding is unavailable');
 }
