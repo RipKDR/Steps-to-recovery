@@ -8,6 +8,7 @@
  * 1. Deletes encryption keys from secure storage
  * 2. Clears web secure storage session (web only)
  * 3. Clears all local database data
+ * 4. Clears shared database data (native only)
  * 
  * **Security**: This MUST be called before signing out to prevent
  * data leaks. All operations are logged and errors are handled gracefully.
@@ -15,6 +16,7 @@
  * @module utils/logoutCleanup
  */
 
+import { Platform } from 'react-native';
 import { deleteEncryptionKey } from './encryption';
 import { clearDatabase } from './database';
 import { secureStorage } from '../adapters/secureStorage';
@@ -32,7 +34,7 @@ export interface LogoutCleanupOptions {
  * Perform complete logout cleanup
  * 
  * **Critical**: This MUST be called before signing out to prevent data leaks.
- * All sensitive data (encryption keys, local database, session) is cleared.
+ * All sensitive data (encryption keys, local database, shared database, session) is cleared.
  * 
  * @param options - Cleanup options
  * @param options.db - Database instance (required for mobile, optional for web)
@@ -77,6 +79,18 @@ export async function performLogoutCleanup(options: LogoutCleanupOptions = {}): 
   } catch (error) {
     logger.error('Failed to clear database during logout', error);
     errors.push(error instanceof Error ? error : new Error('Failed to clear database'));
+  }
+
+  try {
+    // Step 4: Clear shared database (native only)
+    if (Platform.OS !== 'web') {
+      logger.info('Logout cleanup: Clearing shared database');
+      const { clearAllData } = await import('@recovery/shared');
+      await clearAllData();
+    }
+  } catch (error) {
+    logger.error('Failed to clear shared database during logout', error);
+    errors.push(error instanceof Error ? error : new Error('Failed to clear shared database'));
   }
 
   if (errors.length > 0) {

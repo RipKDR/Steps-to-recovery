@@ -106,8 +106,14 @@ export class IndexedDBAdapter implements StorageAdapter {
    * @param options - Configuration options for the adapter
    */
   constructor(options: IndexedDBAdapterOptions = {}) {
-    const base = options.wasmBaseUrl ?? 'https://sql.js.org/dist/';
+    const base =
+      options.wasmBaseUrl ??
+      process.env.EXPO_PUBLIC_SQLJS_WASM_BASE_URL ??
+      'https://sql.js.org/dist/';
     this.wasmBaseUrl = base.endsWith('/') ? base : `${base}/`;
+    if (this.wasmBaseUrl.includes('sql.js.org')) {
+      logger.warn('IndexedDB adapter is using the sql.js CDN. Set EXPO_PUBLIC_SQLJS_WASM_BASE_URL to a local asset for offline-first use.');
+    }
   }
 
   /**
@@ -235,8 +241,11 @@ export class IndexedDBAdapter implements StorageAdapter {
       logger.debug('Persisting database to IndexedDB', { size: data.length });
 
       // Serialize writes to IndexedDB so the newest export always wins
+      const persistPromise = this.persistQueue.then(async () => {
+        await idb.put(STORE_NAME, data, 'database');
+      });
+      this.persistQueue = persistPromise;
       await this.persistQueue;
-      await idb.put(STORE_NAME, data, 'database');
 
       logger.debug('Database persistence complete');
     });

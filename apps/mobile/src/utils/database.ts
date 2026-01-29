@@ -542,17 +542,23 @@ async function runMigrations(db: StorageAdapter): Promise<void> {
  * ```
  */
 export async function clearDatabase(db: StorageAdapter): Promise<void> {
-  await db.execAsync(`
-    DELETE FROM sync_queue;
-    DELETE FROM favorite_meetings;
-    DELETE FROM meeting_search_cache;
-    DELETE FROM cached_meetings;
-    DELETE FROM reading_reflections;
-    DELETE FROM daily_readings;
-    DELETE FROM achievements;
-    DELETE FROM step_work;
-    DELETE FROM daily_checkins;
-    DELETE FROM journal_entries;
-    DELETE FROM user_profile;
-  `);
+  const statements = [
+    'DELETE FROM sync_queue',
+    'DELETE FROM favorite_meetings',
+    'DELETE FROM meeting_search_cache',
+    'DELETE FROM cached_meetings',
+    'DELETE FROM reading_reflections',
+    'DELETE FROM daily_readings',
+    'DELETE FROM achievements',
+    'DELETE FROM step_work',
+    'DELETE FROM daily_checkins',
+    'DELETE FROM journal_entries',
+    'DELETE FROM user_profile',
+  ];
+
+  await db.withTransactionAsync(async () => {
+    for (const sql of statements) {
+      await db.runAsync(sql);
+    }
+  });
 }

@@ -213,6 +213,9 @@ interface LocalReadingReflection {
  * Generate a UUID v4
  */
 function generateUUID(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
     const r = (Math.random() * 16) | 0;
     const v = c === 'x' ? r : (r & 0x3) | 0x8;
@@ -880,7 +883,7 @@ export async function addToSyncQueue(
   supabaseId?: string | null
 ): Promise<void> {
   try {
-    const queueId = `sync_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+    const queueId = `sync_${generateUUID()}`;
     const now = new Date().toISOString();
 
     await db.runAsync(

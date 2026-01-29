@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 import { secureStorage } from '../adapters/secureStorage';
 import { performLogoutCleanup } from '../utils/logoutCleanup';
 import { setSentryUser } from '../lib/sentry';
+import { useDatabase } from './DatabaseContext';
 
 interface AuthState {
   session: Session | null;
@@ -24,6 +25,7 @@ interface AuthContextType extends AuthState {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const { db, isReady } = useDatabase();
   const [state, setState] = useState<AuthState>({
     session: null,
     user: null,
@@ -129,9 +131,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signOut = useCallback(async () => {
     setState(prev => ({ ...prev, loading: true, error: null }));
     try {
-      // Perform complete logout cleanup (encryption keys + session)
-      // Note: Database will be cleared by SyncContext when user becomes null
-      await performLogoutCleanup();
+      // Perform complete logout cleanup (encryption keys + session + local data)
+      await performLogoutCleanup({ db: isReady ? db ?? undefined : undefined });
 
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
@@ -141,7 +142,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setState(prev => ({ ...prev, loading: false }));
     }
-  }, []);
+  }, [db, isReady]);
 
   const resetPassword = useCallback(async (email: string) => {
     setState(prev => ({ ...prev, loading: true, error: null }));

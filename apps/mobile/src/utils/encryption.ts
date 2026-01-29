@@ -7,6 +7,7 @@
  * 
  * **Security Features**:
  * - AES-256-CBC encryption with unique IV per encryption
+ * - HMAC-SHA256 authentication tag (encrypt-then-MAC)
  * - PBKDF2 key derivation (100,000 iterations)
  * - Keys stored in SecureStore (never in AsyncStorage or database)
  * - Platform-agnostic implementation (works on mobile and web)
@@ -110,21 +111,22 @@ export async function getEncryptionKey(): Promise<string | null> {
 }
 
 /**
- * Encrypt content using AES-256-CBC
+ * Encrypt content using AES-256-CBC + HMAC-SHA256
  * 
  * Encrypts sensitive content (journal entries, step work answers, etc.) using
- * AES-256-CBC with a unique IV for each encryption. The IV is prepended to
- * the ciphertext in the format: `{iv}:{ciphertext}`
+ * AES-256-CBC with a unique IV for each encryption. An HMAC tag is appended
+ * to prevent undetected tampering.
  * 
- * **Security**: Each encryption uses a unique IV, preventing pattern analysis.
+ * **Format**: `{iv}:{ciphertext}:{mac}`
+ * **Security**: Each encryption uses a unique IV and a MAC for integrity.
  * 
  * @param content - Plaintext content to encrypt
- * @returns Promise resolving to encrypted string in format `{iv}:{ciphertext}`
+ * @returns Promise resolving to encrypted string in format `{iv}:{ciphertext}:{mac}`
  * @throws Error if encryption key is not found
  * @example
  * ```ts
  * const encrypted = await encryptContent('My journal entry');
- * // Returns: "a1b2c3d4...:encrypted_ciphertext..."
+ * // Returns: "a1b2c3d4...:encrypted_ciphertext...:mac..."
  * ```
  */
 export async function encryptContent(content: string): Promise<string> {
@@ -135,7 +137,10 @@ export async function encryptContent(content: string): Promise<string> {
   const ivWordArray = CryptoJS.enc.Hex.parse(iv);
   const keyWordArray = CryptoJS.enc.Hex.parse(key);
   const encrypted = CryptoJS.AES.encrypt(content, keyWordArray, { iv: ivWordArray, mode: CryptoJS.mode.CBC, padding: CryptoJS.pad.Pkcs7 });
-  return `${iv}:${encrypted.toString()}`;
+  const payload = `${iv}:${encrypted.toString()}`;
+  const macKey = CryptoJS.SHA256(keyWordArray);
+  const mac = CryptoJS.HmacSHA256(payload, macKey).toString(CryptoJS.enc.Hex);
+  return `${payload}:${mac}`;
 }
 
 /**
@@ -143,8 +148,9 @@ export async function encryptContent(content: string): Promise<string> {
  * 
  * Decrypts content that was encrypted using `encryptContent()`. Extracts the
  * IV from the encrypted string and uses it along with the stored encryption key.
+ * If a MAC is present, it is verified before decryption.
  * 
- * @param encrypted - Encrypted string in format `{iv}:{ciphertext}`
+ * @param encrypted - Encrypted string in format `{iv}:{ciphertext}` or `{iv}:{ciphertext}:{mac}`
  * @returns Promise resolving to decrypted plaintext
  * @throws Error if encryption key is not found, format is invalid, or decryption fails
  * @example
@@ -160,8 +166,22 @@ export async function encryptContent(content: string): Promise<string> {
 export async function decryptContent(encrypted: string): Promise<string> {
   const key = await getEncryptionKey();
   if (!key) throw new Error('Encryption key not found');
-  const [iv, ciphertext] = encrypted.split(':');
+  const parts = encrypted.split(':');
+  if (parts.length !== 2 && parts.length !== 3) {
+    throw new Error('Invalid format');
+  }
+  const [iv, ciphertext, mac] = parts;
   if (!iv || !ciphertext) throw new Error('Invalid format');
+  if (parts.length === 3 && !mac) throw new Error('Invalid format');
+  if (mac) {
+    const keyWordArray = CryptoJS.enc.Hex.parse(key);
+    const macKey = CryptoJS.SHA256(keyWordArray);
+    const payload = `${iv}:${ciphertext}`;
+    const expectedMac = CryptoJS.HmacSHA256(payload, macKey).toString(CryptoJS.enc.Hex);
+    if (expectedMac !== mac) {
+      throw new Error('Integrity check failed');
+    }
+  }
   const ivWordArray = CryptoJS.enc.Hex.parse(iv);
   const keyWordArray = CryptoJS.enc.Hex.parse(key);
   const decrypted = CryptoJS.AES.decrypt(ciphertext, keyWordArray, { iv: ivWordArray, mode: CryptoJS.mode.CBC, padding: CryptoJS.pad.Pkcs7 });

@@ -3,7 +3,7 @@
  * Uses Web Crypto API for encryption + localStorage for persistence
  *
  * NOTE: Less secure than native keystores, but best available on web
- * Keys are encrypted with a master password derived from user session
+ * Keys are encrypted with a master key derived from a per-user seed
  */
 
 import type { SecureStorageAdapter } from './types';
@@ -13,20 +13,24 @@ const STORAGE_PREFIX = 'secure_';
 const CRYPTO_ALGORITHM = 'AES-GCM';
 const KEY_LENGTH = 256;
 const SALT_STORAGE_KEY = '_master_key_salt';
+const KEY_SEED_STORAGE_KEY = '_master_key_seed';
 
 export class WebSecureStorageAdapter implements SecureStorageAdapter {
   private masterKey: CryptoKey | null = null;
   private userId: string | null = null;
   private sessionToken: string | null = null;
+  private keySeed: Uint8Array | null = null;
 
   /**
    * Initialize storage with user session (REQUIRED before use)
-   * Derives a user-specific master key from the session token
+   * Derives a user-specific master key from a per-user seed
+   * (session token is retained for legacy migration only)
    */
   async initializeWithSession(userId: string, sessionToken: string): Promise<void> {
     // Clear old key if switching users
     if (this.userId !== userId) {
       this.masterKey = null;
+      this.keySeed = null;
     }
 
     this.userId = userId;
@@ -38,18 +42,21 @@ export class WebSecureStorageAdapter implements SecureStorageAdapter {
 
   /**
    * Clear session and master key (call on logout)
-   * Also clears the stored salt for the user
+   * Also clears the stored salt and seed for the user
    */
   clearSession(): void {
     // Clear stored salt for this user
     if (this.userId) {
       const saltKey = `${STORAGE_PREFIX}${this.userId}${SALT_STORAGE_KEY}`;
       localStorage.removeItem(saltKey);
+      const seedKey = `${STORAGE_PREFIX}${this.userId}${KEY_SEED_STORAGE_KEY}`;
+      localStorage.removeItem(seedKey);
     }
 
     this.masterKey = null;
     this.userId = null;
     this.sessionToken = null;
+    this.keySeed = null;
   }
 
   /**
@@ -79,20 +86,48 @@ export class WebSecureStorageAdapter implements SecureStorageAdapter {
   }
 
   /**
-   * Derive master encryption key from user's session token
-   * Each user gets a unique key derived from their session + random salt
+   * Get or generate a per-user master key seed
+   * Seed is stored in localStorage and reused for the same user
+   */
+  private async getKeySeed(): Promise<Uint8Array> {
+    if (!this.userId) {
+      throw new Error('UserId required to get key seed');
+    }
+
+    if (this.keySeed) {
+      return this.keySeed;
+    }
+
+    const seedKey = `${STORAGE_PREFIX}${this.userId}${KEY_SEED_STORAGE_KEY}`;
+    const storedSeed = localStorage.getItem(seedKey);
+
+    if (storedSeed) {
+      this.keySeed = new Uint8Array(JSON.parse(storedSeed));
+      return this.keySeed;
+    }
+
+    // Generate new random seed (32 bytes)
+    const seed = window.crypto.getRandomValues(new Uint8Array(32));
+    localStorage.setItem(seedKey, JSON.stringify(Array.from(seed)));
+    this.keySeed = seed;
+    return seed;
+  }
+
+  /**
+   * Derive master encryption key from per-user seed + random salt
    */
   private async getMasterKey(): Promise<CryptoKey> {
     if (this.masterKey) return this.masterKey;
 
-    if (!this.sessionToken || !this.userId) {
+    if (!this.userId) {
       throw new Error('SecureStorage not initialized. Call initializeWithSession() first.');
     }
 
-    // Import session token as key material
+    const seed = await this.getKeySeed();
+    // Import per-user seed as key material
     const keyMaterial = await window.crypto.subtle.importKey(
       'raw',
-      new TextEncoder().encode(this.sessionToken),
+      seed,
       { name: 'PBKDF2' },
       false,
       ['deriveKey']
@@ -118,6 +153,39 @@ export class WebSecureStorageAdapter implements SecureStorageAdapter {
     return this.masterKey;
   }
 
+  /**
+   * Legacy master key derivation using session token (migration fallback)
+   */
+  private async getLegacyMasterKey(): Promise<CryptoKey> {
+    if (!this.sessionToken || !this.userId) {
+      throw new Error('SecureStorage not initialized. Call initializeWithSession() first.');
+    }
+
+    const keyMaterial = await window.crypto.subtle.importKey(
+      'raw',
+      new TextEncoder().encode(this.sessionToken),
+      { name: 'PBKDF2' },
+      false,
+      ['deriveKey']
+    );
+
+    const saltArray = await this.getSalt();
+    const salt = saltArray.buffer as ArrayBuffer;
+
+    return window.crypto.subtle.deriveKey(
+      {
+        name: 'PBKDF2',
+        salt,
+        iterations: 100000,
+        hash: 'SHA-256',
+      },
+      keyMaterial,
+      { name: CRYPTO_ALGORITHM, length: KEY_LENGTH },
+      false,
+      ['encrypt', 'decrypt']
+    );
+  }
+
   async getItemAsync(key: string): Promise<string | null> {
     const encrypted = localStorage.getItem(STORAGE_PREFIX + key);
     if (!encrypted) return null;
@@ -138,6 +206,28 @@ export class WebSecureStorageAdapter implements SecureStorageAdapter {
 
       return new TextDecoder().decode(decrypted);
     } catch (error) {
+      if (this.sessionToken) {
+        try {
+          const data = JSON.parse(encrypted) as { iv: number[]; ciphertext: number[] };
+          const iv = new Uint8Array(data.iv);
+          const ciphertext = new Uint8Array(data.ciphertext);
+          const legacyKey = await this.getLegacyMasterKey();
+          const decrypted = await window.crypto.subtle.decrypt(
+            { name: CRYPTO_ALGORITHM, iv },
+            legacyKey,
+            ciphertext.buffer as ArrayBuffer
+          );
+          const plaintext = new TextDecoder().decode(decrypted);
+          // Migrate to new key on successful legacy decrypt
+          await this.setItemAsync(key, plaintext);
+          return plaintext;
+        } catch (legacyError) {
+          // Use sanitized logger to prevent data leaks
+          logger.error('Failed to decrypt secure storage item', legacyError);
+          return null;
+        }
+      }
+
       // Use sanitized logger to prevent data leaks
       logger.error('Failed to decrypt secure storage item', error);
       return null;

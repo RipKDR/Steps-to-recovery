@@ -32,6 +32,7 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
   const isSyncingRef = useRef<boolean>(false);
   const triggerSyncRef = useRef<() => Promise<void>>(async () => {});
   const userIdRef = useRef<string | null>(null);
+  const pendingLogoutClearRef = useRef<boolean>(false);
 
   const [state, setState] = useState<SyncState>({
     isSyncing: false,
@@ -49,8 +50,24 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
     isSyncingRef.current = state.isSyncing;
   }, [state.isSyncing]);
   useEffect(() => {
-    userIdRef.current = user?.id ?? null;
-  }, [user?.id]);
+    const previousUser = userIdRef.current;
+    const nextUserId = user?.id ?? null;
+
+    if (previousUser && !nextUserId) {
+      pendingLogoutClearRef.current = true;
+    }
+
+    userIdRef.current = nextUserId;
+
+    if (pendingLogoutClearRef.current && !nextUserId && db && isReady) {
+      pendingLogoutClearRef.current = false;
+      logger.info('User logged out, clearing local database');
+
+      clearDatabase(db).catch((error) => {
+        logger.error('Failed to clear database on logout', error);
+      });
+    }
+  }, [user?.id, db, isReady]);
 
   /**
    * Update pending count from sync_queue
@@ -206,22 +223,6 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
       return () => unsubscribe();
     }
   }, []);
-
-  /**
-   * Clear database when user logs out
-   */
-  useEffect(() => {
-    const previousUser = userIdRef.current;
-
-    // If we had a user and now don't (logout), clear the database
-    if (previousUser && !user && db && isReady) {
-      logger.info('User logged out, clearing local database');
-
-      clearDatabase(db).catch((error) => {
-        logger.error('Failed to clear database on logout', error);
-      });
-    }
-  }, [user, db, isReady]);
 
   /**
    * Set up periodic background sync (every 5 minutes when online)
