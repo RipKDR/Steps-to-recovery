@@ -20,11 +20,7 @@
         "NSLocationAlwaysAndWhenInUseUsageDescription": "We use your location to notify you when you're near saved meeting locations to provide timely support.",
         "NSLocationWhenInUseUsageDescription": "We use your location to help you save meeting locations for geofencing support.",
         "NSLocationAlwaysUsageDescription": "We use your location in the background to notify you when you're near saved meeting locations.",
-        "UIBackgroundModes": [
-          "location",
-          "fetch",
-          "processing"
-        ]
+        "UIBackgroundModes": ["location", "fetch", "processing"]
       }
     },
     "android": {
@@ -52,10 +48,7 @@
       "output": "single",
       "build": {
         "babel": {
-          "include": [
-            "sql.js",
-            "idb"
-          ]
+          "include": ["sql.js", "idb"]
         }
       },
       "meta": {
@@ -105,7 +98,10 @@
           "organization": "steps-to-recovery",
           "project": "mobile"
         }
-      ]
+      ],
+      "@react-native-community/datetimepicker",
+      "@sentry/react-native",
+      "expo-router"
     ],
     "updates": {
       "enabled": false

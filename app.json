@@ -2,6 +2,7 @@
   "expo": {
     "name": "Steps to Recovery",
     "slug": "steps-to-recovery",
-    "owner": "ripkdr"
+    "owner": "ripkdr",
+    "plugins": ["@sentry/react-native"]
   }
 }
