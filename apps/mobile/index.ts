@@ -1,8 +1,15 @@
+/**
+ * Steps to Recovery - Application Entry Point
+ *
+ * This is the root entry point for the Expo application.
+ * registerRootComponent ensures the app works correctly in:
+ * - Expo Go (development)
+ * - Development builds (expo-dev-client)
+ * - Production builds (standalone apps)
+ *
+ * @see https://docs.expo.dev/versions/latest/sdk/register-root-component/
+ */
 import { registerRootComponent } from 'expo';
-
 import App from './App';
 
-// registerRootComponent calls AppRegistry.registerComponent('main', () => App);
-// It also ensures that whether you load the app in Expo Go or in a native build,
-// the environment is set up appropriately
 registerRootComponent(App);
