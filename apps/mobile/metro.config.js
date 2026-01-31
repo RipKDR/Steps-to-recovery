@@ -1,8 +1,8 @@
-// Metro configuration for Expo using ESM syntax
+// Metro configuration for Expo using CommonJS syntax
 // Ensures .wasm assets (expo-sqlite web) are bundled correctly and supports monorepo paths.
-import { resolve } from 'path';
-import { getDefaultConfig } from 'expo/metro-config';
-import { withNativeWind } from 'nativewind/metro';
+const { resolve } = require('path');
+const { getDefaultConfig } = require('expo/metro-config');
+const { withNativeWind } = require('nativewind/metro');
 
 /** @type {string} Absolute path to the mobile app directory */
 const projectRoot = __dirname;
@@ -34,4 +34,4 @@ config.resolver.sourceExts = config.resolver.sourceExts.filter((ext) => {
   return ext !== 'wasm';
 });
 
-export default withNativeWind(config, { input: './global.css' });
+module.exports = withNativeWind(config, { input: './global.css' });

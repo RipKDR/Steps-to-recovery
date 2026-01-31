@@ -1,10 +1,7 @@
 {
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
-    // === Compatibility ===
     "ignoreDeprecations": "5.0",
-
-    // === Module Resolution ===
     "baseUrl": ".",
     "module": "esnext",
     "moduleResolution": "bundler",
@@ -12,8 +9,6 @@
     "isolatedModules": true,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
-
-    // === Strict Type Checking (CLAUDE.md requirement) ===
     "strict": true,
     "noEmit": true,
     "allowJs": false,
@@ -21,31 +16,49 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedIndexedAccess": false,
     "exactOptionalPropertyTypes": false,
-
-    // === Target & Libraries ===
     "target": "ES2022",
-    "lib": ["ES2022", "DOM", "DOM.Iterable"],
-
-    // === JSX ===
+    "lib": [
+      "ES2022",
+      "DOM",
+      "DOM.Iterable"
+    ],
     "jsx": "react-jsx",
-
-    // === Performance ===
     "skipLibCheck": true,
     "incremental": true,
-
-    // === Path Aliases ===
     "paths": {
-      "@/*": ["./src/*"],
-      "@/components/*": ["./src/components/*"],
-      "@/contexts/*": ["./src/contexts/*"],
-      "@/features/*": ["./src/features/*"],
-      "@/hooks/*": ["./src/hooks/*"],
-      "@/lib/*": ["./src/lib/*"],
-      "@/utils/*": ["./src/utils/*"],
-      "@/design-system": ["./src/design-system/index.ts"],
-      "@/design-system/*": ["./src/design-system/*"],
-      "@recovery/shared": ["../../packages/shared/src/index.ts"],
-      "@recovery/shared/*": ["../../packages/shared/*"]
+      "@/*": [
+        "./src/*"
+      ],
+      "@/components/*": [
+        "./src/components/*"
+      ],
+      "@/contexts/*": [
+        "./src/contexts/*"
+      ],
+      "@/features/*": [
+        "./src/features/*"
+      ],
+      "@/hooks/*": [
+        "./src/hooks/*"
+      ],
+      "@/lib/*": [
+        "./src/lib/*"
+      ],
+      "@/utils/*": [
+        "./src/utils/*"
+      ],
+      "@/design-system": [
+        "./src/design-system/index.ts"
+      ],
+      "@/design-system/*": [
+        "./src/design-system/*"
+      ],
+      "@recovery/shared": [
+        "../../packages/shared/src/index.ts"
+      ],
+      "@recovery/shared/*": [
+        "../../packages/shared/*"
+      ]
     }
   },
   "include": [
@@ -54,7 +67,9 @@
     "index.ts",
     "polyfills.ts",
     "scripts/**/*.ts",
-    "nativewind-env.d.ts"
+    "nativewind-env.d.ts",
+    ".expo/types/**/*.ts",
+    "expo-env.d.ts"
   ],
   "exclude": [
     "node_modules",

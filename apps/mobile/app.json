@@ -129,9 +129,7 @@
       "fallbackToCacheTimeout": 30000,
       "checkAutomatically": "ON_LOAD"
     },
-    "runtimeVersion": {
-      "policy": "appVersion"
-    },
+    "runtimeVersion": "1.0.0",
     "extra": {
       "eas": {
         "projectId": "cc789e98-8c7f-4bf1-9125-23e0b83b8f00"
