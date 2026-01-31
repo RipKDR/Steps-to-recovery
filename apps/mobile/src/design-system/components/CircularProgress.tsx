@@ -11,10 +11,7 @@ import Animated, {
   useSharedValue,
   useAnimatedProps,
   withTiming,
-  withSpring,
   Easing,
-  runOnJS,
-  useDerivedValue,
 } from 'react-native-reanimated';
 import Svg, { Circle, G } from 'react-native-svg';
 import { useTheme } from '../hooks/useTheme';
@@ -134,11 +131,6 @@ export function CircularProgress({
   const animatedProgress = useSharedValue(0);
   const [displayNumber, setDisplayNumber] = useState(0);
 
-  // Update display number during animation
-  const updateDisplayNumber = (value: number): void => {
-    setDisplayNumber(Math.round(value));
-  };
-
   // Animate on progress change
   useEffect(() => {
     if (animated) {
@@ -196,16 +188,8 @@ export function CircularProgress({
 
       return (
         <View style={styles.centerContent}>
-          <Text
-            style={[
-              styles.value,
-              theme.typography.h2,
-              { color: theme.colors.text },
-            ]}
-          >
-            {typeof valueToShow === 'number' && animateNumber
-              ? displayNumber
-              : valueToShow}
+          <Text style={[styles.value, theme.typography.h2, { color: theme.colors.text }]}>
+            {typeof valueToShow === 'number' && animateNumber ? displayNumber : valueToShow}
           </Text>
           {label && (
             <Text

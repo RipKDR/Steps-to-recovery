@@ -3,7 +3,9 @@ import { useQuery } from '@tanstack/react-query';
 import { useDatabase } from '../../../contexts/DatabaseContext';
 import { logger } from '../../../utils/logger';
 import { scheduleAllMilestones, MILESTONE_DAYS } from '../../../services/notificationService';
-import type { UserProfile, Milestone } from '@recovery/shared/types';
+import { generateId } from '../../../utils/id';
+import type { UserProfile } from '@recovery/shared/src/types/database';
+import type { MilestoneDefinition as Milestone } from '@recovery/shared/src/types/models';
 
 /**
  * Milestones configuration
@@ -178,7 +180,7 @@ export function useMilestones(userId: string): {
 
       // Record new milestones
       for (const milestone of newMilestones) {
-        const id = `achievement_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+        const id = generateId('achievement');
         const now = new Date().toISOString();
 
         await db.runAsync(

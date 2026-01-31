@@ -1,10 +1,10 @@
 /**
  * Shared Package Exports
- * 
+ *
  * This is the main entry point for the @recovery/shared package.
  * It exports all shared types, utilities, constants, and services
  * used across the Steps to Recovery application.
- * 
+ *
  * @module @recovery/shared
  * @example
  * ```ts
@@ -13,14 +13,14 @@
  */
 
 // Export only non-conflicting types from ./types
-export type { 
-  SyncStatus, 
-  CheckInType, 
-  SyncOperation, 
-  SyncQueueItem, 
-  DbUserProfile, 
-  DbDailyCheckIn, 
-  DbStepWork 
+export type {
+  SyncStatus,
+  CheckInType,
+  SyncOperation,
+  SyncQueueItem,
+  UserProfile as DbUserProfile,
+  DailyCheckIn as DbDailyCheckIn,
+  StepWork as DbStepWork
 } from './types';
 
 // Main application types (camelCase properties)
@@ -108,3 +108,4 @@ export * from '../jitai';
 export * from '../notifications';
 export * from '../animations';
 export * from '../export';
+export * from './services/sponsorConnection';

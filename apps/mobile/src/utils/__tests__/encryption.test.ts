@@ -200,10 +200,10 @@ describe('Encryption Utilities', () => {
 
       expect(encrypted).toBeDefined();
       expect(typeof encrypted).toBe('string');
-      expect(encrypted).toContain(':'); // IV:ciphertext format
+      expect(encrypted).toContain(':'); // IV:ciphertext:mac format
     });
 
-    it('should return IV:ciphertext format', async () => {
+    it('should return IV:ciphertext:mac format', async () => {
       const mockIV = new Uint8Array(16);
       for (let i = 0; i < 16; i++) {
         mockIV[i] = i;
@@ -213,9 +213,10 @@ describe('Encryption Utilities', () => {
       const encrypted = await encryptContent('test data');
       const parts = encrypted.split(':');
 
-      expect(parts).toHaveLength(2);
+      expect(parts).toHaveLength(3);
       expect(parts[0]).toHaveLength(32); // 16 bytes = 32 hex chars (IV)
       expect(parts[1].length).toBeGreaterThan(0); // ciphertext
+      expect(parts[2]).toHaveLength(64); // HMAC-SHA256 hex
     });
 
     it('should use different IVs for same plaintext', async () => {
@@ -306,7 +307,7 @@ describe('Encryption Utilities', () => {
       expect(decrypted).toBe(original);
     });
 
-    it('should validate IV:ciphertext format', async () => {
+    it('should validate encrypted format', async () => {
       await expect(decryptContent('invalid-format')).rejects.toThrow('Invalid format');
     });
 
@@ -327,6 +328,18 @@ describe('Encryption Utilities', () => {
       await expect(decryptContent(corruptedCiphertext)).rejects.toThrow();
     });
 
+    it('should throw error on invalid MAC', async () => {
+      const mockIV = new Uint8Array(16).fill(1);
+      (global.crypto.getRandomValues as jest.Mock).mockReturnValue(mockIV);
+
+      const original = 'Secret message';
+      const encrypted = await encryptContent(original);
+      const lastChar = encrypted.slice(-1);
+      const tamperedLastChar = lastChar === 'a' ? 'b' : 'a';
+      const tampered = `${encrypted.slice(0, -1)}${tamperedLastChar}`;
+
+      await expect(decryptContent(tampered)).rejects.toThrow('Integrity check failed');
+    });
     it('should throw error if no encryption key exists', async () => {
       mockSecureStorage.getItemAsync.mockResolvedValue(null);
 
@@ -674,12 +687,11 @@ With\ttabs\tand\nnewlines\r\n`;
     it('should handle multiple colons in encrypted data', async () => {
       mockSecureStorage.getItemAsync.mockResolvedValue('a'.repeat(64));
 
-      // The split will only split on first colon, so this should work if IV is valid
+      // Encrypted payloads should only contain two or three segments
       const validIV = '0'.repeat(32);
       const encrypted = `${validIV}:data:with:colons`;
 
-      // This should fail during decryption because "data:with:colons" is not valid base64
-      await expect(decryptContent(encrypted)).rejects.toThrow();
+      await expect(decryptContent(encrypted)).rejects.toThrow('Invalid format');
     });
   });
 

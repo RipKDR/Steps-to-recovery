@@ -31,7 +31,7 @@ const initPromises = new Map<string, Promise<void>>();
  * Increment this when adding new migrations. Migrations are applied
  * sequentially from the current version to this target version.
  */
-const CURRENT_SCHEMA_VERSION = 6;
+const CURRENT_SCHEMA_VERSION = 8;
 
 /**
  * Initialize database with schema for offline-first storage
@@ -522,6 +522,83 @@ async function runMigrations(db: StorageAdapter): Promise<void> {
     logger.info('Migration v6 completed');
   }
 
+  // Migration version 7: Add sponsor connection tables
+  if (currentVersion < 7) {
+    logger.info('Running migration v7: Adding sponsor connection tables');
+    const v7Migrations = [
+      `CREATE TABLE IF NOT EXISTS sponsor_connections (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        role TEXT NOT NULL CHECK(role IN ('sponsee','sponsor')),
+        status TEXT NOT NULL CHECK(status IN ('pending','connected')),
+        invite_code TEXT NOT NULL,
+        display_name TEXT,
+        own_public_key TEXT NOT NULL,
+        peer_public_key TEXT,
+        shared_key TEXT,
+        pending_private_key TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        UNIQUE(user_id, invite_code, role)
+      );`,
+      `CREATE TABLE IF NOT EXISTS sponsor_shared_entries (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        connection_id TEXT NOT NULL,
+        direction TEXT NOT NULL CHECK(direction IN ('outgoing','incoming','comment')),
+        journal_entry_id TEXT,
+        payload TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        FOREIGN KEY (connection_id) REFERENCES sponsor_connections(id)
+      );`,
+      `CREATE INDEX IF NOT EXISTS idx_sponsor_connections_user ON sponsor_connections(user_id);`,
+      `CREATE INDEX IF NOT EXISTS idx_sponsor_connections_status ON sponsor_connections(status);`,
+      `CREATE INDEX IF NOT EXISTS idx_sponsor_shared_entries_connection ON sponsor_shared_entries(connection_id);`,
+      `CREATE INDEX IF NOT EXISTS idx_sponsor_shared_entries_entry ON sponsor_shared_entries(journal_entry_id);`,
+    ];
+
+    for (const migration of v7Migrations) {
+      try {
+        await db.execAsync(migration);
+      } catch (error) {
+        logger.warn('Migration v7 step failed (may be already applied)', error);
+      }
+    }
+
+    await recordMigration(db, 7);
+    logger.info('Migration v7 completed');
+  }
+
+  // Migration version 8: Add weekly reports table
+  if (currentVersion < 8) {
+    logger.info('Running migration v8: Adding weekly reports table');
+    const v8Migrations = [
+      `CREATE TABLE IF NOT EXISTS weekly_reports (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        week_start TEXT NOT NULL,
+        week_end TEXT NOT NULL,
+        report_json TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        UNIQUE(user_id, week_start)
+      );`,
+      `CREATE INDEX IF NOT EXISTS idx_weekly_reports_user ON weekly_reports(user_id);`,
+      `CREATE INDEX IF NOT EXISTS idx_weekly_reports_week ON weekly_reports(week_start);`,
+    ];
+
+    for (const migration of v8Migrations) {
+      try {
+        await db.execAsync(migration);
+      } catch (error) {
+        logger.warn('Migration v8 step failed (may be already applied)', error);
+      }
+    }
+
+    await recordMigration(db, 8);
+    logger.info('Migration v8 completed');
+  }
+
   logger.info('All migrations completed', { newVersion: CURRENT_SCHEMA_VERSION });
 }
 
@@ -542,17 +619,26 @@ async function runMigrations(db: StorageAdapter): Promise<void> {
  * ```
  */
 export async function clearDatabase(db: StorageAdapter): Promise<void> {
-  await db.execAsync(`
-    DELETE FROM sync_queue;
-    DELETE FROM favorite_meetings;
-    DELETE FROM meeting_search_cache;
-    DELETE FROM cached_meetings;
-    DELETE FROM reading_reflections;
-    DELETE FROM daily_readings;
-    DELETE FROM achievements;
-    DELETE FROM step_work;
-    DELETE FROM daily_checkins;
-    DELETE FROM journal_entries;
-    DELETE FROM user_profile;
-  `);
+  const statements = [
+    'DELETE FROM sync_queue',
+    'DELETE FROM favorite_meetings',
+    'DELETE FROM meeting_search_cache',
+    'DELETE FROM cached_meetings',
+    'DELETE FROM reading_reflections',
+    'DELETE FROM daily_readings',
+    'DELETE FROM achievements',
+    'DELETE FROM step_work',
+    'DELETE FROM daily_checkins',
+    'DELETE FROM journal_entries',
+    'DELETE FROM sponsor_shared_entries',
+    'DELETE FROM sponsor_connections',
+    'DELETE FROM weekly_reports',
+    'DELETE FROM user_profile',
+  ];
+
+  await db.withTransactionAsync(async () => {
+    for (const sql of statements) {
+      await db.runAsync(sql);
+    }
+  });
 }

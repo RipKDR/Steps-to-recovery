@@ -697,3 +697,35 @@ export interface DbStepAnswer {
   updated_at: string;
 }
 
+// ============================================
+// Database Types - Re-exports from src/types
+// ============================================
+// These are the snake_case types used by the mobile app's database layer
+// They have encrypted_* fields and string timestamps
+
+export type {
+  // Database types with snake_case fields
+  JournalEntry as JournalEntryDb,
+  DailyCheckIn,
+  StepWork,
+  UserProfile,
+  Achievement as AchievementDb,
+  SyncQueueItem,
+  // Type aliases
+  SyncStatus,
+  CheckInType,
+  SyncOperation,
+  AchievementType,
+} from '../src/types/database';
+
+// Decrypted models for UI use
+export type {
+  JournalEntryDecrypted,
+  DailyCheckInDecrypted,
+  StepWorkDecrypted,
+  MilestoneDefinition,
+  Streak,
+} from '../src/types/models';
+
+// For backward compatibility - Milestone with days, icon, key
+export type { MilestoneDefinition as MilestoneUI } from '../src/types/models';

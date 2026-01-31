@@ -5,17 +5,11 @@
  * Import database types directly from './database' when needed for SQL operations
  */
 
-// Only export non-conflicting database types
-export type { SyncStatus, CheckInType, SyncOperation, SyncQueueItem } from './database';
-export type { UserProfile as DbUserProfile } from './database';
-export type { DailyCheckIn as DbDailyCheckIn } from './database';
-export type { StepWork as DbStepWork } from './database';
+// Export all database types (snake_case with encrypted_ fields)
+export * from './database';
 
-// Export decrypted models
+// Export decrypted models (used in UI after decryption)
 export * from './models';
 
-// Alias exports for backward compatibility
+// Alias exports for backward compatibility - Milestone uses days, icon, key
 export type { MilestoneDefinition as Milestone } from './models';
-
-// Database types for hooks (have encrypted_* fields)
-export type { JournalEntry, DailyCheckIn, StepWork, UserProfile } from './database';

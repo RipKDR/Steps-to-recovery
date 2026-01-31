@@ -57,10 +57,12 @@ export const AchievementCard = memo(function AchievementCard({
   achievement,
   onPress,
   showProgress = true,
-  className = '',
+  className: _className = '',
 }: AchievementCardProps) {
+  // className kept for API compatibility, not currently used in render
+  void _className;
   const theme = useTheme();
-  
+
   // Validate achievement data
   if (!achievement || typeof achievement !== 'object') {
     logger.warn('AchievementCard: Invalid achievement data provided', { achievement });
@@ -111,7 +113,7 @@ export const AchievementCard = memo(function AchievementCard({
   // Build card style for additional styling (border-left, opacity)
   const cardStyle = useMemo(() => {
     const styles: { borderLeftWidth?: number; borderLeftColor?: string; opacity?: number } = {};
-    
+
     if (isUnlocked) {
       styles.borderLeftWidth = 4;
       styles.borderLeftColor = theme.colors.secondary;
@@ -119,7 +121,7 @@ export const AchievementCard = memo(function AchievementCard({
     if (isLocked) {
       styles.opacity = 0.6;
     }
-    
+
     return Object.keys(styles).length > 0 ? styles : undefined;
   }, [isUnlocked, isLocked, theme.colors.secondary]);
 

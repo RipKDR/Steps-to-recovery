@@ -11,8 +11,6 @@ import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withTiming,
-  withSequence,
-  withDelay,
   Easing,
   runOnJS,
   cancelAnimation,
@@ -103,7 +101,7 @@ export function BreathingCircle({
 
   // Increment cycle
   const incrementCycle = useCallback(() => {
-    setCurrentCycle(prev => prev + 1);
+    setCurrentCycle((prev) => prev + 1);
   }, []);
 
   // Breathing animation sequence
@@ -186,7 +184,9 @@ export function BreathingCircle({
       style={[styles.container, { width: size, height: size }]}
       testID={testID}
       accessibilityRole="button"
-      accessibilityLabel={isActive ? `Breathing exercise: ${PHASE_LABELS[phase]}` : 'Start breathing exercise'}
+      accessibilityLabel={
+        isActive ? `Breathing exercise: ${PHASE_LABELS[phase]}` : 'Start breathing exercise'
+      }
       accessibilityHint={isActive ? 'Tap to stop' : 'Tap to start the breathing exercise'}
     >
       {/* Outer ring */}

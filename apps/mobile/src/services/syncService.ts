@@ -24,6 +24,7 @@
 import { supabase } from '../lib/supabase';
 import type { StorageAdapter } from '../adapters/storage';
 import { logger } from '../utils/logger';
+import { decryptContent } from '../utils/encryption';
 
 /**
  * Mutex to prevent concurrent sync operations
@@ -194,25 +195,12 @@ interface LocalReadingReflection {
 }
 
 /**
- * Reading reflection from local SQLite
- */
-interface LocalReadingReflection {
-  id: string;
-  user_id: string;
-  reading_id: string;
-  reading_date: string;
-  encrypted_reflection: string;
-  word_count: number;
-  created_at: string;
-  updated_at: string;
-  sync_status: string;
-  supabase_id: string | null;
-}
-
-/**
  * Generate a UUID v4
  */
 function generateUUID(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
     const r = (Math.random() * 16) | 0;
     const v = c === 'x' ? r : (r & 0x3) | 0x8;
@@ -426,10 +414,20 @@ export async function syncDailyCheckIn(
       // Convert craving (0-10) to day_rating (1-10, inverted: high craving = low rating)
       // If craving is encrypted, we store it as-is for now
       if (checkIn.encrypted_craving) {
-        // For encrypted values, store in notes or a dedicated field
-        // Since Supabase expects INTEGER for day_rating, we'll skip this mapping
-        // and let the evening reflection capture the craving info
+        // Preserve encrypted craving data for privacy
         supabaseData.challenges_faced = checkIn.encrypted_craving;
+
+        // Provide a numeric day_rating if we can safely derive it
+        try {
+          const decrypted = await decryptContent(checkIn.encrypted_craving);
+          const craving = Number.parseInt(decrypted, 10);
+          if (!Number.isNaN(craving)) {
+            const rating = Math.max(1, Math.min(10, 11 - craving));
+            supabaseData.day_rating = rating;
+          }
+        } catch {
+          // Ignore decryption failures; keep encrypted fallback only
+        }
       }
     }
 
@@ -880,7 +878,7 @@ export async function addToSyncQueue(
   supabaseId?: string | null
 ): Promise<void> {
   try {
-    const queueId = `sync_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+    const queueId = `sync_${generateUUID()}`;
     const now = new Date().toISOString();
 
     await db.runAsync(

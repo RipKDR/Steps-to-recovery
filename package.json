@@ -3,10 +3,17 @@
   "version": "1.0.0",
   "license": "MIT",
   "private": true,
+  "packageManager": "npm@10.9.2",
   "workspaces": [
     "apps/*",
     "packages/*"
   ],
+  "overrides": {
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
+    "react-native": "0.81.5",
+    "@sentry/react-native": "^7.11.0"
+  },
   "scripts": {
     "dev": "turbo run dev",
     "build": "turbo run build",
@@ -34,6 +41,7 @@
     "husky": "^9.1.7",
     "lint-staged": "^16.2.7",
     "prettier": "^3.8.1",
+    "supabase": "^2.72.9",
     "turbo": "^2.7.3",
     "typescript": "~5.9.3"
   },
@@ -41,6 +49,8 @@
     "node": ">=20.0.0"
   },
   "dependencies": {
-    "@sentry/react-native": "^7.10.0"
+    "@sentry/react-native": "^7.11.0",
+    "react": "19.1.0",
+    "react-native": "0.81.5"
   }
 }

@@ -3,35 +3,35 @@
     "name": "Steps to Recovery",
     "slug": "steps-to-recovery",
     "version": "1.0.0",
+    "scheme": "stepstorecovery",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "automatic",
+    "userInterfaceStyle": "dark",
     "jsEngine": "hermes",
     "newArchEnabled": true,
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#4F8FC0"
+      "backgroundColor": "#0f172a"
     },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.recovery.stepstorecovery",
+      "buildNumber": "1",
       "infoPlist": {
         "NSLocationAlwaysAndWhenInUseUsageDescription": "We use your location to notify you when you're near saved meeting locations to provide timely support.",
-        "NSLocationWhenInUseUsageDescription": "We use your location to help you save meeting locations for geofencing support.",
+        "NSLocationWhenInUseUsageDescription": "We use your location to help you find nearby meetings and save locations for reminders.",
         "NSLocationAlwaysUsageDescription": "We use your location in the background to notify you when you're near saved meeting locations.",
-        "UIBackgroundModes": [
-          "location",
-          "fetch",
-          "processing"
-        ]
+        "NSFaceIDUsageDescription": "Use Face ID to securely access your private recovery data.",
+        "UIBackgroundModes": ["location", "fetch", "processing", "remote-notification"]
       }
     },
     "android": {
       "package": "com.recovery.stepstorecovery",
+      "versionCode": 1,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#4F8FC0"
+        "backgroundColor": "#0f172a"
       },
       "permissions": [
         "ACCESS_FINE_LOCATION",
@@ -40,11 +40,16 @@
         "POST_NOTIFICATIONS",
         "RECEIVE_BOOT_COMPLETED",
         "SCHEDULE_EXACT_ALARM",
-        "android.permission.ACCESS_COARSE_LOCATION",
-        "android.permission.ACCESS_FINE_LOCATION"
+        "USE_BIOMETRIC",
+        "USE_FINGERPRINT",
+        "VIBRATE"
       ],
-      "edgeToEdgeEnabled": false,
-      "predictiveBackGestureEnabled": false
+      "blockedPermissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE"
+      ],
+      "edgeToEdgeEnabled": false
     },
     "web": {
       "favicon": "./assets/favicon.png",
@@ -52,27 +57,27 @@
       "output": "single",
       "build": {
         "babel": {
-          "include": [
-            "sql.js",
-            "idb"
-          ]
+          "include": ["sql.js", "idb"]
         }
       },
       "meta": {
         "name": "Steps to Recovery",
-        "description": "A private, offline-first recovery companion app for addiction recovery",
-        "keywords": "recovery,addiction,sobriety,journal,12-step",
-        "theme-color": "#4F8FC0"
+        "description": "A private, offline-first recovery companion app for 12-step programs",
+        "keywords": "recovery,addiction,sobriety,journal,12-step,AA,NA,privacy",
+        "theme-color": "#0f172a",
+        "viewport": "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"
       },
       "pwa": {
         "name": "Steps to Recovery",
         "shortName": "Recovery",
-        "description": "Your private recovery companion",
-        "themeColor": "#4F8FC0",
-        "backgroundColor": "#FFFFFF",
+        "description": "Your private, offline-first recovery companion",
+        "themeColor": "#0f172a",
+        "backgroundColor": "#0f172a",
         "display": "standalone",
+        "orientation": "portrait",
         "startUrl": "/",
         "scope": "/",
+        "categories": ["health", "lifestyle"],
         "icons": [
           {
             "src": "./assets/icon.png",
@@ -89,14 +94,16 @@
       [
         "expo-notifications",
         {
-          "color": "#4F8FC0"
+          "color": "#8b5cf6",
+          "defaultChannel": "recovery-reminders"
         }
       ],
       [
         "expo-location",
         {
           "locationAlwaysAndWhenInUsePermission": "We use your location to notify you when you're near saved meeting locations to provide timely support.",
-          "locationWhenInUsePermission": "We use your location to help you save meeting locations for geofencing support."
+          "locationWhenInUsePermission": "We use your location to help you find nearby meetings and save locations for reminders.",
+          "isAndroidBackgroundLocationEnabled": true
         }
       ],
       [
@@ -105,11 +112,24 @@
           "organization": "steps-to-recovery",
           "project": "mobile"
         }
+      ],
+      "@react-native-community/datetimepicker",
+      [
+        "expo-router",
+        {
+          "origin": "https://stepstorecovery.app"
+        }
       ]
     ],
-    "updates": {
-      "enabled": false
+    "experiments": {
+      "typedRoutes": true
     },
+    "updates": {
+      "enabled": true,
+      "fallbackToCacheTimeout": 30000,
+      "checkAutomatically": "ON_LOAD"
+    },
+    "runtimeVersion": "1.0.0",
     "extra": {
       "eas": {
         "projectId": "cc789e98-8c7f-4bf1-9125-23e0b83b8f00"

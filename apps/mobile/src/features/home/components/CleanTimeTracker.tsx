@@ -12,7 +12,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { Card, ProgressBar, Badge, CircularProgress } from '../../../design-system/components';
 import { useTheme } from '../../../design-system/hooks/useTheme';
-import type { Milestone } from '@recovery/shared/types';
+import type { MilestoneDefinition as Milestone } from '@recovery/shared/src/types/models';
 
 interface CleanTimeTrackerProps {
   days: number;

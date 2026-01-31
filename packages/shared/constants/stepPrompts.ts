@@ -8,7 +8,7 @@
  * Structure:
  * - Each step has 25-80 questions (Step 4 is the longest)
  * - Questions are organized into sections for easier navigation
- * - All 12 steps are available from the start (no progressive unlock)
+ * - All 12 steps are included; the UI may preview locked steps depending on phase
  *
  * @module constants/stepPrompts
  */

@@ -22,7 +22,9 @@ import { hapticThreshold, hapticImpact } from '../../utils/haptics';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const ACTION_WIDTH = 80;
 const DELETE_THRESHOLD = -ACTION_WIDTH * 0.75;
-const EDIT_THRESHOLD = ACTION_WIDTH * 0.75;
+// EDIT_THRESHOLD reserved for future right-swipe edit feature
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const _EDIT_THRESHOLD = ACTION_WIDTH * 0.75;
 
 export interface SwipeAction {
   /**
@@ -183,13 +185,6 @@ export function SwipeableListItem({
 
   // Animated style for right actions container
   const rightActionsAnimatedStyle = useAnimatedStyle(() => {
-    const width = interpolate(
-      translateX.value,
-      [-rightActionsWidth - ACTION_WIDTH, -rightActionsWidth, 0],
-      [rightActionsWidth + ACTION_WIDTH, rightActionsWidth, 0],
-      Extrapolation.CLAMP
-    );
-
     return {
       width: Math.abs(translateX.value),
       opacity: interpolate(
@@ -213,7 +208,7 @@ export function SwipeableListItem({
   }));
 
   // Render action button
-  const renderAction = (action: SwipeAction, index: number, isRight: boolean): React.ReactElement => {
+  const renderAction = (action: SwipeAction, _index: number, _isRight: boolean): React.ReactElement => {
     return (
       <Animated.View
         key={action.key}

@@ -1,16 +1,12 @@
 import React, { useState, useCallback } from 'react';
 import { FlatList, StyleSheet, View, ActivityIndicator } from 'react-native';
-import Animated, {
-  FadeInRight,
-  FadeInDown,
-  Layout,
-} from 'react-native-reanimated';
+import Animated, { FadeInRight, FadeInDown, Layout } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons, Feather } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { JournalCard } from '../components/JournalCard';
 import { useJournalEntries, useDeleteJournalEntry } from '../hooks/useJournalEntries';
-import type { JournalEntryDecrypted } from '@recovery/shared/types';
+import type { JournalEntryDecrypted } from '@recovery/shared/src/types/models';
 import {
   useTheme,
   FloatingActionButton,
@@ -43,77 +39,101 @@ export function JournalListScreen({ userId }: JournalListScreenProps): React.Rea
     return (
       entry.title?.toLowerCase().includes(query) ||
       entry.body.toLowerCase().includes(query) ||
-      entry.tags.some(tag => tag.toLowerCase().includes(query))
+      entry.tags.some((tag) => tag.toLowerCase().includes(query))
     );
   });
 
   const handleNewEntry = (): void => {
-    (navigation.navigate as (screen: string, params?: Record<string, unknown>) => void)('JournalEditor', { userId, mode: 'create' });
+    (navigation.navigate as (screen: string, params?: Record<string, unknown>) => void)(
+      'JournalEditor',
+      { userId, mode: 'create' },
+    );
   };
 
   const handleEntryPress = (entry: JournalEntryDecrypted): void => {
-    (navigation.navigate as (screen: string, params?: Record<string, unknown>) => void)('JournalEditor', { userId, mode: 'edit', entryId: entry.id });
+    (navigation.navigate as (screen: string, params?: Record<string, unknown>) => void)(
+      'JournalEditor',
+      { userId, mode: 'edit', entryId: entry.id },
+    );
   };
 
-  const handleDeleteEntry = useCallback(async (entryId: string): Promise<void> => {
-    try {
-      await deleteEntry?.(entryId);
-      hapticSuccess();
-    } catch (error) {
-      // Error handled by hook
-    }
-  }, [deleteEntry]);
+  const handleDeleteEntry = useCallback(
+    async (entryId: string): Promise<void> => {
+      try {
+        await deleteEntry?.(entryId);
+        hapticSuccess();
+      } catch (error) {
+        // Error handled by hook
+      }
+    },
+    [deleteEntry],
+  );
 
   const handleShareEntry = useCallback((entry: JournalEntryDecrypted): void => {
     // TODO: Implement share with sponsor
-    logger.info('Share entry requested', { entryId: entry.id });
+    logger.debug('Share entry:', { entryId: entry.id });
   }, []);
 
   // Swipe actions for each item
-  const getRightActions = useCallback((entry: JournalEntryDecrypted): SwipeAction[] => [
-    {
-      key: 'delete',
-      icon: <Feather name="trash-2" size={20} color="#FFFFFF" />,
-      label: 'Delete',
-      backgroundColor: theme.colors.danger,
-      onPress: () => handleDeleteEntry(entry.id),
-    },
-  ], [theme.colors.danger, handleDeleteEntry]);
+  const getRightActions = useCallback(
+    (entry: JournalEntryDecrypted): SwipeAction[] => [
+      {
+        key: 'delete',
+        icon: <Feather name="trash-2" size={20} color="#FFFFFF" />,
+        label: 'Delete',
+        backgroundColor: theme.colors.danger,
+        onPress: () => handleDeleteEntry(entry.id),
+      },
+    ],
+    [theme.colors.danger, handleDeleteEntry],
+  );
 
-  const getLeftActions = useCallback((entry: JournalEntryDecrypted): SwipeAction[] => [
-    {
-      key: 'share',
-      icon: <Feather name="share" size={20} color="#FFFFFF" />,
-      label: 'Share',
-      backgroundColor: theme.colors.primary,
-      onPress: () => handleShareEntry(entry),
-    },
-  ], [theme.colors.primary, handleShareEntry]);
+  const getLeftActions = useCallback(
+    (entry: JournalEntryDecrypted): SwipeAction[] => [
+      {
+        key: 'share',
+        icon: <Feather name="share" size={20} color="#FFFFFF" />,
+        label: 'Share',
+        backgroundColor: theme.colors.primary,
+        onPress: () => handleShareEntry(entry),
+      },
+    ],
+    [theme.colors.primary, handleShareEntry],
+  );
 
   // Context menu items for long press
-  const getContextMenuItems = useCallback((entry: JournalEntryDecrypted): ContextMenuItem[] => [
-    {
-      key: 'edit',
-      label: 'Edit Entry',
-      icon: <Feather name="edit-2" size={18} color={theme.colors.text} />,
-      onPress: () => handleEntryPress(entry),
-    },
-    {
-      key: 'share',
-      label: 'Share with Sponsor',
-      icon: <Feather name="share" size={18} color={theme.colors.text} />,
-      onPress: () => handleShareEntry(entry),
-    },
-    {
-      key: 'delete',
-      label: 'Delete',
-      icon: <Feather name="trash-2" size={18} color={theme.colors.danger} />,
-      destructive: true,
-      onPress: () => handleDeleteEntry(entry.id),
-    },
-  ], [theme.colors.text, theme.colors.danger, handleEntryPress, handleShareEntry, handleDeleteEntry]);
+  const getContextMenuItems = useCallback(
+    (entry: JournalEntryDecrypted): ContextMenuItem[] => [
+      {
+        key: 'edit',
+        label: 'Edit Entry',
+        icon: <Feather name="edit-2" size={18} color={theme.colors.text} />,
+        onPress: () => handleEntryPress(entry),
+      },
+      {
+        key: 'share',
+        label: 'Share with Sponsor',
+        icon: <Feather name="share" size={18} color={theme.colors.text} />,
+        onPress: () => handleShareEntry(entry),
+      },
+      {
+        key: 'delete',
+        label: 'Delete',
+        icon: <Feather name="trash-2" size={18} color={theme.colors.danger} />,
+        destructive: true,
+        onPress: () => handleDeleteEntry(entry.id),
+      },
+    ],
+    [theme.colors.text, theme.colors.danger, handleEntryPress, handleShareEntry, handleDeleteEntry],
+  );
 
-  const renderItem = ({ item, index }: { item: JournalEntryDecrypted; index: number }): React.ReactElement => (
+  const renderItem = ({
+    item,
+    index,
+  }: {
+    item: JournalEntryDecrypted;
+    index: number;
+  }): React.ReactElement => (
     <Animated.View
       entering={FadeInRight.delay(getStaggerDelay(index)).springify().damping(15)}
       layout={Layout.springify()}
@@ -147,11 +167,11 @@ export function JournalListScreen({ userId }: JournalListScreenProps): React.Rea
   );
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]} edges={['bottom']}>
-      <Animated.View
-        entering={FadeInDown.duration(300)}
-        style={styles.searchContainer}
-      >
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: theme.colors.background }]}
+      edges={['bottom']}
+    >
+      <Animated.View entering={FadeInDown.duration(300)} style={styles.searchContainer}>
         <Input
           label=""
           value={searchQuery}

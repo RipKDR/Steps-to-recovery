@@ -95,7 +95,7 @@ export function Skeleton({
           easing: Easing.inOut(Easing.ease),
         }),
         -1, // Infinite repeat
-        false // Don't reverse
+        false, // Don't reverse
       );
     }
   }, [animated, duration, shimmerPosition]);
@@ -138,11 +138,7 @@ export function Skeleton({
 
   // Animated style for shimmer effect
   const shimmerStyle = useAnimatedStyle(() => {
-    const translateX = interpolate(
-      shimmerPosition.value,
-      [-1, 1],
-      [-200, 200]
-    );
+    const translateX = interpolate(shimmerPosition.value, [-1, 1], [-200, 200]);
 
     return {
       transform: [{ translateX }],
@@ -154,7 +150,7 @@ export function Skeleton({
       style={[
         styles.container,
         {
-          width: dimensions.width,
+          width: dimensions.width as ViewStyle['width'],
           height: dimensions.height,
           borderRadius: dimensions.borderRadius,
           backgroundColor: baseColor,
@@ -169,18 +165,10 @@ export function Skeleton({
     >
       {animated && (
         <AnimatedLinearGradient
-          colors={[
-            'transparent',
-            highlightColor,
-            'transparent',
-          ]}
+          colors={['transparent', highlightColor, 'transparent']}
           start={{ x: 0, y: 0.5 }}
           end={{ x: 1, y: 0.5 }}
-          style={[
-            styles.shimmer,
-            { width: 200, height: '100%' },
-            shimmerStyle,
-          ]}
+          style={[styles.shimmer, { width: 200, height: '100%' }, shimmerStyle]}
         />
       )}
     </View>

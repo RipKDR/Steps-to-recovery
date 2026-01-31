@@ -17,7 +17,7 @@ import { useTheme } from '../hooks/useTheme';
 export interface TextAreaProps extends Omit<TextInputProps, 'value' | 'onChangeText' | 'multiline'> {
   label: string;
   value: string;
-  onChangeText: (text: string) => void;
+  onChangeText?: (text: string) => void;
   error?: string;
   hint?: string;
   required?: boolean;

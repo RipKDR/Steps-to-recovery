@@ -23,8 +23,6 @@ import Animated, {
   withSpring,
   withTiming,
   runOnJS,
-  interpolate,
-  Extrapolation,
 } from 'react-native-reanimated';
 import { BlurView } from 'expo-blur';
 import { useTheme } from '../hooks/useTheme';
@@ -152,13 +150,16 @@ export function ContextMenu({
   }, [onClose]);
 
   // Handle item press
-  const handleItemPress = useCallback((item: ContextMenuItem) => {
-    if (item.disabled) return;
-    triggerSelectHaptic();
-    closeMenu();
-    // Small delay to let animation complete
-    setTimeout(() => item.onPress(), 100);
-  }, [closeMenu, triggerSelectHaptic]);
+  const handleItemPress = useCallback(
+    (item: ContextMenuItem) => {
+      if (item.disabled) return;
+      triggerSelectHaptic();
+      closeMenu();
+      // Small delay to let animation complete
+      setTimeout(() => item.onPress(), 100);
+    },
+    [closeMenu, triggerSelectHaptic],
+  );
 
   // Long press gesture
   const longPressGesture = Gesture.LongPress()
@@ -230,11 +231,7 @@ export function ContextMenu({
         statusBarTranslucent
       >
         {/* Backdrop */}
-        <TouchableOpacity
-          style={styles.backdrop}
-          activeOpacity={1}
-          onPress={closeMenu}
-        >
+        <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={closeMenu}>
           <Animated.View style={[StyleSheet.absoluteFill, backdropAnimatedStyle]}>
             {Platform.OS !== 'web' ? (
               <BlurView
@@ -283,9 +280,7 @@ export function ContextMenu({
               accessibilityRole="menuitem"
               accessibilityState={{ disabled: item.disabled }}
             >
-              {item.icon && (
-                <View style={styles.menuItemIcon}>{item.icon}</View>
-              )}
+              {item.icon && <View style={styles.menuItemIcon}>{item.icon}</View>}
               <Text
                 style={[
                   styles.menuItemLabel,
@@ -294,8 +289,8 @@ export function ContextMenu({
                     color: item.destructive
                       ? theme.colors.danger
                       : item.disabled
-                      ? theme.colors.textTertiary
-                      : theme.colors.text,
+                        ? theme.colors.textTertiary
+                        : theme.colors.text,
                   },
                 ]}
               >

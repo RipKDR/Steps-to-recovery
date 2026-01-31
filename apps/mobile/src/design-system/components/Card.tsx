@@ -5,8 +5,6 @@
 
 import React from 'react';
 import {
-  View,
-  StyleSheet,
   StyleProp,
   ViewStyle,
   TouchableOpacity,
@@ -85,9 +83,8 @@ export function Card({
     : {};
 
   // If interactive variant, add press animation
-  const interactiveStyle = variant === 'interactive' && onPress
-    ? { transform: [{ scale: pressScale }] }
-    : {};
+  const interactiveStyle =
+    variant === 'interactive' && onPress ? { transform: [{ scale: pressScale }] } : {};
 
   // Combine all styles
   const combinedAnimatedStyle = {
@@ -110,14 +107,12 @@ export function Card({
         onPressIn={() => variant === 'interactive' && animatePress(true)}
         onPressOut={() => variant === 'interactive' && animatePress(false)}
         activeOpacity={variant === 'interactive' ? 0.95 : 0.7}
-        accessibilityRole={accessibilityRole || "button"}
+        accessibilityRole={accessibilityRole || 'button'}
         accessibilityLabel={accessibilityLabel}
         accessibilityHint={accessibilityHint}
         testID={testID}
       >
-        <Animated.View style={[cardStyle, combinedAnimatedStyle, style]}>
-          {children}
-        </Animated.View>
+        <Animated.View style={[cardStyle, combinedAnimatedStyle, style]}>{children}</Animated.View>
       </TouchableOpacity>
     );
   }
@@ -135,7 +130,3 @@ export function Card({
     </Animated.View>
   );
 }
-
-const styles = StyleSheet.create({
-  // Placeholder for any static styles if needed
-});

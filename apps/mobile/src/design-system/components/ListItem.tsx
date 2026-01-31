@@ -7,18 +7,20 @@ import React from 'react';
 import {
   View,
   Text,
-  TouchableOpacity,
   StyleSheet,
   ViewStyle,
   Pressable,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
+import type { ComponentProps } from 'react';
 import { useTheme } from '../hooks/useTheme';
+
+type MaterialIconName = ComponentProps<typeof MaterialIcons>['name'];
 
 export interface ListItemProps {
   label: string;
   value?: string;
-  icon?: string;
+  icon?: MaterialIconName;
   iconColor?: string;
   leftElement?: React.ReactNode;
   rightElement?: React.ReactNode;
@@ -61,7 +63,7 @@ export function ListItem({
         <View style={styles.leftContainer}>
           {leftElement || (
             <MaterialIcons
-              name={icon as any}
+              name={icon}
               size={24}
               color={iconColor || theme.colors.primary}
             />

@@ -35,7 +35,8 @@ export type JournalStackParamList = {
 // Steps Stack
 export type StepsStackParamList = {
     StepsOverview: undefined;
-    StepDetail: { stepNumber: number };
+    StepDetail: { stepNumber: number; initialQuestion?: number };
+    StepReview: { stepNumber: number };
 };
 
 // Profile Stack
@@ -43,7 +44,8 @@ export type ProfileStackParamList = {
     ProfileHome: undefined;
     Sponsor: undefined;
     InviteSponsor: undefined;
-    SharedEntries: { sponseeId: string };
+    SharedEntries: { connectionId: string };
+    ShareEntries: { entryId?: string } | undefined;
     NotificationSettings: undefined;
 };
 

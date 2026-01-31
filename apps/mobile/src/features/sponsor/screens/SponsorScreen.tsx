@@ -1,126 +1,212 @@
 /**
- * Sponsor Connections Screen
- * Manages sponsor relationships and sponsee connections
- * Design: iOS-style with proper confirmation modals (no Alert dialogs)
+ * Sponsor Connections Screen (local-only)
+ * Manages manual invite/confirm flows with encrypted payloads.
  */
 
-import React, { useState } from 'react';
-import { View, StyleSheet, FlatList, ActivityIndicator } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { View, StyleSheet, ActivityIndicator, Share } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { ProfileStackParamList } from '../../../navigation/types';
-import { useTheme, Card, Button, Modal } from '../../../design-system';
-import { useSponsorships } from '../hooks';
+import { useTheme, Card, Button, Modal, Input, Toast } from '../../../design-system';
+import { useAuth } from '../../../contexts/AuthContext';
+import { useDatabase } from '../../../contexts/DatabaseContext';
+import { useSponsorConnections } from '../hooks/useSponsorConnections';
+import { generateId } from '../../../utils/id';
+import { logger } from '../../../utils/logger';
+import { parseCommentSharePayload } from '@recovery/shared/services/sponsorConnection';
 import { Text } from 'react-native';
 
 type NavigationProp = NativeStackNavigationProp<ProfileStackParamList>;
 
-interface ConfirmationState {
-  visible: boolean;
-  title: string;
-  message: string;
-  action: () => Promise<void>;
-  variant: 'danger' | 'primary';
-}
-
 export function SponsorScreen(): React.ReactElement {
   const navigation = useNavigation<NavigationProp>();
   const theme = useTheme();
+  const { user } = useAuth();
+  const userId = user?.id ?? '';
+  const { db } = useDatabase();
+
   const {
     mySponsor,
     mySponsees,
-    pendingRequests,
-    sentRequests,
-    loading,
-    acceptRequest,
-    declineRequest,
-    removeSponsor,
-  } = useSponsorships();
+    pendingInvites,
+    isLoading,
+    createInvite,
+    confirmInvite,
+    connectAsSponsor,
+    removeConnection,
+    loadConnections,
+  } = useSponsorConnections(userId);
 
-  const [processingId, setProcessingId] = useState<string | null>(null);
-  const [confirmation, setConfirmation] = useState<ConfirmationState>({
-    visible: false,
-    title: '',
-    message: '',
-    action: async () => {},
-    variant: 'primary',
-  });
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [inviteModalVisible, setInviteModalVisible] = useState(false);
+  const [inviteName, setInviteName] = useState('');
+  const [invitePayload, setInvitePayload] = useState('');
+  const [inviteCode, setInviteCode] = useState('');
+  const [inviteLoading, setInviteLoading] = useState(false);
 
-  const showConfirmation = (
-    title: string,
-    message: string,
-    action: () => Promise<void>,
-    variant: 'danger' | 'primary' = 'primary'
-  ): void => {
-    setConfirmation({
-      visible: true,
-      title,
-      message,
-      action,
-      variant,
-    });
+  const [connectModalVisible, setConnectModalVisible] = useState(false);
+  const [connectName, setConnectName] = useState('');
+  const [connectPayload, setConnectPayload] = useState('');
+  const [confirmPayload, setConfirmPayload] = useState('');
+  const [connectLoading, setConnectLoading] = useState(false);
+
+  const [confirmModalVisible, setConfirmModalVisible] = useState(false);
+  const [confirmInput, setConfirmInput] = useState('');
+  const [confirmLoading, setConfirmLoading] = useState(false);
+
+  const [commentImportVisible, setCommentImportVisible] = useState(false);
+  const [commentPayloadInput, setCommentPayloadInput] = useState('');
+  const [commentLoading, setCommentLoading] = useState(false);
+
+  const [toastMessage, setToastMessage] = useState('');
+  const [toastVariant, setToastVariant] = useState<'success' | 'error' | 'info'>('success');
+
+  const showToast = (message: string, variant: 'success' | 'error' | 'info' = 'success'): void => {
+    setToastMessage(message);
+    setToastVariant(variant);
   };
 
-  const handleAccept = async (id: string): Promise<void> => {
-    showConfirmation(
-      'Accept Sponsorship',
-      'Are you ready to take on this sponsorship responsibility?',
-      async () => {
-        setProcessingId(id);
-        try {
-          await acceptRequest(id);
-          setSuccessMessage('Sponsorship request accepted!');
-          setTimeout(() => setSuccessMessage(null), 3000);
-        } catch (error) {
-          // Error handled by hook
-        } finally {
-          setProcessingId(null);
-        }
+  const sharePayload = async (payload: string, label: string): Promise<void> => {
+    try {
+      await Share.share({
+        message: `${label}\n\n${payload}`,
+      });
+    } catch (error) {
+      logger.warn('Failed to share sponsor payload', error);
+    }
+  };
+
+  const handleCreateInvite = async (): Promise<void> => {
+    try {
+      setInviteLoading(true);
+      const result = await createInvite(inviteName.trim() || undefined);
+      setInvitePayload(result.payload);
+      setInviteCode(result.code);
+      showToast('Invite created. Share it with your sponsor.', 'success');
+    } catch (error) {
+      logger.error('Failed to create invite', error);
+      showToast('Unable to create invite. Try again.', 'error');
+    } finally {
+      setInviteLoading(false);
+    }
+  };
+
+  const handleConnectAsSponsor = async (): Promise<void> => {
+    if (!connectPayload.trim()) {
+      showToast('Paste the invite payload to connect.', 'info');
+      return;
+    }
+
+    try {
+      setConnectLoading(true);
+      const confirmation = await connectAsSponsor(connectPayload.trim(), connectName.trim() || undefined);
+      setConfirmPayload(confirmation);
+      setConnectModalVisible(false);
+      showToast('Connection ready. Send confirmation back.', 'success');
+    } catch (error) {
+      logger.error('Failed to connect as sponsor', error);
+      showToast('Unable to connect. Check the invite code.', 'error');
+    } finally {
+      setConnectLoading(false);
+    }
+  };
+
+  const handleConfirmSponsor = async (): Promise<void> => {
+    if (!confirmInput.trim()) {
+      showToast('Paste the confirmation payload first.', 'info');
+      return;
+    }
+
+    try {
+      setConfirmLoading(true);
+      await confirmInvite(confirmInput.trim());
+      await loadConnections();
+      setConfirmInput('');
+      setConfirmModalVisible(false);
+      showToast('Sponsor confirmed!', 'success');
+    } catch (error) {
+      logger.error('Failed to confirm sponsor', error);
+      showToast('Confirmation failed. Please check the code.', 'error');
+    } finally {
+      setConfirmLoading(false);
+    }
+  };
+
+  const handleRemove = async (connectionId: string): Promise<void> => {
+    try {
+      await removeConnection(connectionId);
+      showToast('Connection removed', 'success');
+    } catch (error) {
+      logger.error('Failed to remove connection', error);
+      showToast('Unable to remove connection', 'error');
+    }
+  };
+
+  const handleImportComment = async (): Promise<void> => {
+    if (!db) {
+      showToast('Database not ready', 'error');
+      return;
+    }
+    const payload = parseCommentSharePayload(commentPayloadInput.trim());
+    if (!payload) {
+      showToast('Invalid comment payload', 'error');
+      return;
+    }
+
+    try {
+      setCommentLoading(true);
+      const connection = await db.getFirstAsync<{ id: string }>(
+        `SELECT id FROM sponsor_connections WHERE user_id = ? AND invite_code = ?`,
+        [userId, payload.code]
+      );
+
+      if (!connection?.id) {
+        showToast('No matching sponsor connection found.', 'error');
+        return;
       }
-    );
+
+      const now = new Date().toISOString();
+      await db.runAsync(
+        `INSERT INTO sponsor_shared_entries (
+          id, user_id, connection_id, direction, journal_entry_id,
+          payload, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          generateId('share'),
+          userId,
+          connection.id,
+          'comment',
+          payload.entryId,
+          commentPayloadInput.trim(),
+          now,
+          now,
+        ]
+      );
+
+      setCommentPayloadInput('');
+      setCommentImportVisible(false);
+      showToast('Comment imported into your journal.', 'success');
+    } catch (error) {
+      logger.error('Failed to import comment', error);
+      showToast('Unable to import comment.', 'error');
+    } finally {
+      setCommentLoading(false);
+    }
   };
 
-  const handleDecline = async (id: string): Promise<void> => {
-    showConfirmation(
-      'Decline Request',
-      'Are you sure you want to decline this sponsorship request?',
-      async () => {
-        setProcessingId(id);
-        try {
-          await declineRequest(id);
-        } catch (error) {
-          // Error handled by hook
-        } finally {
-          setProcessingId(null);
-        }
-      },
-      'danger'
-    );
-  };
+  const sponsorSummary = useMemo(() => {
+    if (pendingInvites.length > 0) {
+      return 'Invite sent — waiting for your sponsor to confirm.';
+    }
+    if (mySponsor) {
+      return 'Connected to your sponsor.';
+    }
+    return 'No sponsor connected yet.';
+  }, [pendingInvites.length, mySponsor]);
 
-  const handleRemove = (id: string, isSponsor: boolean): void => {
-    showConfirmation(
-      isSponsor ? 'Remove Sponsor' : 'Remove Sponsee',
-      isSponsor
-        ? 'Are you sure you want to remove your sponsor? This will end your sponsorship relationship.'
-        : 'Are you sure you want to remove this sponsee? This will end your sponsorship relationship with them.',
-      async () => {
-        try {
-          await removeSponsor(id);
-          setSuccessMessage(isSponsor ? 'Sponsor removed' : 'Sponsee removed');
-          setTimeout(() => setSuccessMessage(null), 3000);
-        } catch (error) {
-          // Error handled by hook
-        }
-      },
-      'danger'
-    );
-  };
-
-  if (loading) {
+  if (isLoading) {
     return (
       <SafeAreaView
         style={[styles.container, { backgroundColor: theme.colors.background }]}
@@ -148,7 +234,6 @@ export function SponsorScreen(): React.ReactElement {
         edges={['bottom']}
       >
         <View style={[styles.content, { paddingHorizontal: theme.spacing.md }]}>
-          {/* Header */}
           <View style={[styles.header, { marginBottom: theme.spacing.lg }]}>
             <Text
               style={[theme.typography.h1, { color: theme.colors.text }]}
@@ -162,316 +247,337 @@ export function SponsorScreen(): React.ReactElement {
                 { color: theme.colors.textSecondary, marginTop: theme.spacing.xs },
               ]}
             >
-              Build and maintain recovery relationships
+              {sponsorSummary}
             </Text>
           </View>
 
-          <FlatList
-            data={[
-              { type: 'my-sponsor' },
-              { type: 'sent-requests' },
-              { type: 'pending-requests' },
-              { type: 'my-sponsees' },
-            ]}
-            keyExtractor={(item) => item.type}
-            showsVerticalScrollIndicator={false}
-            renderItem={({ item }) => {
-              if (item.type === 'my-sponsor') {
-                return (
-                  <View style={{ marginBottom: theme.spacing.lg }}>
-                    <Text
-                      style={[
-                        theme.typography.h3,
-                        { color: theme.colors.text, marginBottom: theme.spacing.sm },
-                      ]}
-                      accessibilityRole="header"
-                    >
-                      My Sponsor
-                    </Text>
-                    {mySponsor ? (
-                      <Card variant="elevated">
-                        <View style={styles.cardHeader}>
-                          <MaterialCommunityIcons
-                            name="account-supervisor"
-                            size={24}
-                            color={theme.colors.primary}
-                          />
-                          <Text
-                            style={[
-                              theme.typography.h3,
-                              { color: theme.colors.text, marginLeft: theme.spacing.sm },
-                            ]}
-                          >
-                            Connected
-                          </Text>
-                        </View>
-                        <Text
-                          style={[
-                            theme.typography.bodySmall,
-                            { color: theme.colors.textSecondary, marginTop: theme.spacing.xs },
-                          ]}
-                        >
-                          Active sponsor relationship
-                        </Text>
-                        <Button
-                          title="Remove Sponsor"
-                          onPress={() => handleRemove(mySponsor.id, true)}
-                          variant="outline"
-                          size="small"
-                          style={{ marginTop: theme.spacing.md }}
-                          textStyle={{ color: theme.colors.danger }}
-                          accessibilityLabel="Remove your sponsor"
-                          accessibilityHint="Ends your sponsorship relationship"
-                        />
-                      </Card>
-                    ) : (
-                      <Card variant="elevated">
-                        <View style={styles.emptyState}>
-                          <MaterialCommunityIcons
-                            name="account-search"
-                            size={48}
-                            color={theme.colors.muted}
-                            style={{ marginBottom: theme.spacing.sm }}
-                          />
-                          <Text
-                            style={[
-                              theme.typography.body,
-                              { color: theme.colors.textSecondary, textAlign: 'center' },
-                            ]}
-                          >
-                            No sponsor connected
-                          </Text>
-                          <Button
-                            title="Find a Sponsor"
-                            onPress={() => navigation.navigate('InviteSponsor')}
-                            variant="primary"
-                            size="medium"
-                            style={{ marginTop: theme.spacing.md }}
-                            accessibilityLabel="Find and invite a sponsor"
-                            accessibilityHint="Navigate to sponsor invitation screen"
-                          />
-                        </View>
-                      </Card>
-                    )}
-                  </View>
-                );
-              }
-
-              if (item.type === 'sent-requests' && sentRequests.length > 0) {
-                return (
-                  <View style={{ marginBottom: theme.spacing.lg }}>
-                    <Card variant="elevated">
-                      <View style={styles.cardHeader}>
-                        <MaterialCommunityIcons
-                          name="clock-outline"
-                          size={20}
-                          color={theme.colors.warning}
-                        />
-                        <Text
-                          style={[
-                            theme.typography.label,
-                            { color: theme.colors.warning, marginLeft: theme.spacing.sm },
-                          ]}
-                        >
-                          Pending Request
-                        </Text>
-                      </View>
-                      <Text
-                        style={[
-                          theme.typography.bodySmall,
-                          { color: theme.colors.textSecondary, marginTop: theme.spacing.xs },
-                        ]}
-                      >
-                        Waiting for sponsor to accept your request
-                      </Text>
-                    </Card>
-                  </View>
-                );
-              }
-
-              if (item.type === 'pending-requests' && pendingRequests.length > 0) {
-                return (
-                  <View style={{ marginBottom: theme.spacing.lg }}>
-                    <Text
-                      style={[
-                        theme.typography.h3,
-                        { color: theme.colors.text, marginBottom: theme.spacing.sm },
-                      ]}
-                      accessibilityRole="header"
-                    >
-                      Sponsorship Requests
-                    </Text>
-                    <FlatList
-                      data={pendingRequests}
-                      keyExtractor={(request) => request.id}
-                      renderItem={({ item: request }) => (
-                        <Card variant="elevated" style={{ marginBottom: theme.spacing.sm }}>
-                          <View style={styles.cardHeader}>
-                            <MaterialCommunityIcons
-                              name="account-plus"
-                              size={24}
-                              color={theme.colors.secondary}
-                            />
-                            <Text
-                              style={[
-                                theme.typography.h3,
-                                { color: theme.colors.text, marginLeft: theme.spacing.sm },
-                              ]}
-                            >
-                              New Request
-                            </Text>
-                          </View>
-                          <Text
-                            style={[
-                              theme.typography.bodySmall,
-                              { color: theme.colors.textSecondary, marginTop: theme.spacing.xs },
-                            ]}
-                          >
-                            Someone wants you as their sponsor
-                          </Text>
-                          <View style={[styles.buttonRow, { marginTop: theme.spacing.md }]}>
-                            <Button
-                              title="Decline"
-                              onPress={() => handleDecline(request.id)}
-                              variant="outline"
-                              size="small"
-                              disabled={processingId === request.id}
-                              style={{ flex: 1, marginRight: theme.spacing.xs }}
-                              accessibilityLabel="Decline sponsorship request"
-                            />
-                            <Button
-                              title="Accept"
-                              onPress={() => handleAccept(request.id)}
-                              variant="secondary"
-                              size="small"
-                              disabled={processingId === request.id}
-                              loading={processingId === request.id}
-                              style={{ flex: 1, marginLeft: theme.spacing.xs }}
-                              accessibilityLabel="Accept sponsorship request"
-                            />
-                          </View>
-                        </Card>
-                      )}
-                    />
-                  </View>
-                );
-              }
-
-              if (item.type === 'my-sponsees' && mySponsees.length > 0) {
-                return (
-                  <View style={{ marginBottom: theme.spacing.xl }}>
-                    <Text
-                      style={[
-                        theme.typography.h3,
-                        { color: theme.colors.text, marginBottom: theme.spacing.sm },
-                      ]}
-                      accessibilityRole="header"
-                    >
-                      My Sponsees ({mySponsees.length})
-                    </Text>
-                    <FlatList
-                      data={mySponsees}
-                      keyExtractor={(sponsee) => sponsee.id}
-                      renderItem={({ item: sponsee }) => (
-                        <Card variant="interactive" style={{ marginBottom: theme.spacing.sm }}>
-                          <View style={styles.cardHeader}>
-                            <MaterialCommunityIcons
-                              name="account-check"
-                              size={24}
-                              color={theme.colors.success}
-                            />
-                            <Text
-                              style={[
-                                theme.typography.h3,
-                                { color: theme.colors.text, marginLeft: theme.spacing.sm },
-                              ]}
-                            >
-                              Sponsee Connected
-                            </Text>
-                          </View>
-                          <Button
-                            title="View Shared Entries →"
-                            onPress={() =>
-                              navigation.navigate('SharedEntries', {
-                                sponseeId: sponsee.sponsee_id,
-                              })
-                            }
-                            variant="outline"
-                            size="small"
-                            style={{ marginTop: theme.spacing.md }}
-                            accessibilityLabel="View shared journal entries from this sponsee"
-                          />
-                          <Button
-                            title="Remove Sponsee"
-                            onPress={() => handleRemove(sponsee.id, false)}
-                            variant="outline"
-                            size="small"
-                            textStyle={{ color: theme.colors.danger }}
-                            style={{ marginTop: theme.spacing.sm }}
-                            accessibilityLabel="Remove this sponsee"
-                            accessibilityHint="Ends your sponsorship relationship with this person"
-                          />
-                        </Card>
-                      )}
-                    />
-                  </View>
-                );
-              }
-
-              return null;
-            }}
-          />
-        </View>
-
-        {/* Success Message Toast */}
-        {successMessage && (
-          <View
-            style={[
-              styles.successToast,
-              {
-                backgroundColor: theme.colors.success,
-                borderRadius: theme.radius.button,
-                paddingHorizontal: theme.spacing.md,
-                paddingVertical: theme.spacing.sm,
-              },
-            ]}
-          >
-            <MaterialCommunityIcons name="check-circle" size={20} color="#FFFFFF" />
+          <Card variant="elevated" style={{ marginBottom: theme.spacing.lg }}>
+            <View style={styles.cardHeader}>
+              <MaterialCommunityIcons name="account-heart" size={24} color={theme.colors.primary} />
+              <Text
+                style={[
+                  theme.typography.h3,
+                  { color: theme.colors.text, marginLeft: theme.spacing.sm },
+                ]}
+              >
+                I need a sponsor
+              </Text>
+            </View>
             <Text
               style={[
-                theme.typography.label,
-                { color: '#FFFFFF', marginLeft: theme.spacing.sm },
+                theme.typography.bodySmall,
+                { color: theme.colors.textSecondary, marginTop: theme.spacing.xs },
               ]}
             >
-              {successMessage}
+              Create an invite and share it with your sponsor. When they send back a confirmation,
+              paste it here to finalize the connection.
             </Text>
-          </View>
-        )}
+
+            <View style={[styles.buttonRow, { marginTop: theme.spacing.md }]}>
+              <Button
+                title="Create Invite"
+                onPress={() => setInviteModalVisible(true)}
+                variant="primary"
+                size="small"
+                style={{ flex: 1, marginRight: theme.spacing.xs }}
+              />
+              <Button
+                title="Confirm Sponsor"
+                onPress={() => setConfirmModalVisible(true)}
+                variant="outline"
+                size="small"
+                style={{ flex: 1, marginLeft: theme.spacing.xs }}
+              />
+            </View>
+
+            <Button
+              title="Import Sponsor Comment"
+              onPress={() => setCommentImportVisible(true)}
+              variant="outline"
+              size="small"
+              style={{ marginTop: theme.spacing.sm }}
+            />
+          </Card>
+
+          <Card variant="elevated" style={{ marginBottom: theme.spacing.lg }}>
+            <View style={styles.cardHeader}>
+              <MaterialCommunityIcons name="account-tie" size={24} color={theme.colors.secondary} />
+              <Text
+                style={[
+                  theme.typography.h3,
+                  { color: theme.colors.text, marginLeft: theme.spacing.sm },
+                ]}
+              >
+                I am a sponsor
+              </Text>
+            </View>
+            <Text
+              style={[
+                theme.typography.bodySmall,
+                { color: theme.colors.textSecondary, marginTop: theme.spacing.xs },
+              ]}
+            >
+              Paste an invite from your sponsee to connect. You will receive a confirmation payload
+              to send back.
+            </Text>
+            <Button
+              title="Connect with Invite"
+              onPress={() => setConnectModalVisible(true)}
+              variant="secondary"
+              size="small"
+              style={{ marginTop: theme.spacing.md }}
+            />
+          </Card>
+
+          {mySponsor && (
+            <Card variant="interactive" style={{ marginBottom: theme.spacing.lg }}>
+              <View style={styles.cardHeader}>
+                <MaterialCommunityIcons
+                  name="account-supervisor"
+                  size={24}
+                  color={theme.colors.success}
+                />
+                <Text
+                  style={[
+                    theme.typography.h3,
+                    { color: theme.colors.text, marginLeft: theme.spacing.sm },
+                  ]}
+                >
+                  My Sponsor
+                </Text>
+              </View>
+              <Text
+                style={[
+                  theme.typography.bodySmall,
+                  { color: theme.colors.textSecondary, marginTop: theme.spacing.xs },
+                ]}
+              >
+                {mySponsor.display_name || 'Sponsor connected'}
+              </Text>
+              <Button
+                title="Remove Sponsor"
+                onPress={() => handleRemove(mySponsor.id)}
+                variant="outline"
+                size="small"
+                textStyle={{ color: theme.colors.danger }}
+                style={{ marginTop: theme.spacing.md }}
+              />
+            </Card>
+          )}
+
+          {mySponsees.length > 0 && (
+            <View style={{ marginBottom: theme.spacing.xl }}>
+              <Text
+                style={[
+                  theme.typography.h3,
+                  { color: theme.colors.text, marginBottom: theme.spacing.sm },
+                ]}
+                accessibilityRole="header"
+              >
+                My Sponsees ({mySponsees.length})
+              </Text>
+              {mySponsees.map((sponsee) => (
+                <Card key={sponsee.id} variant="interactive" style={{ marginBottom: theme.spacing.sm }}>
+                  <View style={styles.cardHeader}>
+                    <MaterialCommunityIcons
+                      name="account-check"
+                      size={24}
+                      color={theme.colors.success}
+                    />
+                    <Text
+                      style={[
+                        theme.typography.h3,
+                        { color: theme.colors.text, marginLeft: theme.spacing.sm },
+                      ]}
+                    >
+                      {sponsee.display_name || 'Sponsee'}
+                    </Text>
+                  </View>
+                  <Button
+                    title="View Shared Entries →"
+                    onPress={() =>
+                      navigation.navigate('SharedEntries', {
+                        connectionId: sponsee.id,
+                      })
+                    }
+                    variant="outline"
+                    size="small"
+                    style={{ marginTop: theme.spacing.md }}
+                  />
+                  <Button
+                    title="Remove Sponsee"
+                    onPress={() => handleRemove(sponsee.id)}
+                    variant="outline"
+                    size="small"
+                    textStyle={{ color: theme.colors.danger }}
+                    style={{ marginTop: theme.spacing.sm }}
+                  />
+                </Card>
+              ))}
+            </View>
+          )}
+        </View>
       </SafeAreaView>
 
-      {/* Confirmation Modal */}
-      <Modal
-        visible={confirmation.visible}
-        onClose={() => setConfirmation({ ...confirmation, visible: false })}
-        title={confirmation.title}
-        message={confirmation.message}
-        variant="center"
-        actions={[
-          {
-            title: 'Cancel',
-            onPress: () => {},
-            variant: 'outline',
-            accessibilityLabel: 'Cancel action',
-          },
-          {
-            title: 'Confirm',
-            onPress: confirmation.action,
-            variant: confirmation.variant === 'danger' ? 'danger' : 'primary',
-            accessibilityLabel: 'Confirm action',
-          },
-        ]}
-        dismissable
+      <Toast
+        visible={!!toastMessage}
+        message={toastMessage}
+        variant={toastVariant}
+        duration={2000}
+        onDismiss={() => setToastMessage('')}
       />
+
+      <Modal
+        visible={inviteModalVisible}
+        onClose={() => setInviteModalVisible(false)}
+        title="Create Sponsor Invite"
+        variant="center"
+      >
+        <Input
+          label="Your name (optional)"
+          value={inviteName}
+          onChangeText={setInviteName}
+          placeholder="How your sponsor knows you"
+        />
+        {invitePayload ? (
+          <Card variant="outlined" style={{ marginBottom: theme.spacing.md }}>
+            <Text style={[theme.typography.label, { color: theme.colors.textSecondary }]}>
+              Invite Code: {inviteCode}
+            </Text>
+            <Text style={[theme.typography.caption, { color: theme.colors.textSecondary, marginTop: 8 }]}>
+              Share this payload with your sponsor:
+            </Text>
+            <Text style={[theme.typography.bodySmall, { color: theme.colors.text, marginTop: 8 }]}>
+              {invitePayload}
+            </Text>
+            <Button
+              title="Share Invite"
+              onPress={() => sharePayload(invitePayload, 'Sponsor invite payload')}
+              variant="primary"
+              size="small"
+              style={{ marginTop: theme.spacing.sm }}
+            />
+          </Card>
+        ) : (
+          <Text style={[theme.typography.bodySmall, { color: theme.colors.textSecondary }]}>
+            Generate an invite and share the payload with your sponsor.
+          </Text>
+        )}
+
+        <View style={styles.modalActions}>
+          <Button
+            title={invitePayload ? 'Close' : 'Generate Invite'}
+            onPress={invitePayload ? () => setInviteModalVisible(false) : handleCreateInvite}
+            variant="primary"
+            size="medium"
+            loading={inviteLoading}
+            disabled={inviteLoading}
+          />
+        </View>
+      </Modal>
+
+      <Modal
+        visible={connectModalVisible}
+        onClose={() => setConnectModalVisible(false)}
+        title="Connect as Sponsor"
+        variant="center"
+      >
+        <Input
+          label="Your name (optional)"
+          value={connectName}
+          onChangeText={setConnectName}
+          placeholder="How your sponsee knows you"
+        />
+        <Input
+          label="Invite Payload"
+          value={connectPayload}
+          onChangeText={setConnectPayload}
+          placeholder="Paste invite payload"
+          multiline
+        />
+        <View style={styles.modalActions}>
+          <Button
+            title="Connect"
+            onPress={handleConnectAsSponsor}
+            variant="primary"
+            size="medium"
+            loading={connectLoading}
+            disabled={connectLoading}
+          />
+        </View>
+      </Modal>
+
+      <Modal
+        visible={!!confirmPayload}
+        onClose={() => setConfirmPayload('')}
+        title="Send Confirmation"
+        variant="center"
+      >
+        <Text style={[theme.typography.bodySmall, { color: theme.colors.textSecondary }]}>
+          Share this confirmation payload back with your sponsee.
+        </Text>
+        <Text style={[theme.typography.bodySmall, { color: theme.colors.text, marginTop: 12 }]}>
+          {confirmPayload}
+        </Text>
+        <View style={styles.modalActions}>
+          <Button
+            title="Share Confirmation"
+            onPress={() => sharePayload(confirmPayload, 'Sponsor confirmation payload')}
+            variant="primary"
+            size="medium"
+          />
+        </View>
+      </Modal>
+
+      <Modal
+        visible={confirmModalVisible}
+        onClose={() => setConfirmModalVisible(false)}
+        title="Confirm Sponsor"
+        variant="center"
+      >
+        <Input
+          label="Confirmation Payload"
+          value={confirmInput}
+          onChangeText={setConfirmInput}
+          placeholder="Paste confirmation payload"
+          multiline
+        />
+        <View style={styles.modalActions}>
+          <Button
+            title="Confirm"
+            onPress={handleConfirmSponsor}
+            variant="primary"
+            size="medium"
+            loading={confirmLoading}
+            disabled={confirmLoading}
+          />
+        </View>
+      </Modal>
+
+      <Modal
+        visible={commentImportVisible}
+        onClose={() => setCommentImportVisible(false)}
+        title="Import Sponsor Comment"
+        variant="center"
+      >
+        <Input
+          label="Comment Payload"
+          value={commentPayloadInput}
+          onChangeText={setCommentPayloadInput}
+          placeholder="Paste comment payload"
+          multiline
+        />
+        <View style={styles.modalActions}>
+          <Button
+            title="Import Comment"
+            onPress={handleImportComment}
+            variant="primary"
+            size="medium"
+            loading={commentLoading}
+            disabled={commentLoading}
+          />
+        </View>
+      </Modal>
     </>
   );
 }
@@ -490,32 +596,17 @@ const styles = StyleSheet.create({
     paddingTop: 16,
   },
   header: {
-    // Spacing handled inline
+    // spacing inline
   },
   cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-  emptyState: {
-    alignItems: 'center',
-    paddingVertical: 16,
-  },
   buttonRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
   },
-  successToast: {
-    position: 'absolute',
-    bottom: 20,
-    left: 20,
-    right: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
+  modalActions: {
+    marginTop: 12,
   },
 });

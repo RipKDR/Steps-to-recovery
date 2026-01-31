@@ -1,23 +1,30 @@
 {
+  "extends": "expo/tsconfig.base",
   "compilerOptions": {
+    "ignoreDeprecations": "5.0",
     "baseUrl": ".",
-    "strict": true,
-    "noEmit": true,
-    "forceConsistentCasingInFileNames": true,
-    "allowJs": false,
-    "target": "es2020",
-    "lib": [
-      "es2020",
-      "dom"
-    ],
     "module": "esnext",
     "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "isolatedModules": true,
-    "jsx": "react-jsx",
-    "skipLibCheck": true,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
+    "strict": true,
+    "noEmit": true,
+    "allowJs": false,
+    "forceConsistentCasingInFileNames": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedIndexedAccess": false,
+    "exactOptionalPropertyTypes": false,
+    "target": "ES2022",
+    "lib": [
+      "ES2022",
+      "DOM",
+      "DOM.Iterable"
+    ],
+    "jsx": "react-jsx",
+    "skipLibCheck": true,
+    "incremental": true,
     "paths": {
       "@/*": [
         "./src/*"
@@ -25,8 +32,20 @@
       "@/components/*": [
         "./src/components/*"
       ],
+      "@/contexts/*": [
+        "./src/contexts/*"
+      ],
+      "@/features/*": [
+        "./src/features/*"
+      ],
+      "@/hooks/*": [
+        "./src/hooks/*"
+      ],
       "@/lib/*": [
         "./src/lib/*"
+      ],
+      "@/utils/*": [
+        "./src/utils/*"
       ],
       "@/design-system": [
         "./src/design-system/index.ts"
@@ -34,20 +53,23 @@
       "@/design-system/*": [
         "./src/design-system/*"
       ],
-      "@recovery/shared/*": [
-        "../../packages/shared/src/*"
-      ],
       "@recovery/shared": [
         "../../packages/shared/src/index.ts"
+      ],
+      "@recovery/shared/*": [
+        "../../packages/shared/*"
       ]
     }
   },
   "include": [
-    "src",
+    "src/**/*",
     "App.tsx",
     "index.ts",
+    "polyfills.ts",
     "scripts/**/*.ts",
-    "nativewind-env.d.ts"
+    "nativewind-env.d.ts",
+    ".expo/types/**/*.ts",
+    "expo-env.d.ts"
   ],
   "exclude": [
     "node_modules",
@@ -56,11 +78,12 @@
     ".expo",
     ".turbo",
     "coverage",
-    "**/__tests__",
+    "dist",
+    "build",
+    "**/__tests__/**",
     "**/*.test.ts",
     "**/*.test.tsx",
-    "../../_bmad-output"
-  ],
-  "types": [],
-  "extends": "expo/tsconfig.base"
+    "**/*.spec.ts",
+    "**/*.spec.tsx"
+  ]
 }

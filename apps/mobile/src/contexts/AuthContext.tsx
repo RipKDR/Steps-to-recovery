@@ -4,6 +4,8 @@ import { supabase } from '../lib/supabase';
 import { secureStorage } from '../adapters/secureStorage';
 import { performLogoutCleanup } from '../utils/logoutCleanup';
 import { setSentryUser } from '../lib/sentry';
+import { useDatabase } from './DatabaseContext';
+import { logger } from '../utils/logger';
 
 interface AuthState {
   session: Session | null;
@@ -24,6 +26,7 @@ interface AuthContextType extends AuthState {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const { db, isReady } = useDatabase();
   const [state, setState] = useState<AuthState>({
     session: null,
     user: null,
@@ -39,7 +42,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         // Initialize secure storage with session token (web only)
         if (session?.access_token && session?.user?.id) {
-          await secureStorage.initializeWithSession(session.user.id, session.access_token);
+          try {
+            await secureStorage.initializeWithSession(session.user.id, session.access_token);
+          } catch (storageError) {
+            logger.warn('Secure storage init failed during session load', storageError);
+          }
         }
 
         // Set Sentry user context for error tracking
@@ -47,8 +54,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         setState(prev => ({
           ...prev,
-          session,
-          user: session?.user ?? null,
+          session: session ?? prev.session,
+          user: session?.user ?? prev.user ?? null,
           loading: false,
           initialized: true,
           error: error ?? null,
@@ -69,22 +76,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      // Initialize or clear secure storage based on session state
-      if (session?.access_token && session?.user?.id) {
-        await secureStorage.initializeWithSession(session.user.id, session.access_token);
-      } else {
-        await secureStorage.clearSession();
+      try {
+        // Initialize or clear secure storage based on session state
+        if (session?.access_token && session?.user?.id) {
+          await secureStorage.initializeWithSession(session.user.id, session.access_token);
+        } else {
+          await secureStorage.clearSession();
+        }
+      } catch (storageError) {
+        logger.warn('Secure storage update failed during auth change', storageError);
+      } finally {
+        // Update Sentry user context
+        setSentryUser(session?.user?.id ?? null);
+
+        setState(prev => ({
+          ...prev,
+          session,
+          user: session?.user ?? null,
+          error: null,
+        }));
       }
-
-      // Update Sentry user context
-      setSentryUser(session?.user?.id ?? null);
-
-      setState(prev => ({
-        ...prev,
-        session,
-        user: session?.user ?? null,
-        error: null,
-      }));
     });
 
     return () => subscription.unsubscribe();
@@ -97,11 +108,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signIn = useCallback(async (email: string, password: string) => {
     setState(prev => ({ ...prev, loading: true, error: null }));
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
       if (error) throw error;
+
+      if (data?.session?.access_token && data?.session?.user?.id) {
+        try {
+          await secureStorage.initializeWithSession(data.session.user.id, data.session.access_token);
+        } catch (storageError) {
+          logger.warn('Secure storage init failed during sign-in', storageError);
+        }
+
+        setSentryUser(data.session.user.id);
+        setState(prev => ({
+          ...prev,
+          session: data.session,
+          user: data.session.user,
+          initialized: true,
+          error: null,
+        }));
+      }
     } catch (error) {
       setState(prev => ({ ...prev, error: error as AuthError }));
       throw error;
@@ -113,11 +141,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signUp = useCallback(async (email: string, password: string) => {
     setState(prev => ({ ...prev, loading: true, error: null }));
     try {
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
       });
       if (error) throw error;
+
+      if (data?.session?.access_token && data?.session?.user?.id) {
+        try {
+          await secureStorage.initializeWithSession(data.session.user.id, data.session.access_token);
+        } catch (storageError) {
+          logger.warn('Secure storage init failed during sign-up', storageError);
+        }
+
+        setSentryUser(data.session.user.id);
+        setState(prev => ({
+          ...prev,
+          session: data.session,
+          user: data.session.user,
+          initialized: true,
+          error: null,
+        }));
+      }
     } catch (error) {
       setState(prev => ({ ...prev, error: error as AuthError }));
       throw error;
@@ -129,9 +174,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signOut = useCallback(async () => {
     setState(prev => ({ ...prev, loading: true, error: null }));
     try {
-      // Perform complete logout cleanup (encryption keys + session)
-      // Note: Database will be cleared by SyncContext when user becomes null
-      await performLogoutCleanup();
+      // Perform complete logout cleanup (encryption keys + session + local data)
+      await performLogoutCleanup({ db: isReady ? db ?? undefined : undefined });
 
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
@@ -141,7 +185,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setState(prev => ({ ...prev, loading: false }));
     }
-  }, []);
+  }, [db, isReady]);
 
   const resetPassword = useCallback(async (email: string) => {
     setState(prev => ({ ...prev, loading: true, error: null }));

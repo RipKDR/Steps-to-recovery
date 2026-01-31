@@ -4,6 +4,7 @@
 
 const isNodeRuntime =
   typeof process !== 'undefined' &&
+  process !== null &&
   !!(process.versions && process.versions.node);
 
 // Avoid importing react-native shims when running in plain Node (SSR/static export),
@@ -69,6 +70,75 @@ if (typeof globalThis.btoa !== 'function') {
   globalThis.btoa = btoaPolyfill;
 }
 
-if (typeof globalThis.crypto === 'undefined' || !(globalThis.crypto || {}).subtle) {
-  globalThis.crypto = globalThis.crypto || {};
+if (typeof globalThis.crypto === 'undefined' || !globalThis.crypto.subtle) {
+  const cryptoUnavailableMessage =
+    'Web Crypto API is not available in this environment. Encryption operations (crypto.subtle) are disabled.';
+
+  // Create a stub for crypto.subtle that fails fast and loudly for any attempted operation.
+  const subtleStub =
+    typeof Proxy === 'function'
+      ? new Proxy(
+          {},
+          {
+            get(_target, prop) {
+              throw new Error(
+                `${cryptoUnavailableMessage} Attempted to access crypto.subtle.${String(prop)}().`,
+              );
+            },
+          },
+        )
+      : {
+          encrypt() {
+            throw new Error(`${cryptoUnavailableMessage} Attempted to call crypto.subtle.encrypt().`);
+          },
+          decrypt() {
+            throw new Error(`${cryptoUnavailableMessage} Attempted to call crypto.subtle.decrypt().`);
+          },
+          deriveKey() {
+            throw new Error(`${cryptoUnavailableMessage} Attempted to call crypto.subtle.deriveKey().`);
+          },
+          deriveBits() {
+            throw new Error(`${cryptoUnavailableMessage} Attempted to call crypto.subtle.deriveBits().`);
+          },
+          generateKey() {
+            throw new Error(`${cryptoUnavailableMessage} Attempted to call crypto.subtle.generateKey().`);
+          },
+          importKey() {
+            throw new Error(`${cryptoUnavailableMessage} Attempted to call crypto.subtle.importKey().`);
+          },
+          exportKey() {
+            throw new Error(`${cryptoUnavailableMessage} Attempted to call crypto.subtle.exportKey().`);
+          },
+          wrapKey() {
+            throw new Error(`${cryptoUnavailableMessage} Attempted to call crypto.subtle.wrapKey().`);
+          },
+          unwrapKey() {
+            throw new Error(`${cryptoUnavailableMessage} Attempted to call crypto.subtle.unwrapKey().`);
+          },
+          sign() {
+            throw new Error(`${cryptoUnavailableMessage} Attempted to call crypto.subtle.sign().`);
+          },
+          verify() {
+            throw new Error(`${cryptoUnavailableMessage} Attempted to call crypto.subtle.verify().`);
+          },
+          digest() {
+            throw new Error(`${cryptoUnavailableMessage} Attempted to call crypto.subtle.digest().`);
+          },
+        };
+
+  const existingCrypto = globalThis.crypto || {};
+  const createdFromScratch = typeof globalThis.crypto === 'undefined';
+
+  globalThis.crypto = {
+    ...existingCrypto,
+    // Preserve any existing getRandomValues if present; otherwise provide a throwing stub
+    getRandomValues:
+      existingCrypto.getRandomValues ||
+      (function getRandomValuesThrowing() {
+        throw new Error(
+          `${cryptoUnavailableMessage} Attempted to call crypto.getRandomValues() in a non-crypto environment.`,
+        );
+      }),
+    subtle: subtleStub,
+  };
 }

@@ -2,8 +2,10 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useDatabase } from '../../../contexts/DatabaseContext';
 import { decryptContent, encryptContent } from '../../../utils/encryption';
 import { logger } from '../../../utils/logger';
+import { generateId } from '../../../utils/id';
 import { addToSyncQueue, addDeleteToSyncQueue } from '../../../services/syncService';
-import type { DailyCheckIn, DailyCheckInDecrypted, CheckInType } from '@recovery/shared/types';
+import type { DailyCheckIn, CheckInType } from '@recovery/shared/src/types/database';
+import type { DailyCheckInDecrypted } from '@recovery/shared/src/types/models';
 
 // Extended types to include gratitude
 interface DailyCheckInWithGratitude extends DailyCheckIn {
@@ -99,7 +101,7 @@ export function useCreateCheckIn(userId: string): {
       if (!db) throw new Error('Database not initialized');
 
       try {
-        const id = `checkin_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+        const id = generateId('checkin');
         const now = new Date().toISOString();
         const today = now.split('T')[0];
 
