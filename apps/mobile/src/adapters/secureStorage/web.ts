@@ -61,7 +61,14 @@ export class WebSecureStorageAdapter implements SecureStorageAdapter {
 
   /**
    * Get or generate a random salt for key derivation
-   * Salt is stored in localStorage and reused for the same user
+   * 
+   * Salt is stored in localStorage alongside encrypted data. While this means
+   * an attacker with localStorage access also has the salt, it still provides
+   * value by preventing rainbow table attacks and ensuring each user has unique
+   * key derivation.
+   * 
+   * NOTE: This is a necessary trade-off for web platform - there is no separate
+   * secure storage available in browsers.
    */
   private async getSalt(): Promise<Uint8Array> {
     if (!this.userId) {

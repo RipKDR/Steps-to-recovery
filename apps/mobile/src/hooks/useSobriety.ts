@@ -24,6 +24,7 @@ import { useProfileStore } from '@recovery/shared/store/profileStore';
 import { useSettingsStore } from '@recovery/shared/store/settingsStore';
 import { getNextMilestone, getLatestMilestone, getAchievedMilestones } from '@recovery/shared/constants/milestones';
 import { scheduleMilestoneNotification } from '@recovery/shared/notifications';
+import type { AppSettings } from '@recovery/shared/types';
 
 /**
  * Sobriety calculation and milestone tracking hook
@@ -46,7 +47,7 @@ export function useSobriety() {
     calculateSobriety,
   } = useProfileStore();
 
-  const appSettings = useSettingsStore((state: any) => state.settings);
+  const appSettings = useSettingsStore((state): AppSettings | null => state.settings);
   const previousMilestoneCountRef = useRef<number | null>(null);
 
   // Load profile on mount
