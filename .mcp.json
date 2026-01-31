@@ -1,10 +1,5 @@
 {
   "mcpServers": {
-    "supabase": {
-      "transport": "http",
-      "url": "https://mcp.supabase.com/mcp?project_ref=tbiunmmvfbakwlzykpwq",
-      "description": "Supabase project for Steps to Recovery - requires OAuth authentication via /mcp command"
-    },
     "memory": {
       "transport": "stdio",
       "command": "npx",
@@ -20,7 +15,7 @@
       "args": [
         "-y",
         "@modelcontextprotocol/server-filesystem",
-        "C:/Users/H/Steps-to-recovery"
+        "."
       ],
       "description": "Advanced file operations for the project directory"
     },
