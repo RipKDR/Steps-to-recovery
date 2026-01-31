@@ -23,7 +23,7 @@
     "react-native-get-random-values": "^1.11.0"
   },
   "devDependencies": {
-    "@types/node": "^20.10.0",
+    "@types/node": "^25.1.0",
     "@types/uuid": "^11.0.0",
     "typescript": "~5.9.3"
   }
