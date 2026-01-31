@@ -2,7 +2,17 @@
   "expo": {
     "name": "Steps to Recovery",
     "slug": "steps-to-recovery",
-    "owner": "ripkdr",
-    "plugins": ["@sentry/react-native"]
+    "owner": "ripkdrs-organization",
+    "plugins": [
+      "@sentry/react-native"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "31a006e3-47da-4995-b63a-ded28567f594"
+      }
+    },
+    "android": {
+      "package": "com.recovery.stepstorecovery"
+    }
   }
 }

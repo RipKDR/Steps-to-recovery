@@ -38,9 +38,11 @@ export function DatabaseProvider({ children }: DatabaseProviderProps): React.Rea
 
 /**
  * Mobile database provider (uses SQLiteProvider from expo-sqlite)
+ * Includes timeout protection and error handling to prevent ANR on slow devices
  */
 function MobileDatabaseProvider({ children }: DatabaseProviderProps): React.ReactElement {
   const [adapter, setAdapter] = useState<StorageAdapter | null>(null);
+  const [error, setError] = useState<Error | null>(null);
   const [SQLiteProviderComponent, setSQLiteProviderComponent] = useState<React.ComponentType<{
     databaseName: string;
     onInit: (db: unknown) => Promise<void>;
@@ -48,13 +50,47 @@ function MobileDatabaseProvider({ children }: DatabaseProviderProps): React.Reac
   }> | null>(null);
 
   useEffect(() => {
+    let isMounted = true;
+
     async function loadSQLite() {
-      // Dynamically import expo-sqlite (only works on mobile)
-      const { SQLiteProvider } = await import('expo-sqlite');
-      setSQLiteProviderComponent(() => SQLiteProvider);
+      try {
+        // Add timeout to prevent ANR on slow devices (10 second limit)
+        const loadPromise = import('expo-sqlite');
+        const timeoutPromise = new Promise<never>((_, reject) => {
+          setTimeout(() => reject(new Error('SQLite load timeout - device may be slow')), 10000);
+        });
+
+        const { SQLiteProvider } = await Promise.race([loadPromise, timeoutPromise]);
+
+        if (isMounted) {
+          setSQLiteProviderComponent(() => SQLiteProvider);
+          logger.info('Mobile: SQLite loaded successfully');
+        }
+      } catch (err) {
+        logger.error('Mobile: Failed to load SQLite', err);
+        if (isMounted) {
+          setError(err instanceof Error ? err : new Error('Failed to load SQLite'));
+        }
+      }
     }
+
     loadSQLite();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
+
+  // Show error state if SQLite failed to load
+  if (error) {
+    logger.error('Mobile: Database initialization failed', error);
+    // Return context with null db - consuming code should handle gracefully
+    return (
+      <DatabaseContext.Provider value={{ db: null, isReady: false }}>
+        {children}
+      </DatabaseContext.Provider>
+    );
+  }
 
   // Wait for SQLiteProvider to load
   if (!SQLiteProviderComponent) {
@@ -67,9 +103,15 @@ function MobileDatabaseProvider({ children }: DatabaseProviderProps): React.Reac
     <SQLiteProviderElement
       databaseName="recovery.db"
       onInit={async (db: unknown) => {
-        const storageAdapter = await createStorageAdapter(db);
-        await initDatabase(storageAdapter);
-        setAdapter(storageAdapter);
+        try {
+          const storageAdapter = await createStorageAdapter(db);
+          await initDatabase(storageAdapter);
+          setAdapter(storageAdapter);
+          logger.info('Mobile: Database initialized successfully');
+        } catch (err) {
+          logger.error('Mobile: Database init failed in onInit', err);
+          setError(err instanceof Error ? err : new Error('Database init failed'));
+        }
       }}
     >
       <DatabaseContext.Provider value={{ db: adapter, isReady: adapter !== null }}>

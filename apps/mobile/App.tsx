@@ -5,9 +5,9 @@ import './polyfills';
 import { initSentry, wrap as sentryWrap } from './src/lib/sentry';
 initSentry();
 
-import React, { Suspense, useState, useMemo, useCallback } from 'react';
+import React, { Suspense, useState, useMemo, useCallback, useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { View, ActivityIndicator, Text } from 'react-native';
+import { View, ActivityIndicator, Text, Platform } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -110,7 +110,11 @@ function App(): React.ReactElement {
                     <SyncProvider>
                       <NotificationProvider>
                         <RootNavigator />
-                        <StatusBar style="light" />
+                        <StatusBar
+                          style="light"
+                          backgroundColor="#0f172a"
+                          translucent={Platform.OS === 'android'}
+                        />
                         <PortalHost />
                       </NotificationProvider>
                     </SyncProvider>

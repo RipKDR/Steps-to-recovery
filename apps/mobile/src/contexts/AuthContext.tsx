@@ -147,18 +147,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
       if (error) throw error;
 
-      if (data?.session?.access_token && data?.session?.user?.id) {
+      const session = data?.session;
+      if (session?.access_token && session?.user?.id) {
         try {
-          await secureStorage.initializeWithSession(data.session.user.id, data.session.access_token);
+          await secureStorage.initializeWithSession(session.user.id, session.access_token);
         } catch (storageError) {
           logger.warn('Secure storage init failed during sign-up', storageError);
         }
 
-        setSentryUser(data.session.user.id);
+        setSentryUser(session.user.id);
         setState(prev => ({
           ...prev,
-          session: data.session,
-          user: data.session.user,
+          session: session,
+          user: session.user,
           initialized: true,
           error: null,
         }));

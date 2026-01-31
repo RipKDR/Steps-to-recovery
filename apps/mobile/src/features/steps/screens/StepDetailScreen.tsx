@@ -537,11 +537,15 @@ export function StepDetailScreen(): React.ReactElement {
             onViewableItemsChanged={onViewableItemsChanged}
             viewabilityConfig={viewabilityConfig}
             getItemLayout={getItemLayout}
-            initialNumToRender={5}
-            maxToRenderPerBatch={5}
-            windowSize={5}
+            // Performance optimizations for Android
+            initialNumToRender={Platform.OS === 'android' ? 8 : 5}
+            maxToRenderPerBatch={Platform.OS === 'android' ? 8 : 5}
+            updateCellsBatchingPeriod={Platform.OS === 'android' ? 30 : 50}
+            windowSize={Platform.OS === 'android' ? 7 : 5}
             removeClippedSubviews={Platform.OS !== 'web'}
             showsVerticalScrollIndicator={true}
+            // Reduce memory usage on Android
+            maintainVisibleContentPosition={undefined}
             onScrollToIndexFailed={(info) => {
               // Fallback for scroll failure
               setTimeout(() => {

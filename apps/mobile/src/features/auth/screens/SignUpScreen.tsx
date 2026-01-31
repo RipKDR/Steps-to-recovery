@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   KeyboardAvoidingView,
-  Platform,
   TouchableOpacity,
   ScrollView,
   TextInput,
@@ -13,6 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useTheme, Input, Button } from '../../../design-system';
 import { validateEmail, validatePassword } from '../../../utils/validation';
+import { useKeyboardConfig } from '../../../hooks/useKeyboardOffset';
 import type { AuthStackScreenProps } from '../../../navigation/types';
 
 type Props = AuthStackScreenProps<'SignUp'>;
@@ -25,6 +25,7 @@ interface FormErrors {
 
 export function SignUpScreen({ navigation }: Props) {
   const theme = useTheme();
+  const keyboardConfig = useKeyboardConfig();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -126,9 +127,9 @@ export function SignUpScreen({ navigation }: Props) {
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.background }]} edges={['top', 'bottom']}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={keyboardConfig.behavior}
         style={styles.container}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+        keyboardVerticalOffset={keyboardConfig.keyboardVerticalOffset}
       >
         <ScrollView
           contentContainerStyle={styles.scrollContent}

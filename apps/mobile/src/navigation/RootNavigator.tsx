@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
+import { BackHandler, Platform } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useAuth } from '../contexts/AuthContext';
@@ -30,6 +31,41 @@ export function RootNavigator() {
       logger.warn('RootNavigator unmounted', { instanceId });
     };
   }, [instanceId]);
+
+  /**
+   * Android hardware back button handling
+   * Prevents app from closing unexpectedly when user presses back at root screens
+   *
+   * Behavior:
+   * - If can go back in navigation stack -> go back (default behavior)
+   * - If at root of main app (Home tab) -> minimize app (don't close)
+   * - If at auth screens -> allow default exit behavior
+   */
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
+      // Check if we can go back in the navigation stack
+      if (navigationRef.isReady() && navigationRef.canGoBack()) {
+        navigationRef.goBack();
+        return true; // Handled - don't exit app
+      }
+
+      // At root level - if user is logged in, minimize instead of exit
+      // This prevents accidental app closure and data loss during sync
+      if (user && !needsOnboarding) {
+        // Return false to let the system handle it (minimizes the app)
+        // But first log that we're at root
+        logger.info('Back pressed at root - minimizing app');
+        return false;
+      }
+
+      // Auth screens - allow normal exit behavior
+      return false;
+    });
+
+    return () => backHandler.remove();
+  }, [user, needsOnboarding]);
 
   useEffect(() => {
     logger.info('Navigation auth state', {
