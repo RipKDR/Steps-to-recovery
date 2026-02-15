@@ -10,7 +10,7 @@
  * - Streak celebration
  */
 
-import React, { useCallback } from 'react';
+import React, { useCallback, memo } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import Animated, { FadeIn } from 'react-native-reanimated';
@@ -26,7 +26,7 @@ interface DailyReadingCardProps {
   enteringDelay?: number;
 }
 
-export function DailyReadingCard({ enteringDelay = 1 }: DailyReadingCardProps) {
+export const DailyReadingCard = memo(function DailyReadingCard({ enteringDelay = 1 }: DailyReadingCardProps) {
   const router = useRouterCompat();
   const {
     todayReading,

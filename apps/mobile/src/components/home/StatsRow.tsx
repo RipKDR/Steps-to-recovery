@@ -10,7 +10,7 @@
  * - Micro-interactions
  */
 
-import React, { useCallback } from 'react';
+import React, { useCallback, memo } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import Animated, {
@@ -35,7 +35,7 @@ interface StatItemProps {
   delay?: number;
 }
 
-function StatItem({
+const StatItem = memo(function StatItem({
   value,
   label,
   icon,
