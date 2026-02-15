@@ -3,7 +3,7 @@
  * Track people to make amends to and progress.
  */
 
-import React, { useState } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { View, Text, TextInput, TouchableOpacity, FlatList } from 'react-native';
 import type { AmendsEntry } from '../types';
 import { ds } from '../../../design-system/tokens/ds';
@@ -30,28 +30,37 @@ export function AmendsTracker({ entries, onAdd, onUpdate }: AmendsTrackerProps) 
     notes: '',
   });
 
-  const handleAdd = async () => {
+  // Memoize completion count to avoid recalculating on every render
+  const completedCount = useMemo(
+    () => entries.filter((e) => e.status === 'complete').length,
+    [entries]
+  );
+
+  const handleAdd = useCallback(async () => {
     if (newEntry.who && newEntry.harm) {
       await onAdd(newEntry);
       setNewEntry({ who: '', harm: '', amendsType: 'direct', notes: '' });
       setShowAdd(false);
     }
-  };
+  }, [newEntry, onAdd]);
 
-  const toggleStatus = async (entry: AmendsEntry) => {
-    const nextStatus =
-      entry.status === 'not_started'
-        ? 'in_progress'
-        : entry.status === 'in_progress'
-          ? 'complete'
-          : 'not_started';
+  const toggleStatus = useCallback(
+    async (entry: AmendsEntry) => {
+      const nextStatus =
+        entry.status === 'not_started'
+          ? 'in_progress'
+          : entry.status === 'in_progress'
+            ? 'complete'
+            : 'not_started';
 
-    await onUpdate({
-      ...entry,
-      status: nextStatus,
-      completedAt: nextStatus === 'complete' ? new Date().toISOString() : undefined,
-    });
-  };
+      await onUpdate({
+        ...entry,
+        status: nextStatus,
+        completedAt: nextStatus === 'complete' ? new Date().toISOString() : undefined,
+      });
+    },
+    [onUpdate]
+  );
 
   const statusColor = (status: string) => {
     switch (status) {
@@ -82,7 +91,7 @@ export function AmendsTracker({ entries, onAdd, onUpdate }: AmendsTrackerProps) 
         <View>
           <Text className="text-white text-xl font-bold">Amends List</Text>
           <Text className="text-gray-500 text-sm">
-            {entries.filter((e) => e.status === 'complete').length} of {entries.length} complete
+            {completedCount} of {entries.length} complete
           </Text>
         </View>
         <TouchableOpacity
