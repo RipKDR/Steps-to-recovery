@@ -130,9 +130,9 @@ export const ChatBubble = memo(function ChatBubble({ message }: ChatBubbleProps)
 The following testing should be performed before production deployment:
 
 ### Functional Testing
-- [ ] Test AmendsTracker with 50+ entries to verify memoization works
+- [ ] Test AmendsTracker with 50+ entries and confirm measurable render performance improvement versus the previous implementation
 - [ ] Test ChatScreen with 100+ messages to verify React.memo optimization
-- [ ] Verify haptic feedback still works on all 19 updated components
+- [ ] Verify haptic feedback still works on all 19 updated components in this PR
 - [ ] Test all home screen widgets for proper rendering
 
 ### Performance Testing
