@@ -30,7 +30,7 @@ export function AchievementsScreen(): React.ReactElement {
   const [refreshing, setRefreshing] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [selectedAchievement, setSelectedAchievement] = useState<string | null>(null);
-  const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const refreshTimerRef = useRef<number | null>(null);
 
   const { achievements, isLoading: _isLoading, unlockedCount, totalCount } = useAchievements();
 
@@ -45,7 +45,7 @@ export function AchievementsScreen(): React.ReactElement {
     setRefreshing(true);
     // Refetch happens automatically through React Query
     await new Promise((resolve) => {
-      refreshTimerRef.current = setTimeout(resolve, 1000);
+      refreshTimerRef.current = setTimeout(resolve, 1000) as unknown as number;
     });
     setRefreshing(false);
   };

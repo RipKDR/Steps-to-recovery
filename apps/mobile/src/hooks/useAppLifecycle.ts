@@ -67,7 +67,7 @@ export function useAppLifecycle(options: AppLifecycleOptions = {}): AppLifecycle
 
   const previousStateRef = useRef<string>('active');
   const sessionStartRef = useRef<Date>(new Date());
-  const durationIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const durationIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Track session duration
   useEffect(() => {
