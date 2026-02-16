@@ -1203,15 +1203,24 @@ const FAILED_ITEM_RETENTION_DAYS = 7;
  * Call periodically (e.g., daily) to prevent unbounded growth
  */
 export async function cleanupSyncQueue(db: StorageAdapter): Promise<{ removed: number }> {
+  let totalRemoved = 0;
   try {
     // Remove permanently failed items older than retention period
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - FAILED_ITEM_RETENTION_DAYS);
 
+    // Count before deleting
+    const oldCountResult = await db.getFirstAsync<{ count: number }>(
+      'SELECT COUNT(*) as count FROM sync_queue WHERE failed_at IS NOT NULL AND failed_at < ?',
+      [cutoffDate.toISOString()],
+    );
+    const oldCount = oldCountResult?.count || 0;
+
     await db.runAsync(
       `DELETE FROM sync_queue WHERE failed_at IS NOT NULL AND failed_at < ?`,
       [cutoffDate.toISOString()],
     );
+    totalRemoved += oldCount;
 
     // Enforce queue size limit by removing oldest failed items first
     // Count total items
@@ -1222,7 +1231,14 @@ export async function cleanupSyncQueue(db: StorageAdapter): Promise<{ removed: n
 
     if (count > MAX_SYNC_QUEUE_SIZE) {
       const excess = count - MAX_SYNC_QUEUE_SIZE;
-      // Remove oldest failed items first, then oldest pending items
+      // Count oldest failed items before deleting
+      const sizeCountResult = await db.getFirstAsync<{ count: number }>(
+        `SELECT COUNT(*) as count FROM sync_queue WHERE failed_at IS NOT NULL LIMIT ?`,
+        [Math.min(excess, 100)],
+      );
+      const sizeCount = sizeCountResult?.count || 0;
+
+      // Remove oldest failed items
       await db.runAsync(
         `DELETE FROM sync_queue
          WHERE id IN (
@@ -1233,9 +1249,10 @@ export async function cleanupSyncQueue(db: StorageAdapter): Promise<{ removed: n
          )`,
         [Math.min(excess, 100)],
       );
+      totalRemoved += sizeCount;
     }
 
-    return { removed: 0 }; // Simplified for now
+    return { removed: totalRemoved };
   } catch (error) {
     logger.error('Failed to cleanup sync queue', error);
     return { removed: 0 };
