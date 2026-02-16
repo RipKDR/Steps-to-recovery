@@ -17,6 +17,7 @@
 ### Medium Priority
 - ✅ AI companion reliability testing (11e81f6) - added try/catch guards to memory extraction paths
 - ✅ PowerSync offline sync evaluation (38d3558)
+- ✅ Sync queue stability fix (23078dc) - enforce queue size limit in addToSyncQueue
 
 ### Lower Priority
 - [ ] Performance profiling on lower-end devices
