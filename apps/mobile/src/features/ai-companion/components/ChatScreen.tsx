@@ -19,16 +19,16 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { ChevronLeft, Settings } from 'lucide-react-native';
 import Animated, { FadeIn, FadeInUp } from 'react-native-reanimated';
-import { Icon } from '../../../components/ui/Icon';
-import { ChatBubble } from './ChatBubble';
-import { ChatInput } from './ChatInput';
-import { QuickActions } from './QuickActions';
-import { CrisisOverlay } from './CrisisOverlay';
-import { useAIChat } from '../hooks/useAIChat';
-import { useSobriety } from '../../../hooks/useSobriety';
-import { useSponsorInfo } from '../../../hooks/useSponsorInfo';
-import { useThemedStyles, type DS } from '../../../design-system/hooks/useThemedStyles';
-import type { CrisisSignal } from '../types';
+import { Icon } from '../../../components/ui/Icon.tsx';
+import { ChatBubble } from './ChatBubble.tsx';
+import { ChatInput } from './ChatInput.tsx';
+import { QuickActions } from './QuickActions.tsx';
+import { CrisisOverlay } from './CrisisOverlay.tsx';
+import { useAIChat } from '../hooks/useAIChat.ts';
+import { useSobriety } from '../../../hooks/useSobriety.ts';
+import { useSponsorInfo } from '../../../hooks/useSponsorInfo.ts';
+import { useThemedStyles, type DS } from '../../../design-system/hooks/useThemedStyles.ts';
+import type { CrisisSignal } from '../types/index.ts';
 
 interface ChatScreenProps {
   userId: string;

@@ -5,12 +5,12 @@
  * Smooth animations, no harsh edges.
  */
 
-import React, { useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { View, Text, Animated, Easing } from 'react-native';
 import * as Haptics from 'expo-haptics';
-import { useThemedStyles, type DS } from '../../../design-system/hooks/useThemedStyles';
-import { useDs } from '../../../design-system/DsProvider';
-import type { Message } from '../types';
+import { useThemedStyles, type DS } from '../../../design-system/hooks/useThemedStyles.ts';
+import { useDs } from '../../../design-system/DsProvider.tsx';
+import type { Message } from '../types/index.ts';
 
 interface ChatBubbleProps {
   message: Message;

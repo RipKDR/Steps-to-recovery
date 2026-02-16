@@ -1,4 +1,4 @@
-import { premiumTypographyAliases, serene } from './serene';
+import { premiumTypographyAliases, serene } from './serene.ts';
 
 /**
  * Design System Tokens

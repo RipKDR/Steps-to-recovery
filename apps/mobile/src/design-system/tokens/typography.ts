@@ -9,7 +9,7 @@
  */
 
 import { type TextStyle } from 'react-native';
-import { fonts } from '../../lib/fonts';
+import { fonts } from '../../lib/fonts.ts';
 
 // =============================================================================
 // MATERIAL DESIGN 3 TYPOGRAPHY (Inter)

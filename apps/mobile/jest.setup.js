@@ -5,6 +5,7 @@
 
 import { cleanup } from '@testing-library/react-native';
 import process from "node:process";
+import { setImmediate } from "node:timers";
 
 // Set up Supabase environment variables BEFORE any module imports
 // This prevents supabase.ts from throwing during initialization

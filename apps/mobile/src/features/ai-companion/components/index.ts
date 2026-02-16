@@ -1,5 +1,6 @@
-export { ChatBubble } from './ChatBubble';
-export { ChatInput } from './ChatInput';
-export { ChatScreen } from './ChatScreen';
-export { QuickActions } from './QuickActions';
-export { CrisisOverlay } from './CrisisOverlay';
+export { ChatBubble } from './ChatBubble.tsx';
+export { ChatInput } from './ChatInput.tsx';
+export { ChatScreen } from './ChatScreen.tsx';
+export { CrisisOverlay } from './CrisisOverlay.tsx';
+export { QuickActions } from './QuickActions.tsx';
+

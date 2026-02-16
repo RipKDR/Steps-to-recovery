@@ -10,9 +10,9 @@ import { View, TextInput, Pressable, ActivityIndicator, Keyboard } from 'react-n
 import Animated, { useAnimatedStyle, useSharedValue, withSequence, withSpring } from 'react-native-reanimated';
 import { Send } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
-import { Icon } from '../../../components/ui/Icon';
-import { useThemedStyles, type DS } from '../../../design-system/hooks/useThemedStyles';
-import { useDs } from '../../../design-system/DsProvider';
+import { Icon } from '../../../components/ui/Icon.tsx';
+import { useThemedStyles, type DS } from '../../../design-system/hooks/useThemedStyles.ts';
+import { useDs } from '../../../design-system/DsProvider.tsx';
 
 interface ChatInputProps {
   onSend: (message: string) => void;

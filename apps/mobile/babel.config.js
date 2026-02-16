@@ -5,6 +5,7 @@
  */
 
 // Load polyfills for Metro and Jest compatibility
+import process from "node:process";
 require('./polyfills.cjs');
 
 /** @param {import('@babel/core').ConfigAPI} api */
@@ -21,7 +22,12 @@ module.exports = function (api) {
       [
         'babel-preset-expo',
         {
-          // Hermes stable transform for production builds
+          // Hermes stable transform for production builds.
+          // NOTE: `unstable_transformProfile` is an experimental Expo/Babel option.
+          // We enable the Hermes "stable" profile for non-test, non-dev-client builds to
+          // align Metro/Babel transforms with Hermes and reduce runtime discrepancies.
+          // Monitor Expo/Babel release notes for a stable alternative and remove/update
+          // this option once a non-unstable equivalent is available.
           ...(isTest || isDevClient ? {} : { unstable_transformProfile: 'hermes-stable' }),
           // Enable React 19 JSX transform
           jsxRuntime: 'automatic',

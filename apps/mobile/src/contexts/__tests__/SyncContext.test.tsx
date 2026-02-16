@@ -143,7 +143,7 @@ describe('SyncContext', () => {
 
   describe('useSync hook', () => {
     it('should throw error when used outside SyncProvider', () => {
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => { });
 
       expect(() => {
         renderHook(() => useSync());

@@ -29,133 +29,133 @@
 // =============================================================================
 
 export {
-  primitives,
-  sageGreen,
   amber,
   coral,
   error,
-  neutral,
-  neutralVariant,
-  status,
   gray,
   highContrast,
-} from './primitives';
+  neutral,
+  neutralVariant,
+  primitives,
+  sageGreen,
+  status,
+} from "./primitives.ts";
 
 export type {
-  SageGreenTone,
   AmberTone,
   CoralTone,
   ErrorTone,
+  GrayTone,
   NeutralTone,
   NeutralVariantTone,
-  GrayTone,
   Primitives,
-} from './primitives';
+  SageGreenTone,
+} from "./primitives.ts";
 
 // =============================================================================
 // SEMANTICS - Material Design 3 color roles
 // =============================================================================
 
 export {
-  semantics,
+  background,
+  disabled,
+  glow,
+  inverse,
+  outline,
   primary,
+  scrim,
   secondary,
-  tertiary,
+  semantics,
+  shadow,
+  stateOverlay,
   surface,
   surfaceContainer,
-  background,
-  outline,
-  inverse,
-  shadow,
-  scrim,
-  disabled,
-  stateOverlay,
-  glow,
-} from './semantics';
+  tertiary,
+} from "./semantics.ts";
 
 export type {
+  SemanticBackground,
+  SemanticDisabled,
+  SemanticGlow,
+  SemanticInverse,
+  SemanticOutline,
   SemanticPrimary,
+  Semantics,
+  SemanticScrim,
   SemanticSecondary,
-  SemanticTertiary,
+  SemanticShadow,
+  SemanticStateOverlay,
   SemanticSurface,
   SemanticSurfaceContainer,
-  SemanticBackground,
-  SemanticOutline,
-  SemanticInverse,
-  SemanticShadow,
-  SemanticScrim,
-  SemanticDisabled,
-  SemanticStateOverlay,
-  SemanticGlow,
-  Semantics,
-} from './semantics';
+  SemanticTertiary,
+} from "./semantics.ts";
 
 // =============================================================================
 // THEMES - Complete theme definitions
 // =============================================================================
 
 export {
-  themes,
-  lightTheme,
   darkTheme,
-  highContrastLightTheme,
-  highContrastDarkTheme,
+  getBaseThemeVariant,
   getTheme,
+  highContrastDarkTheme,
+  highContrastLightTheme,
   isDarkTheme,
   isHighContrastTheme,
-  getBaseThemeVariant,
-  toggleTheme,
+  lightTheme,
   themeNames,
-} from './themes';
+  themes,
+  toggleTheme,
+} from "./themes.ts";
 
-export type { Theme, ThemeName } from './themes';
+export type { Theme, ThemeName } from "./themes.ts";
 
 // =============================================================================
 // MOTION - Animation specifications
 // =============================================================================
 
 export {
-  motionSystem,
+  celebration,
   duration,
   durations,
   easing,
   easings,
-  spring,
+  loading,
+  microInteraction,
   motion,
-  transitions,
-  scale,
+  motionSystem,
   opacity,
   reducedMotion,
-  microInteraction,
-  celebration,
-  loading,
-} from './motion';
+  scale,
+  spring,
+  transitions,
+} from "./motion.ts";
 
 export type {
+  CelebrationKey,
   DurationKey,
   DurationsKey,
   EasingKey,
   EasingsKey,
-  SpringKey,
-  MotionKey,
-  TransitionKey,
-  ScaleKey,
-  OpacityKey,
   MicroInteractionKey,
-  CelebrationKey,
   MotionConfig,
-  SpringConfig,
+  MotionKey,
   MotionSystem,
-} from './motion';
+  OpacityKey,
+  ScaleKey,
+  SpringConfig,
+  SpringKey,
+  TransitionKey,
+} from "./motion.ts";
 
 // =============================================================================
 // UNIFIED TOKENS OBJECT
 // =============================================================================
 
-import { primitives } from './primitives';
-import { semantics } from './semantics';
-import { themes, type Theme, type ThemeName } from './themes';
-import { motionSystem } from './motion';
+import { primitives } from "./primitives.ts";
+import { semantics } from "./semantics.ts";
+import { type Theme, type ThemeName, themes } from "./themes.ts";
+import { type MotionSystem, motionSystem } from "./motion.ts";
 
 /**
  * Complete design token system
@@ -174,8 +174,12 @@ export type Tokens = typeof tokens;
 // THEME HOOK HELPER
 // =============================================================================
 
-import { useState, useCallback, useMemo } from 'react';
-import { getTheme, toggleTheme as toggleThemeFn, isDarkTheme as checkIsDark } from './themes';
+import { useCallback, useMemo, useState } from "react";
+import {
+  getTheme,
+  isDarkTheme as checkIsDark,
+  toggleTheme as toggleThemeFn,
+} from "./themes.ts";
 
 export interface UseThemeReturn {
   /** Current theme object */
@@ -214,7 +218,9 @@ export interface UseThemeReturn {
  * }
  * ```
  */
-export function useTheme(initialTheme: ThemeName = 'light'): UseThemeReturn {
+export function useTheme(
+  { initialTheme = "light" }: { initialTheme?: ThemeName } = {},
+): UseThemeReturn {
   const [themeName, setThemeName] = useState<ThemeName>(initialTheme);
 
   const theme = useMemo(() => getTheme(themeName), [themeName]);
@@ -222,7 +228,7 @@ export function useTheme(initialTheme: ThemeName = 'light'): UseThemeReturn {
   const isDark = useMemo(() => checkIsDark(themeName), [themeName]);
 
   const isHighContrast = useMemo(
-    () => themeName === 'highContrastLight' || themeName === 'highContrastDark',
+    () => themeName === "highContrastLight" || themeName === "highContrastDark",
     [themeName],
   );
 
@@ -235,11 +241,13 @@ export function useTheme(initialTheme: ThemeName = 'light'): UseThemeReturn {
   }, []);
 
   const enableHighContrast = useCallback(() => {
-    setThemeName((current) => (checkIsDark(current) ? 'highContrastDark' : 'highContrastLight'));
+    setThemeName((
+      current,
+    ) => (checkIsDark(current) ? "highContrastDark" : "highContrastLight"));
   }, []);
 
-  const disableHighContrast = useCallback(() => {
-    setThemeName((current) => (checkIsDark(current) ? 'dark' : 'light'));
+  const disableHighContrast = useCallback((): void => {
+    setThemeName((current) => (checkIsDark(current) ? "dark" : "light"));
   }, []);
 
   return {
@@ -264,50 +272,50 @@ export function useTheme(initialTheme: ThemeName = 'light'): UseThemeReturn {
  */
 export const nativeWindVars = {
   light: {
-    '--color-primary': themes.light.primary,
-    '--color-on-primary': themes.light.onPrimary,
-    '--color-primary-container': themes.light.primaryContainer,
-    '--color-on-primary-container': themes.light.onPrimaryContainer,
-    '--color-secondary': themes.light.secondary,
-    '--color-on-secondary': themes.light.onSecondary,
-    '--color-secondary-container': themes.light.secondaryContainer,
-    '--color-on-secondary-container': themes.light.onSecondaryContainer,
-    '--color-surface': themes.light.surface,
-    '--color-on-surface': themes.light.onSurface,
-    '--color-surface-variant': themes.light.surfaceVariant,
-    '--color-on-surface-variant': themes.light.onSurfaceVariant,
-    '--color-background': themes.light.background,
-    '--color-on-background': themes.light.onBackground,
-    '--color-outline': themes.light.outline,
-    '--color-outline-variant': themes.light.outlineVariant,
-    '--color-error': themes.light.error,
-    '--color-on-error': themes.light.onError,
-    '--color-success': themes.light.success,
-    '--color-warning': themes.light.warning,
-    '--color-info': themes.light.info,
+    "--color-primary": themes.light.primary,
+    "--color-on-primary": themes.light.onPrimary,
+    "--color-primary-container": themes.light.primaryContainer,
+    "--color-on-primary-container": themes.light.onPrimaryContainer,
+    "--color-secondary": themes.light.secondary,
+    "--color-on-secondary": themes.light.onSecondary,
+    "--color-secondary-container": themes.light.secondaryContainer,
+    "--color-on-secondary-container": themes.light.onSecondaryContainer,
+    "--color-surface": themes.light.surface,
+    "--color-on-surface": themes.light.onSurface,
+    "--color-surface-variant": themes.light.surfaceVariant,
+    "--color-on-surface-variant": themes.light.onSurfaceVariant,
+    "--color-background": themes.light.background,
+    "--color-on-background": themes.light.onBackground,
+    "--color-outline": themes.light.outline,
+    "--color-outline-variant": themes.light.outlineVariant,
+    "--color-error": themes.light.error,
+    "--color-on-error": themes.light.onError,
+    "--color-success": themes.light.success,
+    "--color-warning": themes.light.warning,
+    "--color-info": themes.light.info,
   },
   dark: {
-    '--color-primary': themes.dark.primary,
-    '--color-on-primary': themes.dark.onPrimary,
-    '--color-primary-container': themes.dark.primaryContainer,
-    '--color-on-primary-container': themes.dark.onPrimaryContainer,
-    '--color-secondary': themes.dark.secondary,
-    '--color-on-secondary': themes.dark.onSecondary,
-    '--color-secondary-container': themes.dark.secondaryContainer,
-    '--color-on-secondary-container': themes.dark.onSecondaryContainer,
-    '--color-surface': themes.dark.surface,
-    '--color-on-surface': themes.dark.onSurface,
-    '--color-surface-variant': themes.dark.surfaceVariant,
-    '--color-on-surface-variant': themes.dark.onSurfaceVariant,
-    '--color-background': themes.dark.background,
-    '--color-on-background': themes.dark.onBackground,
-    '--color-outline': themes.dark.outline,
-    '--color-outline-variant': themes.dark.outlineVariant,
-    '--color-error': themes.dark.error,
-    '--color-on-error': themes.dark.onError,
-    '--color-success': themes.dark.success,
-    '--color-warning': themes.dark.warning,
-    '--color-info': themes.dark.info,
+    "--color-primary": themes.dark.primary,
+    "--color-on-primary": themes.dark.onPrimary,
+    "--color-primary-container": themes.dark.primaryContainer,
+    "--color-on-primary-container": themes.dark.onPrimaryContainer,
+    "--color-secondary": themes.dark.secondary,
+    "--color-on-secondary": themes.dark.onSecondary,
+    "--color-secondary-container": themes.dark.secondaryContainer,
+    "--color-on-secondary-container": themes.dark.onSecondaryContainer,
+    "--color-surface": themes.dark.surface,
+    "--color-on-surface": themes.dark.onSurface,
+    "--color-surface-variant": themes.dark.surfaceVariant,
+    "--color-on-surface-variant": themes.dark.onSurfaceVariant,
+    "--color-background": themes.dark.background,
+    "--color-on-background": themes.dark.onBackground,
+    "--color-outline": themes.dark.outline,
+    "--color-outline-variant": themes.dark.outlineVariant,
+    "--color-error": themes.dark.error,
+    "--color-on-error": themes.dark.onError,
+    "--color-success": themes.dark.success,
+    "--color-warning": themes.dark.warning,
+    "--color-info": themes.dark.info,
   },
 } as const;
 
@@ -325,7 +333,9 @@ export const nativeWindVars = {
  * const motion = reduceMotion ? tokens.motion.reducedMotion : tokens.motion;
  * ```
  */
-export function getMotionForAccessibility(reduceMotion: boolean) {
+export function getMotionForAccessibility(
+  { reduceMotion }: { reduceMotion: boolean },
+): MotionSystem | MotionSystem["reducedMotion"] {
   if (reduceMotion) {
     return motionSystem.reducedMotion;
   }
@@ -338,5 +348,5 @@ export function getMotionForAccessibility(reduceMotion: boolean) {
 
 // Re-export legacy tokens for backward compatibility
 // These will be removed in a future version
-export { md3LightColors, md3DarkColors } from './md3-colors';
-export { md3Colors, md3ColorsDark, lightColors, darkColors } from './colors';
+export { md3DarkColors, md3LightColors } from "./md3-colors.ts";
+export { darkColors, lightColors, md3Colors, md3ColorsDark } from "./colors.ts";

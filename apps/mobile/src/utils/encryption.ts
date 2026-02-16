@@ -18,9 +18,9 @@ import CryptoJS from 'crypto-js';
  */
 
 import { Platform } from 'react-native';
-import { secureStorage } from "../adapters/secureStorage/index";
+import { secureStorage } from "../adapters/secureStorage/index.ts";
 import type { StorageAdapter } from "../adapters/storage/index.ts";
-import { logger } from "./logger";
+import { logger } from "./logger.ts";
 
 /**
  * Constant-time string comparison to prevent timing attacks

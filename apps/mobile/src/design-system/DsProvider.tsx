@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useMemo } from 'react';
 import { useColorScheme } from 'react-native';
-import { createDs, ds as darkDs, type DS } from './tokens/ds';
+import { createDs, ds as darkDs, type DS } from './tokens/ds.ts';
 
 interface DsContextValue {
   ds: DS;

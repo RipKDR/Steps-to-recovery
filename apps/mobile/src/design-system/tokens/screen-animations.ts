@@ -13,7 +13,7 @@
  */
 
 import { FadeIn, FadeInDown, SlideInDown } from 'react-native-reanimated';
-import { transitions } from './motion';
+import { transitions } from './motion.ts';
 
 export const ScreenAnimations = {
   /**

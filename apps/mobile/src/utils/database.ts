@@ -14,7 +14,7 @@
  */
 
 import type { StorageAdapter } from "../adapters/storage/index.ts";
-import { logger } from "./logger";
+import { logger } from "./logger.ts";
 
 /**
  * Guard against duplicate/concurrent initialization

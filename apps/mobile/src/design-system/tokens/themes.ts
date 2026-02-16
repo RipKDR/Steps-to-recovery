@@ -8,8 +8,8 @@
  * warm, supportive color palette optimized for accessibility.
  */
 
-import { semantics } from './semantics';
-import { highContrast } from './primitives';
+import { semantics } from './semantics.ts';
+import { highContrast } from './primitives.ts';
 
 // =============================================================================
 // LIGHT THEME

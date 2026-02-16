@@ -5,12 +5,12 @@
  * Time-aware suggestions.
  */
 
-import React, { useMemo, useCallback } from 'react';
+import { useMemo, useCallback } from 'react';
 import { ScrollView, Pressable, Text, View, StyleSheet } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
-import { useThemedStyles, type DS } from '../../../design-system/hooks/useThemedStyles';
-import { useDs } from '../../../design-system/DsProvider';
+import { useThemedStyles, type DS } from '../../../design-system/hooks/useThemedStyles.ts';
+import { useDs } from '../../../design-system/DsProvider.tsx';
 
 interface QuickAction {
   id: string;
@@ -154,7 +154,7 @@ export function QuickActions({ onSelect, disabled }: QuickActionsProps) {
 
   const handleSelect = useCallback(
     (message: string) => {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => { });
       onSelect(message);
     },
     [onSelect],

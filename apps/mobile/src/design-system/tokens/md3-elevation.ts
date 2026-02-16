@@ -6,7 +6,7 @@
  */
 
 import { type ViewStyle } from 'react-native';
-import { md3LightColors, md3DarkColors } from './md3-colors';
+import { md3LightColors, md3DarkColors } from './md3-colors.ts';
 
 // ============================================================================
 // MD3 ELEVATION LEVELS (0-5)

@@ -52,14 +52,14 @@ export {
   DailyCheckInCard,
   AchievementBadge,
   AchievementGrid,
-} from './components';
+} from './components/index.ts';
 
-export { ThemeProvider } from './context/ThemeContext';
-export { useTheme, useColors, useIsDark } from './hooks/useTheme';
-export { useMotionPress } from './hooks/useMotionPress';
-export { useThemedStyles } from './hooks/useThemedStyles';
-export { Action, useActionMotion } from './primitives';
-export { ScreenAnimations } from './tokens/screen-animations';
+export { ThemeProvider } from './context/ThemeContext.tsx';
+export { useTheme, useColors, useIsDark } from './hooks/useTheme.ts';
+export { useMotionPress } from './hooks/useMotionPress.ts';
+export { useThemedStyles } from './hooks/useThemedStyles.ts';
+export { Action, useActionMotion } from './primitives/index.ts';
+export { ScreenAnimations } from './tokens/screen-animations.ts';
 export {
   serene,
   sereneGlow,
@@ -70,7 +70,7 @@ export {
   getSereneProgressBarStyles,
   getSereneRingMetrics,
   getSereneTextureOverlay,
-} from './tokens/serene';
+} from './tokens/serene.ts';
 // Legacy motion exports
 export {
   MotionTransitions,
@@ -79,7 +79,7 @@ export {
   motionScale,
   motionTiming,
   motionShimmer,
-} from './tokens/motion';
+} from './tokens/motion.ts';
 
 // Material Design 3 Motion System
 export {
@@ -89,15 +89,15 @@ export {
   md3Spring,
   md3Transitions,
   motionSystem,
-} from './tokens/motion';
+} from './tokens/motion.ts';
 export type {
   MD3DurationKey,
   MD3EasingKey,
   MD3MotionKey,
   MD3SpringKey,
   MD3TransitionKey,
-} from './tokens/motion';
-export { glass, glow, glassGradients } from './tokens/glass';
+} from './tokens/motion.ts';
+export { glass, glow, glassGradients } from './tokens/glass.ts';
 export {
   aestheticColors,
   gradients,
@@ -108,7 +108,7 @@ export {
   calmingMotion,
   premiumEffects,
   componentPatterns,
-} from './tokens/aesthetic';
+} from './tokens/aesthetic.ts';
 export {
   useTheme as useThemeTokens,
   darkColors,
@@ -116,15 +116,15 @@ export {
   spacing as themeSpacing,
   typography as themeTypography,
   borderRadius as themeBorderRadius,
-} from './tokens/theme';
-export type { Theme } from './tokens/theme';
+} from './tokens/theme.ts';
+export type { Theme } from './tokens/theme.ts';
 
 // Material Design 3 Token System
-export { md3Colors, md3ColorsDark } from './tokens/colors';
-export type { MD3Colors, MD3ColorsDark } from './tokens/colors';
+export { md3Colors, md3ColorsDark } from './tokens/colors.ts';
+export type { MD3Colors, MD3ColorsDark } from './tokens/colors.ts';
 
-export { md3Typography, typographySystem } from './tokens/typography';
-export type { MD3TypographyStyle } from './tokens/typography';
+export { md3Typography, typographySystem } from './tokens/typography.ts';
+export type { MD3TypographyStyle } from './tokens/typography.ts';
 
 export {
   md3Spacing,
@@ -132,8 +132,8 @@ export {
   md3Elevation,
   spacingSystem,
   getSpacing,
-} from './tokens/spacing';
-export type { MD3SpacingKey, MD3ComponentSpacingKey, MD3ElevationKey } from './tokens/spacing';
+} from './tokens/spacing.ts';
+export type { MD3SpacingKey, MD3ComponentSpacingKey, MD3ElevationKey } from './tokens/spacing.ts';
 
 export {
   md3Shadows,
@@ -146,9 +146,9 @@ export {
   md3ComponentShadows,
   md3ComponentShadowsDark,
   shadowSystem,
-} from './tokens/shadows';
-export type { MD3ShadowLevel, MD3ComponentShadowKey } from './tokens/shadows';
-export type { ActionRootProps, UseActionMotionOptions } from './primitives';
+} from './tokens/shadows.ts';
+export type { MD3ShadowLevel, MD3ComponentShadowKey } from './tokens/shadows.ts';
+export type { ActionRootProps, UseActionMotionOptions } from './primitives/index.ts';
 export {
   pressAnimation,
   hoverAnimation,
@@ -163,7 +163,7 @@ export {
   useShimmerAnimation,
   useBreathingAnimation,
   useStaggerAnimation,
-} from './tokens/micro-animations';
+} from './tokens/micro-animations.ts';
 
 export type {
   BadgeProps,
@@ -201,7 +201,7 @@ export type {
   AchievementBadgeProps,
   Achievement,
   AchievementGridProps,
-} from './components';
+} from './components/index.ts';
 
 // Material Design 3 Warm Theme Tokens
 export {
@@ -214,8 +214,8 @@ export {
   md3LightColors,
   md3DarkColors,
   elevationOverlayOpacity,
-} from './tokens/md3-colors';
-export type { MD3LightColors, MD3DarkColors } from './tokens/md3-colors';
+} from './tokens/md3-colors.ts';
+export type { MD3LightColors, MD3DarkColors } from './tokens/md3-colors.ts';
 
 export {
   md3ElevationLight,
@@ -226,15 +226,15 @@ export {
   md3Motion as md3MotionElevation,
   md3Typography as md3TypographyElevation,
   md3Tokens,
-} from './tokens/md3-elevation';
-export type { ElevationStyle } from './tokens/md3-elevation';
+} from './tokens/md3-elevation.ts';
+export type { ElevationStyle } from './tokens/md3-elevation.ts';
 
 // Micro-Interactions and Animation System
-export * from './animations';
+export * from './animations/index.ts';
 
-export * from './review';
+export * from './review/index.ts';
 
 // Theme-aware design system tokens
-export { DsProvider, useDs, useDsIsDark } from './DsProvider';
-export { ds, createDs, paletteLight, colorsLight, semanticLight, shadowsLight } from './tokens/ds';
-export type { DS } from './tokens/ds';
+export { DsProvider, useDs, useDsIsDark } from    './DsProvider.tsx';
+export { ds, createDs, paletteLight, colorsLight, semanticLight, shadowsLight } from  './tokens/ds.ts';
+export type { DS } from './tokens/ds.ts';

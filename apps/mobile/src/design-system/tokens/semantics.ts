@@ -16,7 +16,7 @@ import {
   neutralVariant,
   status,
   highContrast,
-} from './primitives';
+} from './primitives.ts';
 
 // =============================================================================
 // SEMANTIC COLOR ROLES
