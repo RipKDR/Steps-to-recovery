@@ -1231,10 +1231,11 @@ export async function cleanupSyncQueue(db: StorageAdapter): Promise<{ removed: n
 
     if (count > MAX_SYNC_QUEUE_SIZE) {
       const excess = count - MAX_SYNC_QUEUE_SIZE;
+      const removeCount = Math.min(excess, 100);
+
       // Count oldest failed items before deleting
       const sizeCountResult = await db.getFirstAsync<{ count: number }>(
-        `SELECT COUNT(*) as count FROM sync_queue WHERE failed_at IS NOT NULL LIMIT ?`,
-        [Math.min(excess, 100)],
+        `SELECT COUNT(*) as count FROM sync_queue WHERE failed_at IS NOT NULL LIMIT ${removeCount}`,
       );
       const sizeCount = sizeCountResult?.count || 0;
 
@@ -1245,9 +1246,8 @@ export async function cleanupSyncQueue(db: StorageAdapter): Promise<{ removed: n
            SELECT id FROM sync_queue
            WHERE failed_at IS NOT NULL
            ORDER BY failed_at ASC
-           LIMIT ?
+           LIMIT ${removeCount}
          )`,
-        [Math.min(excess, 100)],
       );
       totalRemoved += sizeCount;
     }
@@ -1386,6 +1386,28 @@ export async function addToSyncQueue(
   supabaseId?: string | null,
 ): Promise<void> {
   try {
+    // Enforce queue size limit before adding - remove oldest pending items if at capacity
+    const countResult = await db.getFirstAsync<{ count: number }>(
+      'SELECT COUNT(*) as count FROM sync_queue WHERE retry_count < ? AND failed_at IS NULL',
+      [MAX_RETRY_COUNT],
+    );
+    const count = countResult?.count || 0;
+
+    if (count >= MAX_SYNC_QUEUE_SIZE) {
+      // Remove oldest pending items to make room
+      const deleteResult = await db.runAsync(
+        `DELETE FROM sync_queue
+         WHERE id IN (
+           SELECT id FROM sync_queue
+           WHERE retry_count < ? AND failed_at IS NULL
+           ORDER BY created_at ASC
+           LIMIT 10
+         )`,
+        [MAX_RETRY_COUNT],
+      );
+      logger.warn('Sync queue at capacity, removed oldest pending items', { removed: deleteResult });
+    }
+
     const queueId = `sync_${generateUUID()}`;
     const now = new Date().toISOString();
 
