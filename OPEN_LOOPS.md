@@ -18,6 +18,9 @@
 - ✅ AI companion reliability testing (11e81f6) - added try/catch guards to memory extraction paths
 - ✅ PowerSync offline sync evaluation (38d3558)
 - ✅ Sync queue stability fix (23078dc) - enforce queue size limit in addToSyncQueue
+- ✅ Day 1 Core Safety Maestro test (6321ba9) - automated validation for 5 non-negotiable tests
+- [ ] Create Day 2 Daily Workflows Maestro test (pending)
+- [ ] Create Day 3 Network & Sync Maestro test (pending)
 
 ### Lower Priority
 - [ ] Performance profiling on lower-end devices
@@ -30,6 +33,7 @@
 - Local builds available but limited to debugging on connected device
 
 ## Done This Week
+- ✅ 6321ba9 docs(maestro): add Day 1 Core Safety validation flow
 - ✅ 346fa2b safety: add per-screen error boundaries to all 39 screens
 - ✅ 5d418f6 fix: make haptics error-safe
 - ✅ ba242ae fix: improve meeting finder empty state for non-US users
