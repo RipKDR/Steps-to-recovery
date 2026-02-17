@@ -20,7 +20,8 @@
 - ✅ Sync queue stability fix (23078dc) - enforce queue size limit in addToSyncQueue
 - ✅ Day 1 Core Safety Maestro test (6321ba9) - automated validation for 5 non-negotiable tests
 - ✅ Day 2 Daily Workflows Maestro test (152324d) - automated validation for 4 daily workflows
-- ✅ Create Day 3 Network & Sync Maestro test (399af29) - tests offline→online transitions
+- ✅ Day 3 Network & Sync Maestro test (399af29) - tests offline→online transitions
+- ✅ Day 4 Stability & Performance Maestro test (51259ad) - startup, memory, haptics, error handling
 
 ### Lower Priority
 - [ ] Performance profiling on lower-end devices
@@ -33,6 +34,7 @@
 - Local builds available but limited to debugging on connected device
 
 ## Done This Week
+- ✅ 51259ad docs(maestro): add Day 4 Stability & Performance validation test (2026-02-17)
 - ✅ 6321ba9 docs(maestro): add Day 1 Core Safety validation flow
 - ✅ 346fa2b safety: add per-screen error boundaries to all 39 screens
 - ✅ 5d418f6 fix: make haptics error-safe
