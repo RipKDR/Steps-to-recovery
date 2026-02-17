@@ -19,7 +19,8 @@
 - ✅ PowerSync offline sync evaluation (38d3558)
 - ✅ Sync queue stability fix (23078dc) - enforce queue size limit in addToSyncQueue
 - ✅ Day 1 Core Safety Maestro test (6321ba9) - automated validation for 5 non-negotiable tests
-- [ ] Create Day 2 Daily Workflows Maestro test (pending)
+- ✅ Day 2 Daily Workflows Maestro test (152324d) - automated validation for 4 daily workflows
+- [ ] Create Day 3 Network & Sync Maestro test (pending)
 - [ ] Create Day 3 Network & Sync Maestro test (pending)
 
 ### Lower Priority
@@ -49,3 +50,5 @@
 - ✅ 7b072d2 docs: add PRIORITY TESTING ORDER to DEVICE_TESTING_CHECKLIST (2026-02-17)
 - ✅ c58af34 docs: enhance DEVICE_TESTING_CHECKLIST with rehab ready checklist and troubleshooting (2026-02-17)
 - ✅ eecd896 fix: add missing userId dependency to useChatHistory useEffect (2026-02-17)
+- ✅ 152324d docs(maestro): add Day 2 Daily Workflows validation flow (2026-02-17)
+- [ ] Create Day 3 Network & Sync Maestro test (pending)
