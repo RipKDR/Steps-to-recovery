@@ -1,14 +1,19 @@
 /**
  * AI Chat Proxy Edge Function
  *
- * Proxies chat requests to OpenAI/Anthropic with:
+ * Proxies chat requests to OpenClaw (self-hosted VPS) with:
  * - User authentication via Supabase JWT
  * - Daily usage limits for free tier
- * - BYOK support (use user's own key if provided)
+ * - Per-user session isolation (passes userId to OpenClaw)
  * - Streaming responses
  * - Structured logging & error tracking
  *
  * Deploy: supabase functions deploy ai-chat
+ *
+ * Required secrets (set via `supabase secrets set`):
+ *   OPENCLAW_URL    — your Hostinger VPS URL, e.g. https://your-vps.com
+ *   OPENCLAW_TOKEN  — shared auth token for the VPS gateway
+ *
  * Test: curl -X POST https://<project>.supabase.co/functions/v1/ai-chat \
  *   -H "Authorization: Bearer $JWT_TOKEN" \
  *   -H "Content-Type: application/json" \
@@ -84,7 +89,9 @@ const DEFAULT_MODEL = "gpt-4o-mini";
 const MAX_MESSAGE_LENGTH = 4000;
 const REQUEST_TIMEOUT_MS = 30000;
 
-const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
+// OpenClaw VPS — set via `supabase secrets set OPENCLAW_URL=... OPENCLAW_TOKEN=...`
+const OPENCLAW_URL = Deno.env.get("OPENCLAW_URL");
+const OPENCLAW_TOKEN = Deno.env.get("OPENCLAW_TOKEN");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 const ALLOWED_ORIGIN = Deno.env.get("ALLOWED_ORIGIN") || "*";
@@ -92,7 +99,8 @@ const ALLOWED_ORIGIN = Deno.env.get("ALLOWED_ORIGIN") || "*";
 // Validate critical environment variables
 const validateEnv = (): void => {
   const required = [
-    "OPENAI_API_KEY",
+    "OPENCLAW_URL",
+    "OPENCLAW_TOKEN",
     "SUPABASE_URL",
     "SUPABASE_SERVICE_ROLE_KEY",
   ];
@@ -278,9 +286,9 @@ Deno.serve(async (req: Request): Promise<Response> => {
   try {
     validateEnv();
 
-    // Check for required API key
-    if (!OPENAI_API_KEY) {
-      throw new Error("OPENAI_API_KEY not configured");
+    // Check for required OpenClaw config
+    if (!OPENCLAW_URL || !OPENCLAW_TOKEN) {
+      throw new Error("OPENCLAW_URL and OPENCLAW_TOKEN must be configured");
     }
 
     // 1. Authenticate user
@@ -453,11 +461,14 @@ Deno.serve(async (req: Request): Promise<Response> => {
       });
     }
 
-    // 5. Forward to OpenAI
-    const openaiPayload = {
-      model: chatRequest.model || DEFAULT_MODEL,
+    // 5. Forward to OpenClaw VPS
+    // OpenClaw exposes an OpenAI-compatible endpoint — same request shape.
+    // Passing `user` gives per-user session isolation on the gateway side.
+    const openclawPayload = {
+      model: chatRequest.model || "openclaw:companion",
       messages: chatRequest.messages,
       stream: chatRequest.stream,
+      user: user.id, // per-user personalisation / session isolation
       ...(chatRequest.temperature !== undefined &&
         { temperature: chatRequest.temperature }),
       ...(chatRequest.max_tokens !== undefined &&
@@ -467,32 +478,32 @@ Deno.serve(async (req: Request): Promise<Response> => {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
-    let openaiResponse: Response;
+    let openclawResponse: Response;
     try {
-      openaiResponse = await fetch(
-        "https://api.openai.com/v1/chat/completions",
+      openclawResponse = await fetch(
+        `${OPENCLAW_URL}/v1/chat/completions`,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${OPENAI_API_KEY}`,
+            Authorization: `Bearer ${OPENCLAW_TOKEN}`,
           },
-          body: JSON.stringify(openaiPayload),
+          body: JSON.stringify(openclawPayload),
           signal: controller.signal,
         },
       );
     } catch (error) {
       clearTimeout(timeoutId);
       const message = error instanceof Error && error.name === "AbortError"
-        ? "Request timeout"
+        ? "Request timeout — check your VPS is reachable"
         : error instanceof Error
         ? error.message
         : "Unknown error";
 
       log({
         level: "error",
-        context: "openai_request",
-        message: "Failed to connect to OpenAI",
+        context: "openclaw_request",
+        message: "Failed to connect to OpenClaw VPS",
         userId: user.id,
         detail: message,
       });
@@ -501,24 +512,24 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
     clearTimeout(timeoutId);
 
-    // Handle OpenAI errors
-    if (!openaiResponse.ok) {
-      const errorText = await openaiResponse.text();
+    // Handle OpenClaw errors
+    if (!openclawResponse.ok) {
+      const errorText = await openclawResponse.text();
       log({
         level: "error",
-        context: "openai_error",
-        message: "OpenAI API error",
+        context: "openclaw_error",
+        message: "OpenClaw VPS error",
         userId: user.id,
-        status: openaiResponse.status,
-        detail: errorText.slice(0, 200), // Truncate to prevent log spam
+        status: openclawResponse.status,
+        detail: errorText.slice(0, 200),
       });
 
       return errorResponse(
-        openaiResponse.status === 429 ? 429 : 502,
+        openclawResponse.status === 429 ? 429 : 502,
         "AI service error",
-        openaiResponse.status === 429
-          ? "OpenAI rate limit exceeded. Please try again later."
-          : "OpenAI returned an error",
+        openclawResponse.status === 429
+          ? "Gateway rate limit exceeded. Please try again later."
+          : "OpenClaw VPS returned an error",
       );
     }
 
@@ -553,8 +564,8 @@ Deno.serve(async (req: Request): Promise<Response> => {
     }
 
     // 7. Stream or return response
-    if (chatRequest.stream && openaiResponse.body) {
-      return new Response(openaiResponse.body, {
+    if (chatRequest.stream && openclawResponse.body) {
+      return new Response(openclawResponse.body, {
         status: 200,
         headers: {
           ...corsHeaders,
@@ -566,7 +577,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     }
 
     // Non-streaming response
-    const data = await openaiResponse.json();
+    const data = await openclawResponse.json();
     return new Response(JSON.stringify(data), {
       status: 200,
       headers: {
