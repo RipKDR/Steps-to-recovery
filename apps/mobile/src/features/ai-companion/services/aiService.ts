@@ -147,6 +147,13 @@ export async function createAIService(): Promise<AIServiceInstance> {
     return new AIServiceInstance(null, 'openclaw');
   }
 
+  // Check if OpenClaw was configured via settings (stored in SecureStore)
+  const { getOpenClawProvider } = await import('./openClawProvider');
+  const clawProvider = getOpenClawProvider();
+  if (await clawProvider.isConfigured()) {
+    return new AIServiceInstance(null, 'openclaw');
+  }
+
   const apiKey = await secureStorage.getItemAsync(API_KEY_STORAGE_KEY);
   const storedProvider = await secureStorage.getItemAsync(PROVIDER_STORAGE_KEY);
 

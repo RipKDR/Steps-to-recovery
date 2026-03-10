@@ -24,6 +24,7 @@ import * as Haptics from '@/platform/haptics';
 import { useThemedStyles, type DS } from '../../../design-system/hooks/useThemedStyles';
 import { useDs } from '../../../design-system/DsProvider';
 import { getAIService, type AIProvider } from '../services/aiService';
+import { getOpenClawProvider } from '../services/openClawProvider';
 import { getSessionCost, getDailyCost, getCostHistory } from '../services/costEstimation';
 import type { DailyCostEntry } from '../services/costEstimation';
 import {
@@ -52,6 +53,19 @@ export function AISettingsScreen() {
   const [isSaving, setIsSaving] = useState(false);
   const [provider, setProvider] = useState<AIProvider | null>(null);
 
+  // OpenClaw state
+  const [openClawUrl, setOpenClawUrl] = useState('');
+  const [openClawToken, setOpenClawToken] = useState('');
+  const [showOpenClawToken, setShowOpenClawToken] = useState(false);
+  const [isOpenClawConfigured, setIsOpenClawConfigured] = useState(false);
+  const [isSavingOpenClaw, setIsSavingOpenClaw] = useState(false);
+  const [isTestingOpenClaw, setIsTestingOpenClaw] = useState(false);
+  const [openClawTestResult, setOpenClawTestResult] = useState<{
+    ok: boolean;
+    latencyMs: number;
+    error?: string;
+  } | null>(null);
+
   // Cost visibility state
   const [sessionCost, setSessionCostVal] = useState(0);
   const [dailyCost, setDailyCostVal] = useState(0);
@@ -64,6 +78,7 @@ export function AISettingsScreen() {
 
   useEffect(() => {
     checkConfiguration();
+    checkOpenClawConfiguration();
     loadCostData();
     loadRateLimitData();
   }, []);
@@ -80,6 +95,84 @@ export function AISettingsScreen() {
       setIsConfigured(false);
     }
   };
+
+  const checkOpenClawConfiguration = async (): Promise<void> => {
+    try {
+      const claw = getOpenClawProvider();
+      setIsOpenClawConfigured(await claw.isConfigured());
+    } catch {
+      setIsOpenClawConfigured(false);
+    }
+  };
+
+  const handleSaveOpenClaw = useCallback(async (): Promise<void> => {
+    const url = openClawUrl.trim();
+    const token = openClawToken.trim();
+    if (!url || !token) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
+      Alert.alert('Missing Fields', 'Please enter both your VPS URL and auth token.');
+      return;
+    }
+    setIsSavingOpenClaw(true);
+    try {
+      const claw = getOpenClawProvider();
+      await claw.saveConfig(url, token);
+      setIsOpenClawConfigured(true);
+      setOpenClawUrl('');
+      setOpenClawToken('');
+      setOpenClawTestResult(null);
+      // Refresh top-level status
+      await checkConfiguration();
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+      Alert.alert('OpenClaw Saved', 'Your VPS is now the active AI provider.');
+    } catch {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
+      Alert.alert('Error', 'Failed to save OpenClaw config. Please try again.');
+    } finally {
+      setIsSavingOpenClaw(false);
+    }
+  }, [openClawUrl, openClawToken]);
+
+  const handleClearOpenClaw = useCallback(async (): Promise<void> => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    Alert.alert(
+      'Remove OpenClaw?',
+      'The app will fall back to your API key (if set) or no AI.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: async () => {
+            const claw = getOpenClawProvider();
+            await claw.clearConfig();
+            setIsOpenClawConfigured(false);
+            setOpenClawTestResult(null);
+            await checkConfiguration();
+          },
+        },
+      ],
+    );
+  }, []);
+
+  const handleTestOpenClaw = useCallback(async (): Promise<void> => {
+    setIsTestingOpenClaw(true);
+    setOpenClawTestResult(null);
+    try {
+      const claw = getOpenClawProvider();
+      const result = await claw.testConnection();
+      setOpenClawTestResult(result);
+      Haptics.notificationAsync(
+        result.ok
+          ? Haptics.NotificationFeedbackType.Success
+          : Haptics.NotificationFeedbackType.Error,
+      ).catch(() => {});
+    } catch {
+      setOpenClawTestResult({ ok: false, latencyMs: 0, error: 'Test failed' });
+    } finally {
+      setIsTestingOpenClaw(false);
+    }
+  }, []);
 
   const loadCostData = async (): Promise<void> => {
     try {
@@ -294,6 +387,148 @@ export function AISettingsScreen() {
               </Pressable>
             </Animated.View>
           )}
+
+          {/* OpenClaw Section */}
+          <Animated.View entering={FadeInDown.delay(155).duration(300)}>
+            <Text style={styles.sectionLabel}>OpenClaw — Self-Hosted VPS</Text>
+            <View style={styles.card}>
+              <View style={styles.statusRow}>
+                <Text style={styles.statusLabel}>Status</Text>
+                <View style={styles.statusValue}>
+                  <View
+                    style={[
+                      styles.statusDot,
+                      isOpenClawConfigured ? styles.statusDotActive : styles.statusDotInactive,
+                    ]}
+                    importantForAccessibility="no"
+                  />
+                  <Text
+                    style={[
+                      styles.statusText,
+                      isOpenClawConfigured ? styles.statusTextActive : styles.statusTextInactive,
+                    ]}
+                  >
+                    {isOpenClawConfigured ? 'Connected' : 'Not configured'}
+                  </Text>
+                </View>
+              </View>
+
+              {isOpenClawConfigured && (
+                <View style={[styles.costRow, styles.costRowBorder]}>
+                  <Pressable
+                    onPress={handleTestOpenClaw}
+                    disabled={isTestingOpenClaw}
+                    style={styles.testBtn}
+                    accessibilityRole="button"
+                    accessibilityLabel={isTestingOpenClaw ? 'Testing connection' : 'Test connection'}
+                    accessibilityState={{ disabled: isTestingOpenClaw }}
+                  >
+                    <Text style={styles.testBtnText}>
+                      {isTestingOpenClaw ? 'Testing...' : 'Test Connection'}
+                    </Text>
+                  </Pressable>
+                  {openClawTestResult && (
+                    <Text
+                      style={[
+                        styles.testResult,
+                        openClawTestResult.ok ? styles.testResultOk : styles.testResultFail,
+                      ]}
+                    >
+                      {openClawTestResult.ok
+                        ? `${openClawTestResult.latencyMs}ms`
+                        : openClawTestResult.error || 'Failed'}
+                    </Text>
+                  )}
+                </View>
+              )}
+            </View>
+
+            <Text style={styles.hint}>
+              Point to your Hostinger VPS running an OpenAI-compatible gateway (e.g. LiteLLM).
+            </Text>
+
+            <View style={styles.inputRow}>
+              <TextInput
+                value={openClawUrl}
+                onChangeText={setOpenClawUrl}
+                placeholder={
+                  isOpenClawConfigured
+                    ? 'New VPS URL (e.g. https://your-vps.com)'
+                    : 'https://your-vps.com'
+                }
+                placeholderTextColor={ds.colors.textQuaternary}
+                autoCapitalize="none"
+                autoCorrect={false}
+                keyboardType="url"
+                style={styles.input}
+                accessibilityLabel="OpenClaw VPS URL"
+                accessibilityHint="Enter the URL of your Hostinger VPS"
+              />
+            </View>
+
+            <View style={[styles.inputRow, { marginBottom: ds.space[2] }]}>
+              <TextInput
+                value={openClawToken}
+                onChangeText={setOpenClawToken}
+                placeholder={isOpenClawConfigured ? 'New auth token' : 'Auth token'}
+                placeholderTextColor={ds.colors.textQuaternary}
+                secureTextEntry={!showOpenClawToken}
+                autoCapitalize="none"
+                autoCorrect={false}
+                style={styles.input}
+                accessibilityLabel="OpenClaw auth token"
+                accessibilityHint="Enter the auth token for your VPS gateway"
+              />
+              <Pressable
+                onPress={() => setShowOpenClawToken(!showOpenClawToken)}
+                style={styles.eyeBtn}
+                accessibilityRole="button"
+                accessibilityLabel={showOpenClawToken ? 'Hide token' : 'Show token'}
+              >
+                <Feather
+                  name={showOpenClawToken ? 'eye-off' : 'eye'}
+                  size={20}
+                  color={ds.colors.textTertiary}
+                />
+              </Pressable>
+            </View>
+
+            <Pressable
+              onPress={handleSaveOpenClaw}
+              disabled={isSavingOpenClaw || (!openClawUrl.trim() && !openClawToken.trim())}
+              style={[
+                styles.saveBtn,
+                (isSavingOpenClaw || (!openClawUrl.trim() && !openClawToken.trim())) &&
+                  styles.saveBtnDisabled,
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel={isSavingOpenClaw ? 'Saving OpenClaw config' : 'Save OpenClaw config'}
+              accessibilityState={{
+                disabled: isSavingOpenClaw || (!openClawUrl.trim() && !openClawToken.trim()),
+              }}
+            >
+              <Text
+                style={[
+                  styles.saveBtnText,
+                  (isSavingOpenClaw || (!openClawUrl.trim() && !openClawToken.trim())) &&
+                    styles.saveBtnTextDisabled,
+                ]}
+              >
+                {isSavingOpenClaw ? 'Saving...' : 'Save OpenClaw Config'}
+              </Text>
+            </Pressable>
+
+            {isOpenClawConfigured && (
+              <Pressable
+                onPress={handleClearOpenClaw}
+                style={[styles.clearBtn, { marginTop: ds.space[2] }]}
+                accessibilityLabel="Remove OpenClaw config"
+                accessibilityRole="button"
+              >
+                <Text style={styles.clearBtnText}>Remove OpenClaw</Text>
+              </Pressable>
+            )}
+          </Animated.View>
 
           {/* Usage & Costs Section */}
           <Animated.View entering={FadeInDown.delay(160).duration(300)}>
@@ -702,6 +937,29 @@ const createStyles = (ds: DS) =>
     },
     barLabelToday: {
       color: ds.colors.accent,
+    },
+
+    // OpenClaw test connection
+    testBtn: {
+      paddingHorizontal: ds.space[3],
+      paddingVertical: ds.space[2],
+      backgroundColor: ds.colors.bgQuaternary,
+      borderRadius: ds.radius.sm,
+    },
+    testBtnText: {
+      ...ds.typography.caption,
+      fontWeight: '500',
+      color: ds.colors.textSecondary,
+    },
+    testResult: {
+      ...ds.typography.caption,
+      fontWeight: '600',
+    },
+    testResultOk: {
+      color: ds.colors.success,
+    },
+    testResultFail: {
+      color: ds.colors.error,
     },
 
     // Rate Limiting
