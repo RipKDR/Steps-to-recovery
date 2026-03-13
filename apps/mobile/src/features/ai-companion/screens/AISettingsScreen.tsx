@@ -4,7 +4,7 @@
  * Apple Settings-inspired API configuration.
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -23,7 +23,7 @@ import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import * as Haptics from '@/platform/haptics';
 import { useThemedStyles, type DS } from '../../../design-system/hooks/useThemedStyles';
 import { useDs } from '../../../design-system/DsProvider';
-import { getAIService, type AIProvider } from '../services/aiService';
+import { getAIService, resetAIService, type AIProvider } from '../services/aiService';
 import { getOpenClawProvider } from '../services/openClawProvider';
 import { getSessionCost, getDailyCost, getCostHistory } from '../services/costEstimation';
 import type { DailyCostEntry } from '../services/costEstimation';
@@ -76,6 +76,12 @@ export function AISettingsScreen() {
   const [rateLimitEnabled, setRateLimitEnabledState] = useState(true);
   const [dailyLimitValue, setDailyLimitValue] = useState('50');
 
+  // Derived: both fields must be non-empty to enable Save
+  const isOpenClawFormValid = useMemo(
+    () => Boolean(openClawUrl.trim() && openClawToken.trim()),
+    [openClawUrl, openClawToken],
+  );
+
   useEffect(() => {
     checkConfiguration();
     checkOpenClawConfiguration();
@@ -117,6 +123,8 @@ export function AISettingsScreen() {
     try {
       const claw = getOpenClawProvider();
       await claw.saveConfig(url, token);
+      // Reset singleton so next getAIService() call picks up the openclaw provider
+      resetAIService();
       setIsOpenClawConfigured(true);
       setOpenClawUrl('');
       setOpenClawToken('');
@@ -147,6 +155,8 @@ export function AISettingsScreen() {
             try {
               const claw = getOpenClawProvider();
               await claw.clearConfig();
+              // Reset singleton so next getAIService() call falls back to previous provider
+              resetAIService();
               await checkConfiguration();
               setIsOpenClawConfigured(false);
               setOpenClawTestResult(null);
@@ -503,23 +513,21 @@ export function AISettingsScreen() {
 
             <Pressable
               onPress={handleSaveOpenClaw}
-              disabled={isSavingOpenClaw || !openClawUrl.trim() || !openClawToken.trim()}
+              disabled={isSavingOpenClaw || !isOpenClawFormValid}
               style={[
                 styles.saveBtn,
-                (isSavingOpenClaw || (!openClawUrl.trim() && !openClawToken.trim())) &&
-                  styles.saveBtnDisabled,
+                (isSavingOpenClaw || !isOpenClawFormValid) && styles.saveBtnDisabled,
               ]}
               accessibilityRole="button"
               accessibilityLabel={isSavingOpenClaw ? 'Saving OpenClaw config' : 'Save OpenClaw config'}
               accessibilityState={{
-                disabled: isSavingOpenClaw || (!openClawUrl.trim() && !openClawToken.trim()),
+                disabled: isSavingOpenClaw || !isOpenClawFormValid,
               }}
             >
               <Text
                 style={[
                   styles.saveBtnText,
-                  (isSavingOpenClaw || (!openClawUrl.trim() && !openClawToken.trim())) &&
-                    styles.saveBtnTextDisabled,
+                  (isSavingOpenClaw || !isOpenClawFormValid) && styles.saveBtnTextDisabled,
                 ]}
               >
                 {isSavingOpenClaw ? 'Saving...' : 'Save OpenClaw Config'}
