@@ -85,7 +85,7 @@ interface LogContext {
 // Configuration
 // ============================================================================
 const DAILY_FREE_LIMIT = 20;
-const DEFAULT_MODEL = "gpt-4o-mini";
+const DEFAULT_MODEL = "openclaw:companion";
 const MAX_MESSAGE_LENGTH = 4000;
 const REQUEST_TIMEOUT_MS = 30000;
 
@@ -465,7 +465,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     // OpenClaw exposes an OpenAI-compatible endpoint — same request shape.
     // Passing `user` gives per-user session isolation on the gateway side.
     const openclawPayload = {
-      model: chatRequest.model || "openclaw:companion",
+      model: chatRequest.model || DEFAULT_MODEL,
       messages: chatRequest.messages,
       stream: chatRequest.stream,
       user: user.id, // per-user personalisation / session isolation
