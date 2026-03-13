@@ -495,7 +495,7 @@ export function AISettingsScreen() {
 
             <Pressable
               onPress={handleSaveOpenClaw}
-              disabled={isSavingOpenClaw || (!openClawUrl.trim() && !openClawToken.trim())}
+              disabled={isSavingOpenClaw || !openClawUrl.trim() || !openClawToken.trim()}
               style={[
                 styles.saveBtn,
                 (isSavingOpenClaw || (!openClawUrl.trim() && !openClawToken.trim())) &&
