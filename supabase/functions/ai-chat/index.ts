@@ -514,14 +514,13 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
     // Handle OpenClaw errors
     if (!openclawResponse.ok) {
-      const errorText = await openclawResponse.text();
       log({
         level: "error",
         context: "openclaw_error",
         message: "OpenClaw VPS error",
         userId: user.id,
         status: openclawResponse.status,
-        detail: errorText.slice(0, 200),
+        detail: openclawResponse.statusText || `HTTP_${openclawResponse.status}`,
       });
 
       return errorResponse(
