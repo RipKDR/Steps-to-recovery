@@ -141,32 +141,14 @@ function detectProvider(apiKey: string): AIProvider {
  * Create AI service instance
  */
 export async function createAIService(): Promise<AIServiceInstance> {
-  // Auto-detect OpenClaw from environment (zero user setup)
-  const openclawUrl = process.env.EXPO_PUBLIC_OPENCLAW_URL;
-  if (openclawUrl) {
+  // Auto-detect OpenClaw from environment or secure storage (zero user setup).
+  // Require both URL and token via isConfigured() to avoid creating an
+  // OpenClaw instance when only the URL env var is set but the token is missing.
+  const { getOpenClawProvider } = await import('./openClawProvider');
+  const clawProvider = getOpenClawProvider();
+  if (await clawProvider.isConfigured()) {
     return new AIServiceInstance(null, 'openclaw');
   }
-
-       // OpenClaw provider — delegate to streaming async generator
-       if (this.provider === 'openclaw') {
-         const { getOpenClawProvider } = await import('./openClawProvider');
-         const clawProvider = getOpenClawProvider();
-         yield* clawProvider.chat(messages, {
-           userId: options.userId,
-           signal: options.signal,
-           maxTokens: options.maxTokens,
-           temperature: options.temperature,
-         });
-         span?.end();
-         return;
-       }
-
-      // Use proxy if no API key and proxy is enabled
-      if (!this.apiKey && AI_PROXY_ENABLED) {
-        yield* this.chatViaProxy(messages, options);
-        span?.end();
-        return;
-      }
 
   const apiKey = await secureStorage.getItemAsync(API_KEY_STORAGE_KEY);
   const storedProvider = await secureStorage.getItemAsync(PROVIDER_STORAGE_KEY);
