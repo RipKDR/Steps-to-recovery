@@ -90,7 +90,8 @@ const MAX_MESSAGE_LENGTH = 4000;
 const REQUEST_TIMEOUT_MS = 30000;
 
 // OpenClaw VPS — set via `supabase secrets set OPENCLAW_URL=... OPENCLAW_TOKEN=...`
-const OPENCLAW_URL = Deno.env.get("OPENCLAW_URL");
+// Trim trailing slashes so `${OPENCLAW_URL}/v1/...` never produces a double-slash.
+const OPENCLAW_URL = Deno.env.get("OPENCLAW_URL")?.replace(/\/+$/, "");
 const OPENCLAW_TOKEN = Deno.env.get("OPENCLAW_TOKEN");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
