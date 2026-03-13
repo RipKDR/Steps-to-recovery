@@ -506,19 +506,19 @@ export function AISettingsScreen() {
               disabled={isSavingOpenClaw || !openClawUrl.trim() || !openClawToken.trim()}
               style={[
                 styles.saveBtn,
-                (isSavingOpenClaw || (!openClawUrl.trim() && !openClawToken.trim())) &&
+                (isSavingOpenClaw || !openClawUrl.trim() || !openClawToken.trim()) &&
                   styles.saveBtnDisabled,
               ]}
               accessibilityRole="button"
               accessibilityLabel={isSavingOpenClaw ? 'Saving OpenClaw config' : 'Save OpenClaw config'}
               accessibilityState={{
-                disabled: isSavingOpenClaw || (!openClawUrl.trim() && !openClawToken.trim()),
+                disabled: isSavingOpenClaw || !openClawUrl.trim() || !openClawToken.trim(),
               }}
             >
               <Text
                 style={[
                   styles.saveBtnText,
-                  (isSavingOpenClaw || (!openClawUrl.trim() && !openClawToken.trim())) &&
+                  (isSavingOpenClaw || !openClawUrl.trim() || !openClawToken.trim()) &&
                     styles.saveBtnTextDisabled,
                 ]}
               >

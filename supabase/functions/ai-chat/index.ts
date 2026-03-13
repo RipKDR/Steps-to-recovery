@@ -85,7 +85,6 @@ interface LogContext {
 // Configuration
 // ============================================================================
 const DAILY_FREE_LIMIT = 20;
-const DEFAULT_MODEL = "gpt-4o-mini";
 const MAX_MESSAGE_LENGTH = 4000;
 const REQUEST_TIMEOUT_MS = 30000;
 

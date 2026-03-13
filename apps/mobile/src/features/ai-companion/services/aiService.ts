@@ -147,27 +147,6 @@ export async function createAIService(): Promise<AIServiceInstance> {
     return new AIServiceInstance(null, 'openclaw');
   }
 
-       // OpenClaw provider — delegate to streaming async generator
-       if (this.provider === 'openclaw') {
-         const { getOpenClawProvider } = await import('./openClawProvider');
-         const clawProvider = getOpenClawProvider();
-         yield* clawProvider.chat(messages, {
-           userId: options.userId,
-           signal: options.signal,
-           maxTokens: options.maxTokens,
-           temperature: options.temperature,
-         });
-         span?.end();
-         return;
-       }
-
-      // Use proxy if no API key and proxy is enabled
-      if (!this.apiKey && AI_PROXY_ENABLED) {
-        yield* this.chatViaProxy(messages, options);
-        span?.end();
-        return;
-      }
-
   const apiKey = await secureStorage.getItemAsync(API_KEY_STORAGE_KEY);
   const storedProvider = await secureStorage.getItemAsync(PROVIDER_STORAGE_KEY);
 
