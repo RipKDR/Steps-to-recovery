@@ -144,11 +144,19 @@ export function AISettingsScreen() {
           text: 'Remove',
           style: 'destructive',
           onPress: async () => {
-            const claw = getOpenClawProvider();
-            await claw.clearConfig();
-            setIsOpenClawConfigured(false);
-            setOpenClawTestResult(null);
-            await checkConfiguration();
+            try {
+              const claw = getOpenClawProvider();
+              await claw.clearConfig();
+              await checkConfiguration();
+              setIsOpenClawConfigured(false);
+              setOpenClawTestResult(null);
+            } catch {
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
+              Alert.alert(
+                'Error',
+                'Failed to remove OpenClaw configuration. Please try again.',
+              );
+            }
           },
         },
       ],
