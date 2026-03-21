@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet , Text } from 'react-native';
 import type { StyleProp, ViewStyle } from 'react-native';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated';
 import { Image } from 'expo-image';
@@ -159,7 +159,6 @@ export interface ZoomableImageProps {
 }
 
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import { Text } from 'react-native';
 
 export function ZoomableImage({ source, style }: ZoomableImageProps): React.ReactElement {
   const scale = useSharedValue(1);

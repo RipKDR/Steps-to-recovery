@@ -15,15 +15,13 @@
  *   node scripts/performance-audit.js --fix
  */
 
-const fs = require('fs');
-const path = require('path');
-const { execSync } = require('child_process');
-
+import { readdirSync, statSync, readFileSync, existsSync, writeFileSync } from 'node:fs';
+import { join, relative, basename } from 'node:path';
 // Paths
-const ROOT_PATH = path.join(__dirname, '..');
-const MOBILE_APP_PATH = path.join(ROOT_PATH, 'apps', 'mobile');
-const SRC_PATH = path.join(MOBILE_APP_PATH, 'src');
-const REPORT_PATH = path.join(ROOT_PATH, 'docs', 'PERFORMANCE_REPORT.md');
+const ROOT_PATH = join(__dirname, '..');
+const MOBILE_APP_PATH = join(ROOT_PATH, 'apps', 'mobile');
+const SRC_PATH = join(MOBILE_APP_PATH, 'src');
+const REPORT_PATH = join(ROOT_PATH, 'docs', 'PERFORMANCE_REPORT.md');
 
 // Audit configuration
 const AUDIT_CONFIG = {
@@ -120,7 +118,7 @@ const stats = {
 function addIssue(type, file, line, message, suggestion, severity = 'warning') {
   issues.push({
     type,
-    file: path.relative(ROOT_PATH, file),
+    file: relative(ROOT_PATH, file),
     line,
     message,
     suggestion,
@@ -137,7 +135,7 @@ function addOptimization(title, description, impact, effort, files = []) {
     description,
     impact, // high, medium, low
     effort, // high, medium, low
-    files: files.map((f) => path.relative(ROOT_PATH, f)),
+    files: files.map((f) => relative(ROOT_PATH, f)),
   });
 }
 
@@ -146,6 +144,121 @@ function addOptimization(title, description, impact, effort, files = []) {
  */
 function countLines(content) {
   return content.split('\n').length;
+}
+
+/**
+ * Check anti-patterns in a single line
+ */
+function checkLineAntiPatterns(line, filePath, lineNumber) {
+  // Star imports
+  if (line.match(ANTI_PATTERNS.starImports.pattern)) {
+    const match = line.match(/from\s+['"]([^'"]+)['"]/);
+    const module = match ? match[1] : 'unknown';
+    const allowedModules = ['react', 'expo-haptics', 'expo-secure-store', 'expo-notifications'];
+
+    if (!allowedModules.some((m) => module.includes(m))) {
+      addIssue(
+        'star-import',
+        filePath,
+        lineNumber,
+        `Star import from "${module}"`,
+        ANTI_PATTERNS.starImports.suggestion,
+        'warning',
+      );
+      stats.starImports++;
+    }
+  }
+
+  // Inline functions in JSX
+  if (line.match(ANTI_PATTERNS.inlineFunctions.pattern)) {
+    addIssue(
+      'inline-function',
+      filePath,
+      lineNumber,
+      ANTI_PATTERNS.inlineFunctions.message,
+      ANTI_PATTERNS.inlineFunctions.suggestion,
+      'info',
+    );
+  }
+
+  // Heavy computations
+  if (line.match(ANTI_PATTERNS.heavyComputation.pattern)) {
+    addIssue(
+      'heavy-computation',
+      filePath,
+      lineNumber,
+      ANTI_PATTERNS.heavyComputation.message,
+      ANTI_PATTERNS.heavyComputation.suggestion,
+      'warning',
+    );
+  }
+
+  // Console statements
+  if (line.match(ANTI_PATTERNS.consoleLogs.pattern) && !filePath.includes('logger')) {
+    addIssue(
+      'console-log',
+      filePath,
+      lineNumber,
+      ANTI_PATTERNS.consoleLogs.message,
+      ANTI_PATTERNS.consoleLogs.suggestion,
+      'info',
+    );
+  }
+}
+
+/**
+ * Update statistics for performance hooks
+ */
+function updatePerformanceStats(content) {
+  if (content.includes('useMemo')) stats.useMemoUsages++;
+  if (content.includes('useCallback')) stats.useCallbackUsages++;
+  if (content.includes('React.memo') || content.includes('memo(')) stats.memoUsages++;
+  if (content.includes('FlatList')) stats.flatListUsages++;
+  if (content.includes('FlashList')) stats.flashListUsages++;
+}
+
+/**
+ * Check for virtualization issues
+ */
+function checkVirtualizationIssues(isComponent, filePath, content) {
+  if (
+    !isComponent ||
+    !content.includes('.map(') ||
+    content.includes('FlatList') ||
+    content.includes('FlashList')
+  ) {
+    return;
+  }
+
+  const mapMatches = content.match(/\.map\(/g);
+  if (mapMatches && mapMatches.length > 0) {
+    addIssue(
+      'no-virtualization',
+      filePath,
+      1,
+      'Component uses .map() for rendering lists without FlatList/FlashList',
+      'Consider using FlashList for better performance with large lists',
+      'warning',
+    );
+  }
+}
+
+/**
+ * Check for missing memoization
+ */
+function checkMemoizationIssues(filePath, content) {
+  if (content.includes('filter(') || content.includes('sort(') || content.includes('reduce(')) {
+    if (!content.includes('useMemo')) {
+      addIssue(
+        'no-memoization',
+        filePath,
+        1,
+        'File contains array operations that could benefit from memoization',
+        'Wrap expensive computations in useMemo',
+        'info',
+      );
+    }
+  }
 }
 
 /**
@@ -159,7 +272,7 @@ function analyzeFile(filePath, content) {
 
   const isComponent = filePath.includes('components') || filePath.includes('screens');
   const isScreen = filePath.includes('screens');
-  const isHook = path.basename(filePath).startsWith('use');
+  const isHook = basename(filePath).startsWith('use');
 
   if (isComponent) stats.componentsFound++;
   if (isScreen) stats.screensFound++;
@@ -179,120 +292,23 @@ function analyzeFile(filePath, content) {
 
   // Check for anti-patterns
   lines.forEach((line, index) => {
-    const lineNumber = index + 1;
-
-    // Star imports
-    if (line.match(ANTI_PATTERNS.starImports.pattern)) {
-      const match = line.match(/from\s+['"]([^'"]+)['"]/);
-      const module = match ? match[1] : 'unknown';
-
-      // Skip allowed star imports (React, Haptics, etc.)
-      const allowedModules = ['react', 'expo-haptics', 'expo-secure-store', 'expo-notifications'];
-      if (!allowedModules.some((m) => module.includes(m))) {
-        addIssue(
-          'star-import',
-          filePath,
-          lineNumber,
-          `Star import from "${module}"`,
-          ANTI_PATTERNS.starImports.suggestion,
-          'warning',
-        );
-        stats.starImports++;
-      }
-    }
-
-    // Inline functions in JSX
-    if (line.match(ANTI_PATTERNS.inlineFunctions.pattern)) {
-      addIssue(
-        'inline-function',
-        filePath,
-        lineNumber,
-        ANTI_PATTERNS.inlineFunctions.message,
-        ANTI_PATTERNS.inlineFunctions.suggestion,
-        'info',
-      );
-    }
-
-    // Heavy computations
-    if (line.match(ANTI_PATTERNS.heavyComputation.pattern)) {
-      addIssue(
-        'heavy-computation',
-        filePath,
-        lineNumber,
-        ANTI_PATTERNS.heavyComputation.message,
-        ANTI_PATTERNS.heavyComputation.suggestion,
-        'warning',
-      );
-    }
-
-    // Console statements
-    if (line.match(ANTI_PATTERNS.consoleLogs.pattern) && !filePath.includes('logger')) {
-      addIssue(
-        'console-log',
-        filePath,
-        lineNumber,
-        ANTI_PATTERNS.consoleLogs.message,
-        ANTI_PATTERNS.consoleLogs.suggestion,
-        'info',
-      );
-    }
+    checkLineAntiPatterns(line, filePath, index + 1);
   });
 
-  // Check for performance hooks usage
-  if (content.includes('useMemo')) stats.useMemoUsages++;
-  if (content.includes('useCallback')) stats.useCallbackUsages++;
-  if (content.includes('React.memo') || content.includes('memo(')) stats.memoUsages++;
-
-  // Check for list virtualization
-  if (content.includes('FlatList')) stats.flatListUsages++;
-  if (content.includes('FlashList')) stats.flashListUsages++;
-
-  // Check for potential list virtualization opportunities
-  if (
-    isComponent &&
-    content.includes('.map(') &&
-    !content.includes('FlatList') &&
-    !content.includes('FlashList')
-  ) {
-    // Check if it's a large component with map usage
-    const mapMatches = content.match(/\.map\(/g);
-    if (mapMatches && mapMatches.length > 0) {
-      addIssue(
-        'no-virtualization',
-        filePath,
-        1,
-        'Component uses .map() for rendering lists without FlatList/FlashList',
-        'Consider using FlashList for better performance with large lists',
-        'warning',
-      );
-    }
-  }
-
-  // Check for missing useMemo on expensive calculations
-  if (content.includes('filter(') || content.includes('sort(') || content.includes('reduce(')) {
-    // Check if inside useMemo
-    if (!content.includes('useMemo')) {
-      addIssue(
-        'no-memoization',
-        filePath,
-        1,
-        'File contains array operations that could benefit from memoization',
-        'Wrap expensive computations in useMemo',
-        'info',
-      );
-    }
-  }
+  updatePerformanceStats(content);
+  checkVirtualizationIssues(isComponent, filePath, content);
+  checkMemoizationIssues(filePath, content);
 }
 
 /**
  * Walk directory and analyze files
  */
 function walkDirectory(dirPath) {
-  const entries = fs.readdirSync(dirPath);
+  const entries = readdirSync(dirPath);
 
   for (const entry of entries) {
-    const entryPath = path.join(dirPath, entry);
-    const stats = fs.statSync(entryPath);
+    const entryPath = join(dirPath, entry);
+    const stats = statSync(entryPath);
 
     if (stats.isDirectory()) {
       // Skip excluded directories
@@ -302,7 +318,7 @@ function walkDirectory(dirPath) {
       walkDirectory(entryPath);
     } else if (stats.isFile() && /\.(ts|tsx|js|jsx)$/.test(entry)) {
       try {
-        const content = fs.readFileSync(entryPath, 'utf-8');
+        const content = readFileSync(entryPath, 'utf-8');
         analyzeFile(entryPath, content);
       } catch (error) {
         console.error(`Error reading ${entryPath}:`, error.message);
@@ -328,7 +344,7 @@ function generateRecommendations() {
     `Screens like ${heavyScreens.join(', ')} are loaded upfront but may not be needed immediately. Use React.lazy() for on-demand loading.`,
     'high',
     'medium',
-    heavyScreens.map((s) => path.join(SRC_PATH, 'features', s)),
+    heavyScreens.map((s) => join(SRC_PATH, 'features', s)),
   );
 
   // 2. List virtualization
@@ -524,7 +540,7 @@ async function runAudit() {
   console.log('🔍 Starting Performance Audit...\n');
 
   // Check if source directory exists
-  if (!fs.existsSync(SRC_PATH)) {
+  if (!existsSync(SRC_PATH)) {
     console.error(`❌ Source directory not found: ${SRC_PATH}`);
     process.exit(1);
   }
@@ -542,7 +558,7 @@ async function runAudit() {
   const report = generateReport();
 
   // Save report
-  fs.writeFileSync(REPORT_PATH, report);
+  writeFileSync(REPORT_PATH, report);
   console.log(`✅ Report saved to ${REPORT_PATH}\n`);
 
   // Print summary

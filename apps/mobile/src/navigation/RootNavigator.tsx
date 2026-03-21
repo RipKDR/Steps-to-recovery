@@ -25,9 +25,7 @@ export function RootNavigator() {
   const instanceIdRef = useRef<number | null>(null);
   const hasCheckedProfileRef = useRef(false);
 
-  if (instanceIdRef.current === null) {
-    instanceIdRef.current = navigatorInstanceCounter++;
-  }
+  instanceIdRef.current ??= navigatorInstanceCounter++;
   const instanceId = instanceIdRef.current;
 
   useEffect(() => {
@@ -201,6 +199,25 @@ export function RootNavigator() {
     return <LoadingSpinner message="Loading your journey..." />;
   }
 
+  const renderNavigationStack = () => {
+    if (user) {
+      return needsOnboarding ? (
+        <Stack.Screen name="Onboarding">
+          {() => <OnboardingSteps onComplete={() => setNeedsOnboarding(false)} />}
+        </Stack.Screen>
+      ) : (
+        <Stack.Screen name="MainApp" component={MainNavigator} />
+      );
+    }
+    return (
+      <Stack.Screen
+        name="Auth"
+        component={AuthNavigator}
+        options={{ animationTypeForReplace: 'pop' }}
+      />
+    );
+  };
+
   return (
     <NavigationContainer ref={navigationRef} linking={linking}>
       <Stack.Navigator
@@ -209,19 +226,7 @@ export function RootNavigator() {
           animation: 'fade',
         }}
       >
-        {!user ? (
-          <Stack.Screen
-            name="Auth"
-            component={AuthNavigator}
-            options={{ animationTypeForReplace: 'pop' }}
-          />
-        ) : needsOnboarding ? (
-          <Stack.Screen name="Onboarding">
-            {() => <OnboardingSteps onComplete={() => setNeedsOnboarding(false)} />}
-          </Stack.Screen>
-        ) : (
-          <Stack.Screen name="MainApp" component={MainNavigator} />
-        )}
+        {renderNavigationStack()}
       </Stack.Navigator>
     </NavigationContainer>
   );

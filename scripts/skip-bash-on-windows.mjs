@@ -7,8 +7,8 @@
  * On Windows: skips gracefully (bash not available)
  */
 
-import { spawnSync } from 'child_process';
-import { platform } from 'os';
+import { spawnSync } from 'node:child_process';
+import { platform } from 'node:os';
 
 const isWindows = platform() === 'win32';
 
